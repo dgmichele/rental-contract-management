@@ -34,6 +34,10 @@ Backend API RESTful per gestione contratti di affitto con autenticazione JWT, ca
 
 - Zod, Day.js
 
+**Utilità Development**
+
+- nodemon, ts-node, cross-env, dotenv
+
 **Email:**
 
 - Resend API, React Email, node-cron
