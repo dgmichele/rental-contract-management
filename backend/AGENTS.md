@@ -98,7 +98,11 @@ backend/
 │   ├── owner.service.ts
 │   └── user.service.ts
 ├── types/
+│   └── api.ts
+│   └── auth.ts
+│   └── database.ts
 │   └── index.ts
+│   └── shared.ts
 ├── utils/
 │   ├── AppError.ts
 │   ├── errorHandler.ts
