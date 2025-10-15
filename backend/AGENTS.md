@@ -17,6 +17,7 @@ Backend API RESTful per gestione contratti di affitto con autenticazione JWT, ca
 - **HTTP Status:** Coerenti con messaggi esplicativi
 - **Logging:** `console.log()` nei punti critici per debug
 - **Environment:** `.env.dev` (localhost + pgAdmin) e `.env.production` (Netsons)
+- **Commenti:**: Commentare sempre il codice con informazioni compatte ma allo stesso tempo dettagliate e che facciano capire esattamente cosa fa quella porzione di codice commentata. I commenti devono essere in italiano per maggior chiarezza
 
 ---
 
@@ -875,47 +876,411 @@ return res.status(500).json({
 
 ## 14. Ordine Sviluppo Consigliato
 
-### Fase 1: Setup & Auth (3-4 giorni)
+## Fase 1: Setup & Auth (3-4 giorni)
 
-1. Setup progetto, TypeScript, Knex
-2. Migrations database (tutte le tabelle)
-3. Auth service: register, login, refresh, logout
-4. JWT middleware
-5. Password reset flow
-6. Test auth (alta priorità)
+### 1.1 Setup Progetto
 
-### Fase 2: CRUD Base (3-4 giorni)
+**File da creare:**
 
-7. Owners CRUD
-8. Tenants logic (no endpoints diretti, gestiti via contracts)
-9. Contracts CRUD base
-10. Dashboard stats
-11. Rate limiting
-12. Error handling
+- `package.json`: Dipendenze (express, typescript, knex, pg, bcrypt, jsonwebtoken, zod, dotenv, cors, helmet, express-rate-limit, dayjs, resend, react-email, node-cron)
+- `tsconfig.json`: Strict mode, target ES2020, moduleResolution node
+- `.env.dev`: Variabili locali (DB, JWT secrets, Resend placeholder)
+- `.gitignore`: node_modules, .env\*, dist/
 
-### Fase 3: Logica Avanzata (4-5 giorni)
+**Comandi:**
 
-13. Annuities service (calcolo, generazione)
-14. Endpoint annuities
-15. Renew contract logic
-16. Renew annuity logic
-17. Test annuities (alta priorità)
+```bash
+npm init -y
+npm install [dipendenze]
+npm install -D typescript @types/node @types/express ts-node nodemon
+npx tsc --init
+```
 
-### Fase 4: Email & Cron (3-4 giorni)
+### 1.2 Database Setup
 
-18. Email service (Resend integration)
-19. React Email templates
-20. Notification service + cron job
-21. Test cron job (alta priorità)
+**File:**
 
-### Fase 5: Testing & Deploy (2-3 giorni)
+- `db/knexfile.ts`: Config per dev/production, legge da .env
+- `config/db.ts`: Export istanza Knex
 
-22. Test media priorità
-23. Fix bugs
-24. Deploy su Netsons
-25. Verifica produzione
+**Migrations da creare (ordine):**
 
-**Totale stimato: 15-20 giorni**
+1. `001_create_users.ts`
+2. `002_create_owners.ts`
+3. `003_create_tenants.ts`
+4. `004_create_contracts.ts`
+5. `005_create_annuities.ts`
+6. `006_create_refresh_tokens.ts`
+7. `007_create_blacklisted_tokens.ts`
+8. `008_create_password_reset_tokens.ts`
+9. `009_create_notifications.ts`
+
+**Esegui:** `npx knex migrate:latest --env development`
+
+### 1.3 Auth Service & Routes
+
+**File da creare nell'ordine:**
+
+1. **`types/database.ts`**: Interfaces per User, RefreshToken, BlacklistedToken, PasswordResetToken
+2. **`types/auth.ts`**: RegisterRequest, LoginRequest, RefreshRequest, etc.
+3. **`utils/AppError.ts`**: Custom error class con statusCode
+4. **`utils/token.utils.ts`**: `generateAccessToken()`, `generateRefreshToken()`, `verifyToken()`
+5. **`services/auth.service.ts`**:
+   - `register()`: Hash password (bcrypt), insert user, return tokens
+   - `login()`: Verify credentials, generate tokens, save refresh token
+   - `refreshAccessToken()`: Verify refresh token, generate new access
+   - `logout()`: Blacklist refresh token
+6. **`controllers/auth.controller.ts`**: Zod validation → call service → response
+7. **`routes/auth.routes.ts`**: POST /register, /login, /refresh, /logout
+
+**Test:** Postman/Thunder Client su tutti gli endpoint
+
+### 1.4 JWT Middleware
+
+**File:**
+
+- `middleware/auth.middleware.ts`:
+  - Estrae token da header Authorization
+  - Verifica con `verifyToken()`
+  - Check blacklist
+  - Attach `req.user = { id, email }`
+  - Next() o throw 401
+
+**Applica a:** Tutte le routes tranne `/api/auth/*`
+
+### 1.5 Password Reset
+
+**File:**
+
+- `services/auth.service.ts` (aggiungi):
+  - `requestPasswordReset()`: Generate token, save in DB con expires_at (+1h), return token
+  - `resetPassword()`: Verify token valid/unused/not expired, hash new password, update user, mark token used
+- `services/email.service.ts` (basic):
+  - `sendPasswordResetEmail()`: Resend API call con template placeholder
+- `emails/ResetPasswordEmail.tsx`: React Email component (link con token)
+- `controllers/auth.controller.ts`: Aggiungi POST `/forgot-password`, `/reset-password`
+- `routes/auth.routes.ts`: Aggiungi routes
+
+### 1.6 Rate Limiting
+
+**File:**
+
+- `middleware/rateLimiter.middleware.ts`:
+  - `loginLimiter`: 5 req/15min
+  - `registerLimiter`: 5 req/15min
+  - `forgotPasswordLimiter`: 3 req/1h
+
+**Applica in:** `auth.routes.ts` sui rispettivi endpoints
+
+### 1.7 Test Auth (Alta Priorità)
+
+**File:**
+
+- `__tests__/setup.ts`: beforeAll (migrate), beforeEach (clean DB), afterAll (close connection)
+- `__tests__/integration/auth.test.ts`:
+  - Register: success, duplicate email, validation fail
+  - Login: success, wrong password, return tokens
+  - Refresh: valid, expired, blacklisted
+  - Logout: blacklist token
+  - Password reset: request (email sent), reset (valid token), expired token
+
+---
+
+## Fase 2: CRUD Base (3-4 giorni)
+
+### 2.1 Error Handler Middleware
+
+**File:**
+
+- `middleware/errorHandler.middleware.ts`:
+  - Catch AppError → response con statusCode
+  - Catch Zod → 400 con errors array
+  - Catch JWT errors → 401
+  - Generic → 500
+
+**Applica in:** `server.ts` come ultimo middleware
+
+### 2.2 Users Endpoints
+
+**File:**
+
+1. `types/database.ts`: Aggiungi UpdateUserRequest
+2. `services/user.service.ts`:
+   - `getUserById()`
+   - `updateUserDetails()`: name, surname, email (check unique)
+   - `updateUserPassword()`: verify currentPassword, hash new
+3. `controllers/user.controller.ts`: Validazione + service calls
+4. `routes/user.routes.ts`: GET /me, PUT /me/details, PUT /me/password
+5. `server.ts`: Mount `/api/users` con auth middleware
+
+### 2.3 Owners CRUD
+
+**File:**
+
+1. `types/database.ts`: Owner interface, CreateOwnerRequest, UpdateOwnerRequest
+2. `services/owner.service.ts`:
+   - `createOwner()`: Insert con user_id
+   - `getOwners()`: Paginated, filter by user_id, search param
+   - `getOwnerById()`: Verify ownership (user_id match)
+   - `updateOwner()`: Verify ownership
+   - `deleteOwner()`: Verify ownership, cascade delete contracts
+   - `getOwnerContracts()`: Paginated contracts for owner
+3. `controllers/owner.controller.ts`: Validazione + pagination logic
+4. `routes/owner.routes.ts`: GET /, GET /:id, GET /:id/contracts, POST /, PUT /:id, DELETE /:id
+5. `server.ts`: Mount `/api/owners` con auth
+
+**Test:** Postman con JWT valido
+
+### 2.4 Contracts CRUD Base
+
+**File:**
+
+1. `types/database.ts`: Contract, Tenant, CreateContractRequest, UpdateContractRequest
+2. `services/contract.service.ts`:
+   - `createContract()`:
+     - Se tenant_id → verify exists
+     - Se tenant_data → create tenant first
+     - Insert contract con user_id derivato da owner
+     - **NON generare annuities ancora**
+   - `getContracts()`: Paginated, filters (ownerId, search, expiryMonth/Year), join owner/tenant
+   - `getContractById()`: Full details con owner, tenant, **NO annuities ancora**
+   - `updateContract()`: Verify ownership via owner_id
+   - `deleteContract()`: Verify ownership, cascade annuities
+3. `controllers/contract.controller.ts`: Validazione (Zod schema con refine per date), pagination
+4. `routes/contract.routes.ts`: GET /, GET /:id, POST /, PUT /:id, DELETE /:id
+5. `server.ts`: Mount `/api/contracts` con auth
+
+**NON implementare ancora:** `/renew`, `/annuity`, `GET /:id/annuities`
+
+### 2.5 Dashboard Stats
+
+**File:**
+
+1. `types/api.ts`: DashboardStatsResponse
+2. `services/dashboard.service.ts`:
+   - `getStats()`:
+     - Count contracts, owners (by user_id)
+     - Sum monthly_rent
+     - Count expiring contracts (current/next month)
+3. `controllers/dashboard.controller.ts`: Call service
+4. `routes/dashboard.routes.ts`: GET /stats
+5. `server.ts`: Mount `/api/dashboard` con auth
+
+**NON implementare ancora:** `/expiring-contracts` (serve annuities logic)
+
+---
+
+## Fase 3: Logica Avanzata (4-5 giorni)
+
+### 3.1 Annuities Service
+
+**File:**
+
+1. `types/database.ts`: Annuity interface
+2. `services/annuity.service.ts`:
+   - `generateAnnuitiesForContract(contractId)`:
+     - Fetch contract
+     - Se cedolare_secca → return []
+     - Calcola anni intermedi (NO primo, NO ultimo)
+     - Per ogni anno: due_date = start_date + N anni
+     - Insert in annuities con is_paid basato su last_annuity_paid
+     - Return annuities create
+   - `getAnnuitiesByContract(contractId)`: Return timeline completa
+   - `updateAnnuityPaid(contractId, year)`:
+     - Find annuity by (contract_id, year)
+     - Set is_paid = true, paid_at = NOW()
+     - Update contract.last_annuity_paid = year
+
+**Test unitari:**
+
+- `__tests__/unit/annuities.test.ts`:
+  - Cedolare secca → no annuities
+  - 2025-2028 → [2026, 2027]
+  - 2025-2026 → []
+  - Due dates correct
+  - is_paid logic
+
+### 3.2 Integra Annuities in Contracts
+
+**Modifica:**
+
+- `services/contract.service.ts`:
+  - `createContract()`: Dopo insert, call `generateAnnuitiesForContract()`
+  - `getContractById()`: Join annuities, return in response
+- `controllers/contract.controller.ts`: Aggiungi GET `/:id/annuities` → call `getAnnuitiesByContract()`
+- `routes/contract.routes.ts`: Aggiungi GET `/:id/annuities`
+
+### 3.3 Renew Contract
+
+**File:**
+
+- `types/api.ts`: RenewContractRequest
+- `services/contract.service.ts`:
+  - `renewContract(contractId, data)`:
+    - Verify ownership
+    - **Knex transaction:**
+      - Delete old annuities
+      - Update contract (dates, cedolare_secca, etc.)
+      - Generate new annuities
+    - Return updated contract
+- `controllers/contract.controller.ts`: Validazione, call service
+- `routes/contract.routes.ts`: PUT `/:id/renew`
+
+### 3.4 Update Annuity
+
+**File:**
+
+- `types/api.ts`: UpdateAnnuityRequest
+- `controllers/contract.controller.ts`: PUT `/:id/annuity`
+  - Validazione: contractId, last_annuity_paid (year)
+  - Call `annuity.service.updateAnnuityPaid()`
+  - Response success
+- `routes/contract.routes.ts`: PUT `/:id/annuity`
+
+### 3.5 Dashboard Expiring Contracts
+
+**File:**
+
+- `services/dashboard.service.ts`:
+  - `getExpiringContracts(period, page, limit)`:
+    - Calculate targetMonth/Year
+    - Query contracts con end_date = targetMonth
+    - Query annuities con due_date in targetMonth AND is_paid = false
+    - Join owner, tenant
+    - Paginated response
+- `controllers/dashboard.controller.ts`: GET `/expiring-contracts?period=current|next`
+- `routes/dashboard.routes.ts`: Aggiungi route
+
+---
+
+## Fase 4: Email & Cron (3-4 giorni)
+
+### 4.1 Email Templates
+
+**File da creare:**
+
+- `emails/ResetPasswordEmail.tsx`: Link con token (già fatto in Fase 1)
+- `emails/ExpirationReminderInternal.tsx`:
+  - Props: contractId, ownerName, tenantName, expiryDate, type (contract/annuity)
+  - Style semplice, CTA "Aggiungi a calendario"
+- `emails/ExpirationReminderClient.tsx`:
+  - Props: ownerName, tenantName, address (se disponibile), expiryDate, type
+  - Style professionale branded
+
+### 4.2 Email Service
+
+**File:**
+
+- `services/email.service.ts` (completa):
+  - `sendPasswordResetEmail()` (già fatto)
+  - `sendExpirationReminderInternal(contract, type, year?)`:
+    - Render template con React Email
+    - Send via Resend a INTERNAL_NOTIFICATION_EMAIL
+  - `sendExpirationReminderClient(contract, type, year?)`:
+    - Render template
+    - Send a owner.email
+  - Error handling con try/catch, log errori
+
+### 4.3 Notification Service
+
+**File:**
+
+1. `types/database.ts`: Notification interface
+2. `services/notification.service.ts`:
+   - `sendExpiringContractsNotifications()`:
+     - Calculate targetDate = now + 7 days
+     - Query contracts con end_date = targetDate
+     - Query annuities con due_date = targetDate AND is_paid = false
+     - Per ogni match:
+       - Check if already sent (query notifications)
+       - Se NO: send internal + client email
+       - Insert in notifications
+     - Return counts (sent, failed)
+   - `checkNotificationSent(contractId, type, year?)`: Helper per verify duplicate
+
+### 4.4 Cron Job
+
+**File:**
+
+- `server.ts` (aggiungi):
+  - Import `node-cron`
+  - Schedule job: `cron.schedule(CRON_NOTIFICATION_TIME, async () => {...})`
+  - Call `notification.service.sendExpiringContractsNotifications()`
+  - Log risultati
+
+**Test manuale:** Cambia cron a `* * * * *` (ogni minuto), verifica log
+
+### 4.5 Test Cron (Alta Priorità)
+
+**File:**
+
+- `__tests__/integration/cron.test.ts`:
+  - Mock date con jest.useFakeTimers()
+  - Insert contract con end_date = oggi + 7 giorni
+  - Insert annuity con due_date = oggi + 7 giorni, is_paid = false
+  - Call notification service
+  - Assert emails sent (mock Resend)
+  - Assert notifications table populated
+  - Test NO duplicate (re-run service, assert no new emails)
+
+---
+
+## Fase 5: Testing & Deploy (2-3 giorni)
+
+### 5.1 Test Media Priorità
+
+**File:**
+
+- `__tests__/integration/contracts.test.ts`:
+  - Create con tenant esistente/nuovo
+  - Update, delete, cascade annuities
+  - Filters (ownerId, search, expiryMonth)
+- `__tests__/unit/validation.test.ts`:
+  - Contract schema: date validation
+  - Email, password validation
+
+### 5.2 Fix Bugs & Refactor
+
+- Review TODO comments
+- Optimize queries (add missing indexes se necessario)
+- Clean console.logs (keep only critical)
+
+### 5.3 Deploy Netsons
+
+**Checklist:**
+
+1. Create DB production su phpPgAdmin
+2. Update `.env.production` con DB credentials
+3. Upload codice (escludi node_modules, .env.dev)
+4. `npm install --production`
+5. Run migrations: `npx knex migrate:latest --env production`
+6. Test manuale endpoints chiave
+7. Verify cron job running (check logs dopo 24h)
+8. Test email Resend (trigger manual notification)
+
+### 5.4 Monitoring
+
+- Setup basic health check endpoint: GET `/health` → 200 OK
+- Monitor logs per errori cron
+- Test reset password flow end-to-end
+
+---
+
+## Note Finali
+
+**Dipendenze tra fasi:**
+
+- Fase 3 dipende da Fase 2 (contracts must exist)
+- Fase 4 dipende da Fase 3 (annuities logic)
+
+**Quando sei bloccato:**
+
+- Mock temporaneamente parti mancanti (es. email service → console.log)
+- Testa singoli service con script temporanei prima di integrare
+
+**Commit strategy:**
+
+- Commit dopo ogni punto completato
 
 ---
 
