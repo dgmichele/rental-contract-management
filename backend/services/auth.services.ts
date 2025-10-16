@@ -19,6 +19,10 @@ import {
   verifyToken 
 } from '../utils/token.utils';
 import AppError from '../utils/AppError';
+import crypto from 'crypto';
+import dayjs from 'dayjs';
+import { sendPasswordResetEmail } from '../services/email.services';
+import { PasswordResetToken } from '../types/database';
 
 const SALT_ROUNDS = 10;
 
@@ -281,5 +285,96 @@ export const logout = async (refreshToken: string): Promise<boolean> => {
     
     console.error('[AUTH_SERVICE] Errore durante logout:', error);
     throw new AppError('Errore durante il logout', 500);
+  }
+};
+
+// ----------------------------
+// Request Password Reset
+// ----------------------------
+export const requestPasswordReset = async (email: string): Promise<string> => {
+  console.log('[AUTH_SERVICE] Richiesta reset password per email:', email);
+
+  try {
+    // Trova l'utente
+    const user = await db('users').where({ email }).first();
+    if (!user) {
+      console.log('[AUTH_SERVICE] Utente non trovato:', email);
+      throw new AppError('Email non registrata', 404);
+    }
+
+    // Genera token sicuro
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = dayjs().add(1, 'hour').toDate();
+
+    // Salva token nel DB
+    const newToken: Omit<PasswordResetToken, 'id' | 'created_at'> = {
+      user_id: user.id,
+      token,
+      expires_at: expiresAt,
+      used: false,
+    };
+
+    await db('password_reset_tokens').insert(newToken);
+    console.log('[AUTH_SERVICE] Token reset salvato in DB per userId:', user.id);
+
+    // Invia email all'utente
+    await sendPasswordResetEmail(user.email, token);
+
+    return token;
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+
+    console.error('[AUTH_SERVICE] Errore requestPasswordReset:', error);
+    throw new AppError('Errore durante la richiesta di reset password', 500);
+  }
+};
+
+// ----------------------------
+// Reset Password
+// ----------------------------
+export const resetPassword = async (token: string, newPassword: string): Promise<boolean> => {
+  console.log('[AUTH_SERVICE] Reset password con token:', token);
+
+  try {
+    // Trova token valido
+    const tokenRecord = await db('password_reset_tokens')
+      .where({ token })
+      .first() as PasswordResetToken | undefined;
+
+    if (!tokenRecord) {
+      console.log('[AUTH_SERVICE] Token non trovato');
+      throw new AppError('Token non valido', 400);
+    }
+
+    if (tokenRecord.used) {
+      console.log('[AUTH_SERVICE] Token già utilizzato');
+      throw new AppError('Token già utilizzato', 400);
+    }
+
+    if (dayjs().isAfter(dayjs(tokenRecord.expires_at))) {
+      console.log('[AUTH_SERVICE] Token scaduto');
+      throw new AppError('Token scaduto', 400);
+    }
+
+    // Hash della nuova password
+    const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
+    // Aggiorna password utente
+    await db('users')
+      .where({ id: tokenRecord.user_id })
+      .update({ password_hash: passwordHash });
+
+    // Segna token come usato
+    await db('password_reset_tokens')
+      .where({ id: tokenRecord.id })
+      .update({ used: true });
+
+    console.log('[AUTH_SERVICE] Password aggiornata con successo per userId:', tokenRecord.user_id);
+    return true;
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+
+    console.error('[AUTH_SERVICE] Errore resetPassword:', error);
+    throw new AppError('Errore durante il reset della password', 500);
   }
 };

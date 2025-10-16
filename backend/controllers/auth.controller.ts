@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import * as authService from '../services/auth.services';
+import * as emailService from '../services/email.services';
 import AppError from '../utils/AppError';
 
 // ============= ZOD SCHEMAS =============
@@ -199,6 +200,72 @@ export const logoutController = async (
       return next(new AppError('Refresh token mancante', 400));
     }
 
+    next(error);
+  }
+};
+
+// Schemi Zod per password reset
+const forgotPasswordSchema = z.object({
+  email: z.string().email('Email non valida').toLowerCase().trim(),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Token mancante'),
+  newPassword: z
+    .string()
+    .min(8, 'La password deve contenere almeno 8 caratteri')
+    .regex(/[A-Z]/, 'La password deve contenere almeno una lettera maiuscola')
+    .regex(/[a-z]/, 'La password deve contenere almeno una lettera minuscola')
+    .regex(/[0-9]/, 'La password deve contenere almeno un numero'),
+});
+
+// POST /forgot-password
+export const forgotPasswordController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { email } = forgotPasswordSchema.parse(req.body);
+
+    // Genera token di reset
+    const token = await authService.requestPasswordReset(email);
+
+    // Invia email
+    await emailService.sendPasswordResetEmail(email, token);
+
+    res.status(200).json({
+      success: true,
+      message: `Email per il reset della password inviata se l'utente esiste`
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return next(new AppError('Email non valida', 400));
+    }
+    next(error);
+  }
+};
+
+// POST /reset-password
+export const resetPasswordController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { token, newPassword } = resetPasswordSchema.parse(req.body);
+
+    // Reset password
+    await authService.resetPassword(token, newPassword);
+
+    res.status(200).json({
+      success: true,
+      message: 'Password resettata con successo',
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return next(new AppError('Token o password non validi', 400));
+    }
     next(error);
   }
 };

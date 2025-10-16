@@ -4,6 +4,8 @@ import {
   loginController,
   refreshTokenController,
   logoutController,
+  forgotPasswordController,
+  resetPasswordController,
 } from '../controllers/auth.controller';
 
 const router = Router();
@@ -43,5 +45,9 @@ router.post('/refresh', refreshTokenController);
  * @returns { success, message }
  */
 router.post('/logout', logoutController);
+
+// Password reset
+router.post('/forgot-password', forgotPasswordController);
+router.post('/reset-password', resetPasswordController);
 
 export default router;
