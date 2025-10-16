@@ -572,8 +572,8 @@ DB_NAME=rental_contract_management_dev
 # JWT
 ACCESS_TOKEN_SECRET=3:N+H?N816z!
 REFRESH_TOKEN_SECRET=dv6r?1x6Bq9/s
-ACCESS_TOKEN_EXPIRATION=15m
-REFRESH_TOKEN_EXPIRATION=30d
+ACCESS_TOKEN_EXPIRATION=900s # 15 minutes
+REFRESH_TOKEN_EXPIRATION=2592000s # 30 days
 
 # Resend
 RESEND_API_KEY=re_your_dev_key # da sostituire con la chiave reale di Resend al momento in cui ci serve
@@ -608,8 +608,8 @@ DB_NAME=contracts_production
 # JWT (CAMBIARE con secrets forti)
 ACCESS_TOKEN_SECRET=prod_super_secret_access_32chars_min
 REFRESH_TOKEN_SECRET=prod_super_secret_refresh_32chars_min
-ACCESS_TOKEN_EXPIRATION=15m
-REFRESH_TOKEN_EXPIRATION=30d
+ACCESS_TOKEN_EXPIRATION=900s # 15 minutes
+REFRESH_TOKEN_EXPIRATION=2592000s # 30 days
 
 # Resend
 RESEND_API_KEY=re_your_production_key

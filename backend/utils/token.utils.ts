@@ -1,67 +1,75 @@
-import jwt, { JwtPayload, SignOptions } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import { JwtPayload } from '../types/auth';
 
 dotenv.config();
 
-const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET!;
-const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET!;
+const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET!;
+const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET!;
+const ACCESS_TOKEN_EXPIRATION = '900s'; // 15 minuti
+const REFRESH_TOKEN_EXPIRATION = '2592000s'; // 30 giorni
 
-// Converte i tempi di scadenza in secondi per adattarsi a typescript
-const accessTokenExpirationInSeconds = 900; // 15 minuti
-const refreshTokenExpirationInSeconds = 2592000; // 30 giorni
-
-if (!accessTokenSecret || !refreshTokenSecret) {
-  throw new Error('I segreti dei token non sono definiti nelle variabili d\'ambiente');
+// Verifica che i secret siano definiti all'avvio
+if (!ACCESS_TOKEN_SECRET || !REFRESH_TOKEN_SECRET) {
+  throw new Error('ACCESS_TOKEN_SECRET e REFRESH_TOKEN_SECRET devono essere definiti nelle variabili d\'ambiente');
 }
 
 /**
- * Genera un token di accesso.
- * @param userId - L'ID dell'utente.
- * @returns Il token di accesso generato.
+ * Genera un access token JWT.
+ * @param userId - ID dell'utente
+ * @param email - Email dell'utente
+ * @returns Access token firmato
  */
-export const generateAccessToken = (userId: number): string => {
-  const options: SignOptions = {
-    algorithm: 'HS256',
-    expiresIn: accessTokenExpirationInSeconds,
+export const generateAccessToken = (userId: number, email: string): string => {
+  const payload: JwtPayload = {
+    userId,
+    email,
   };
-  return jwt.sign({ id: userId }, accessTokenSecret, options);
-};
 
-/**
- * Genera un token di aggiornamento.
- * @param userId - L'ID dell'utente.
- * @returns Il token di aggiornamento generato.
- */
-export const generateRefreshToken = (userId: number): string => {
-  const options: SignOptions = {
+  return jwt.sign(payload, ACCESS_TOKEN_SECRET, {
     algorithm: 'HS256',
-    expiresIn: refreshTokenExpirationInSeconds,
+    expiresIn: ACCESS_TOKEN_EXPIRATION,
+  });
+};
+
+/**
+ * Genera un refresh token JWT.
+ * @param userId - ID dell'utente
+ * @param email - Email dell'utente
+ * @returns Refresh token firmato
+ */
+export const generateRefreshToken = (userId: number, email: string): string => {
+  const payload: JwtPayload = {
+    userId,
+    email,
   };
-  return jwt.sign({ id: userId }, refreshTokenSecret, options);
+
+  return jwt.sign(payload, REFRESH_TOKEN_SECRET, {
+    algorithm: 'HS256',
+    expiresIn: REFRESH_TOKEN_EXPIRATION,
+  });
 };
 
 /**
- * Verifica un token di accesso.
- * @param token - Il token di accesso da verificare.
- * @returns Il payload del token decodificato.
+ * Verifica e decodifica un token (access o refresh).
+ * @param token - Token JWT da verificare
+ * @param type - Tipo di token ('access' | 'refresh')
+ * @returns Payload decodificato con userId e email
+ * @throws Error se il token non è valido o è scaduto
  */
-export const verifyAccessToken = (token: string): JwtPayload => {
+export const verifyToken = (token: string, type: 'access' | 'refresh'): JwtPayload => {
   try {
-    return jwt.verify(token, accessTokenSecret) as JwtPayload;
+    const secret = type === 'access' ? ACCESS_TOKEN_SECRET : REFRESH_TOKEN_SECRET;
+    const decoded = jwt.verify(token, secret) as JwtPayload;
+    
+    return decoded;
   } catch (error) {
-    throw new Error('Token di accesso non valido');
-  }
-};
-
-/**
- * Verifica un token di aggiornamento.
- * @param token - Il token di aggiornamento da verificare.
- * @returns Il payload del token decodificato.
- */
-export const verifyRefreshToken = (token: string): JwtPayload => {
-  try {
-    return jwt.verify(token, refreshTokenSecret) as JwtPayload;
-  } catch (error) {
-    throw new Error('Token di aggiornamento non valido');
+    if (error instanceof jwt.TokenExpiredError) {
+      throw new Error('Token scaduto');
+    }
+    if (error instanceof jwt.JsonWebTokenError) {
+      throw new Error('Token non valido');
+    }
+    throw new Error('Errore nella verifica del token');
   }
 };

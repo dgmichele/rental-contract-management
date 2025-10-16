@@ -1,147 +1,204 @@
-
 import { Request, Response, NextFunction } from 'express';
-import * as authService from '../services/auth.service';
-import {
-  RegisterRequestSchema,
-  LoginRequestSchema,
-  RefreshRequestSchema,
-  ForgotPasswordRequestSchema,
-  ResetPasswordRequestSchema,
-  LogoutRequestSchema,
-} from '../types/auth';
+import { z } from 'zod';
+import * as authService from '../services/auth.services';
+import AppError from '../utils/AppError';
+
+// ============= ZOD SCHEMAS =============
 
 /**
- * @description Gestisce la registrazione di un nuovo utente.
- * @route POST /api/auth/register
+ * Schema di validazione per registrazione utente.
+ * Password: minimo 8 caratteri, almeno 1 maiuscola, 1 minuscola, 1 numero
  */
-export const register = async (
+const registerSchema = z.object({
+  name: z.string().min(1, 'Il nome è obbligatorio').trim(),
+  surname: z.string().min(1, 'Il cognome è obbligatorio').trim(),
+  email: z.string().email('Email non valida').toLowerCase().trim(),
+  password: z
+    .string()
+    .min(8, 'La password deve contenere almeno 8 caratteri')
+    .regex(/[A-Z]/, 'La password deve contenere almeno una lettera maiuscola')
+    .regex(/[a-z]/, 'La password deve contenere almeno una lettera minuscola')
+    .regex(/[0-9]/, 'La password deve contenere almeno un numero'),
+});
+
+/**
+ * Schema di validazione per login.
+ */
+const loginSchema = z.object({
+  email: z.string().email('Email non valida').toLowerCase().trim(),
+  password: z.string().min(1, 'La password è obbligatoria'),
+});
+
+/**
+ * Schema di validazione per refresh token.
+ */
+const refreshTokenSchema = z.object({
+  refreshToken: z.string().min(1, 'Refresh token mancante'),
+});
+
+// ============= CONTROLLERS =============
+
+/**
+ * Controller per registrazione nuovo utente.
+ * POST /api/auth/register
+ */
+export const registerController = async (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
-  try {
-    const validatedData = RegisterRequestSchema.parse(req.body);
-    const { accessToken, refreshToken, user } = await authService.register(
-      validatedData
-    );
+): Promise<void> => {
+  console.log('[AUTH_CONTROLLER] POST /register - Inizio validazione');
 
-    // Imposta il refresh token in un cookie HttpOnly per maggior sicurezza
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 giorni
+  try {
+    // Validazione input con Zod
+    const validatedData = registerSchema.parse(req.body);
+    console.log('[AUTH_CONTROLLER] Validazione completata per:', validatedData.email);
+
+    // Chiama il service
+    const result = await authService.register(validatedData);
+
+    console.log('[AUTH_CONTROLLER] Registrazione completata, userId:', result.user.id);
+
+    // Response 201 Created
+    res.status(201).json({
+      success: true,
+      data: {
+        accessToken: result.tokens.accessToken,
+        refreshToken: result.tokens.refreshToken,
+        user: result.user,
+      },
+      message: 'Registrazione completata con successo',
     });
-
-    res.status(201).json({ success: true, data: { accessToken, user } });
   } catch (error) {
+    // Gestione errori Zod (validazione)
+    if (error instanceof z.ZodError) {
+      console.log('[AUTH_CONTROLLER] Errore validazione:', error.issues);
+
+      const formattedErrors = error.issues.map((err) => ({
+        field: err.path.join('.'),
+        message: err.message,
+      }));
+
+      return next(new AppError('Dati di input non validi', 400));
+    }
+
+    // Passa altri errori al middleware errorHandler
     next(error);
   }
 };
 
 /**
- * @description Gestisce il login dell'utente.
- * @route POST /api/auth/login
+ * Controller per login utente esistente.
+ * POST /api/auth/login
  */
-export const login = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const validatedData = LoginRequestSchema.parse(req.body);
-    const { accessToken, refreshToken, user } = await authService.login(
-      validatedData
-    );
-
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 giorni
-    });
-
-    res.status(200).json({ success: true, data: { accessToken, user } });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * @description Gestisce il refresh dell'access token.
- * @route POST /api/auth/refresh
- */
-export const refresh = async (
+export const loginController = async (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
+  console.log('[AUTH_CONTROLLER] POST /login - Inizio validazione');
+
   try {
-    // Il refresh token viene prelevato dai cookie
-    const { refreshToken } = req.cookies;
-    const validatedData = RefreshRequestSchema.parse({ refreshToken });
+    // Validazione input
+    const validatedData = loginSchema.parse(req.body);
+    console.log('[AUTH_CONTROLLER] Validazione completata per:', validatedData.email);
 
-    const { accessToken } = await authService.refreshAccessToken(
-      validatedData.refreshToken
-    );
-    res.status(200).json({ success: true, data: { accessToken } });
-  } catch (error) {
-    next(error);
-  }
-};
+    // Chiama il service
+    const result = await authService.login(validatedData);
 
-/**
- * @description Gestisce il logout dell'utente.
- * @route POST /api/auth/logout
- */
-export const logout = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    // Il refresh token viene passato nel body per invalidarlo
-    const { refreshToken } = req.body;
-    const validatedData = LogoutRequestSchema.parse({ refreshToken });
+    console.log('[AUTH_CONTROLLER] Login completato, userId:', result.user.id);
 
-    await authService.logout(validatedData.refreshToken);
-
-    // Pulisce il cookie del refresh token
-    res.clearCookie('refreshToken');
-
-    res.status(200).json({ success: true, message: 'Logout effettuato con successo.' });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * @description Gestisce la richiesta di reset password.
- * @route POST /api/auth/forgot-password
- */
-export const forgotPassword = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const validatedData = ForgotPasswordRequestSchema.parse(req.body);
-    await authService.requestPasswordReset(validatedData.email);
+    // Response 200 OK
     res.status(200).json({
       success: true,
-      message: 'Se l\'utente esiste, riceverà un\'email con le istruzioni per il reset della password.',
+      data: {
+        accessToken: result.tokens.accessToken,
+        refreshToken: result.tokens.refreshToken,
+        user: result.user,
+      },
+      message: 'Login effettuato con successo',
     });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      console.log('[AUTH_CONTROLLER] Errore validazione:', error.issues);
+      return next(new AppError('Dati di input non validi', 400));
+    }
+
     next(error);
   }
 };
 
 /**
- * @description Gestisce il reset della password con un token.
- * @route POST /api/auth/reset-password
+ * Controller per rinnovo access token.
+ * POST /api/auth/refresh
  */
-export const resetPassword = async (
+export const refreshTokenController = async (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
+  console.log('[AUTH_CONTROLLER] POST /refresh - Richiesta rinnovo token');
+
   try {
-    const validatedData = ResetPasswordRequestSchema.parse(req.body);
-    await authService.resetPassword(validatedData.token, validatedData.newPassword);
-    res.status(200).json({ success: true, message: 'Password aggiornata con successo.' });
+    // Validazione input
+    const { refreshToken } = refreshTokenSchema.parse(req.body);
+    console.log('[AUTH_CONTROLLER] Refresh token ricevuto');
+
+    // Chiama il service
+    const newAccessToken = await authService.refreshAccessToken(refreshToken);
+
+    console.log('[AUTH_CONTROLLER] Nuovo access token generato');
+
+    // Response 200 OK
+    res.status(200).json({
+      success: true,
+      data: {
+        accessToken: newAccessToken,
+      },
+      message: 'Token rinnovato con successo',
+    });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      console.log('[AUTH_CONTROLLER] Errore validazione:', error.issues);
+      return next(new AppError('Refresh token mancante', 400));
+    }
+
+    next(error);
+  }
+};
+
+/**
+ * Controller per logout utente.
+ * POST /api/auth/logout
+ */
+export const logoutController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  console.log('[AUTH_CONTROLLER] POST /logout - Richiesta logout');
+
+  try {
+    // Validazione input
+    const { refreshToken } = refreshTokenSchema.parse(req.body);
+    console.log('[AUTH_CONTROLLER] Refresh token ricevuto per logout');
+
+    // Chiama il service
+    await authService.logout(refreshToken);
+
+    console.log('[AUTH_CONTROLLER] Logout completato');
+
+    // Response 200 OK
+    res.status(200).json({
+      success: true,
+      message: 'Logout effettuato con successo',
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      console.log('[AUTH_CONTROLLER] Errore validazione:', error.issues);
+      return next(new AppError('Refresh token mancante', 400));
+    }
+
     next(error);
   }
 };
