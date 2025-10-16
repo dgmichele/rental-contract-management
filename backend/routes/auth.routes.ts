@@ -7,6 +7,7 @@ import {
   forgotPasswordController,
   resetPasswordController,
 } from '../controllers/auth.controller';
+import { loginLimiter, registerLimiter, forgotPasswordLimiter } from "../middleware/rateLimiter.middleware";
 
 const router = Router();
 
@@ -17,7 +18,7 @@ const router = Router();
  * @body    { name, surname, email, password }
  * @returns { accessToken, refreshToken, user }
  */
-router.post('/register', registerController);
+router.post('/register', registerLimiter, registerController);
 
 /**
  * @route   POST /api/auth/login
@@ -26,7 +27,7 @@ router.post('/register', registerController);
  * @body    { email, password }
  * @returns { accessToken, refreshToken, user }
  */
-router.post('/login', loginController);
+router.post('/login', loginLimiter, loginController);
 
 /**
  * @route   POST /api/auth/refresh
@@ -48,6 +49,6 @@ router.post('/logout', logoutController);
 
 // Password reset
 router.post('/forgot-password', forgotPasswordController);
-router.post('/reset-password', resetPasswordController);
+router.post('/reset-password', forgotPasswordLimiter, resetPasswordController);
 
 export default router;
