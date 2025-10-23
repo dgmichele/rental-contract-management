@@ -75,6 +75,13 @@ app.get('/health', (req, res) => {
 });
 
 // ============= ROUTES =============
+
+// Rotta base di test
+app.get('/', (req, res) => {
+  res.send('Server pronto 🥳');
+});
+
+// Auth routes
 app.use('/api/auth', authRoutes);
 console.log('[SERVER] ✅ Route /api/auth montate');
 
@@ -98,7 +105,7 @@ app.use((req, res) => {
 // ============= AVVIO SERVER =============
 app.listen(PORT, () => {
   console.log('='.repeat(50));
-  console.log(`[SERVER] 🚀 Server avviato su porta ${PORT}`);
+  console.log(`[SERVER] 🚀 Server avviato su porta ${PORT}: http://localhost:${PORT}/`);
   console.log(`[SERVER] 🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
   console.log(`[SERVER] 📍 Health check: http://localhost:${PORT}/health`);
   console.log(`[SERVER] 🔐 Auth endpoints: http://localhost:${PORT}/api/auth`);
