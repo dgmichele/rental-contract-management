@@ -228,11 +228,7 @@ export const forgotPasswordController = async (
   try {
     const { email } = forgotPasswordSchema.parse(req.body);
 
-    // Genera token di reset
-    const token = await authService.requestPasswordReset(email);
-
-    // Invia email
-    await emailService.sendPasswordResetEmail(email, token);
+    await authService.requestPasswordReset(email); // Invio email gestito in auth.service.ts
 
     res.status(200).json({
       success: true,
