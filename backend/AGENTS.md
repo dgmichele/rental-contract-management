@@ -112,6 +112,7 @@ backend/
 ├── .env.production
 ├── .gitignore
 ├── jest.config.js
+├── jest.global-setup.ts
 ├── package.json
 ├── server.ts
 └── tsconfig.json
