@@ -21,7 +21,7 @@ import {
 import AppError from '../utils/AppError';
 import crypto from 'crypto';
 import dayjs from 'dayjs';
-import { sendPasswordResetEmail } from '../services/email.services';
+import { sendPasswordResetEmail } from './email.service';
 import { PasswordResetToken } from '../types/database';
 
 const SALT_ROUNDS = 10;

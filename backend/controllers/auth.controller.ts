@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import * as authService from '../services/auth.services';
-import * as emailService from '../services/email.services';
+import * as authService from '../services/auth.service';
 import AppError from '../utils/AppError';
 
 // ============= ZOD SCHEMAS =============
