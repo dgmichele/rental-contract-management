@@ -32,6 +32,20 @@ export interface Owner {
   updated_at: Date;
 }
 
+export interface CreateOwnerRequest {
+  name: string;
+  surname: string;
+  phone: string;
+  email: string;
+}
+
+export interface UpdateOwnerRequest {
+  name?: string;
+  surname?: string;
+  phone?: string;
+  email?: string;
+}
+
 export interface Tenant {
   id: number;
   name: string;

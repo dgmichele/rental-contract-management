@@ -104,6 +104,7 @@ backend/
 │   └── database.ts
 │   └── index.ts
 │   └── shared.ts
+│   └── express.d.ts
 ├── utils/
 │   ├── AppError.ts
 │   ├── errorHandler.ts

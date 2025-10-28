@@ -8,6 +8,7 @@ import path from 'path';
 // Import routes
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
+import ownerRoutes from './routes/owner.routes';
 
 // Carica le variabili d'ambiente in base a NODE_ENV
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.dev';
@@ -89,6 +90,10 @@ console.log('[SERVER] ✅ Route /api/auth montate');
 // User routes
 app.use('/api/user', userRoutes);
 console.log('[SERVER] ✅ Route /api/user montate');
+
+// Owner routes
+app.use('/api/owner', ownerRoutes);
+console.log('[SERVER] ✅ Route /api/owner montate');
 
 // ============= 404 HANDLER =============
 app.use((req, res) => {
