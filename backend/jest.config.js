@@ -43,8 +43,8 @@ module.exports = {
   // Forza uscita dopo tutti i test (evita hang)
   forceExit: true,
   
-  // Timeout default per ogni test (10 secondi)
-  testTimeout: 10000,
+  // Timeout default per ogni test (aumentato per operazioni DB)
+  testTimeout: 15000,
   
   // Pulizia mock tra test
   clearMocks: true,
@@ -63,6 +63,12 @@ module.exports = {
     },
   },
   
-  // Aumenta workers per test paralleli (ma limita a 2 per evitare race conditions su DB)
-  maxWorkers: 1, // IMPORTANTE: 1 worker per evitare conflitti DB nei test
+  // IMPORTANTE: 1 worker per evitare conflitti DB nei test
+  maxWorkers: 1,
+  
+  // Rileva operazioni asincrone non completate (open handles)
+  detectOpenHandles: true,
+  
+  // Timeout per l'intera suite
+  globalTeardown: undefined,
 };

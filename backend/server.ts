@@ -103,24 +103,29 @@ app.use((req, res) => {
 });
 
 // ============= AVVIO SERVER =============
-app.listen(PORT, () => {
-  console.log('='.repeat(50));
-  console.log(`[SERVER] 🚀 Server avviato su porta ${PORT}: http://localhost:${PORT}/`);
-  console.log(`[SERVER] 🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`[SERVER] 📍 Health check: http://localhost:${PORT}/health`);
-  console.log(`[SERVER] 🔐 Auth endpoints: http://localhost:${PORT}/api/auth`);
-  console.log('='.repeat(50));
-});
+// Avvia il server solo se non siamo in ambiente di test
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log('='.repeat(50));
+    console.log(`[SERVER] 🚀 Server avviato su porta ${PORT}: http://localhost:${PORT}/`);
+    console.log(`[SERVER] 🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`[SERVER] 📍 Health check: http://localhost:${PORT}/health`);
+    console.log(`[SERVER] 🔐 Auth endpoints: http://localhost:${PORT}/api/auth`);
+    console.log('='.repeat(50));
+  });
 
-// ============= GRACEFUL SHUTDOWN =============
-process.on('SIGTERM', () => {
-  console.log('[SERVER] SIGTERM ricevuto, chiusura graceful...');
-  process.exit(0);
-});
+  // ============= GRACEFUL SHUTDOWN =============
+  process.on('SIGTERM', () => {
+    console.log('[SERVER] SIGTERM ricevuto, chiusura graceful...');
+    // Qui andrebbe la logica di chiusura delle connessioni (es. DB)
+    process.exit(0);
+  });
 
-process.on('SIGINT', () => {
-  console.log('[SERVER] SIGINT ricevuto, chiusura graceful...');
-  process.exit(0);
-});
+  process.on('SIGINT', () => {
+    console.log('[SERVER] SIGINT ricevuto, chiusura graceful...');
+    // Qui andrebbe la logica di chiusura delle connessioni (es. DB)
+    process.exit(0);
+  });
+}
 
 export default app;

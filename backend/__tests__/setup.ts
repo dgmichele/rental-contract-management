@@ -56,15 +56,19 @@ beforeEach(async () => {
     // IMPORTANTE: Pulisci in ordine inverso alle dipendenze (per rispettare FK)
     // Le tabelle figlie vanno eliminate prima delle tabelle parent
     
-    await db('notifications').del();
-    await db('annuities').del();
-    await db('contracts').del();
-    await db('tenants').del();
-    await db('owners').del();
-    await db('blacklisted_tokens').del();
-    await db('refresh_tokens').del();
-    await db('password_reset_tokens').del();
-    await db('users').del();
+    // Usa TRUNCATE CASCADE per una pulizia più robusta e veloce
+    await db.raw('TRUNCATE TABLE notifications CASCADE');
+    await db.raw('TRUNCATE TABLE annuities CASCADE');
+    await db.raw('TRUNCATE TABLE contracts CASCADE');
+    await db.raw('TRUNCATE TABLE tenants CASCADE');
+    await db.raw('TRUNCATE TABLE owners CASCADE');
+    await db.raw('TRUNCATE TABLE blacklisted_tokens CASCADE');
+    await db.raw('TRUNCATE TABLE refresh_tokens CASCADE');
+    await db.raw('TRUNCATE TABLE password_reset_tokens CASCADE');
+    await db.raw('TRUNCATE TABLE users RESTART IDENTITY CASCADE');
+    
+    // Aspetta che tutte le operazioni siano completate
+    await new Promise(resolve => setTimeout(resolve, 50));
     
     console.log('[TEST_SETUP] ✅ Tabelle pulite');
   } catch (error) {
@@ -77,7 +81,12 @@ afterAll(async () => {
   console.log('[TEST_SETUP] 🛑 Chiusura connessione DB');
   
   try {
+    // Aspetta che tutte le query pending siano completate
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Chiudi tutte le connessioni al pool
     await db.destroy();
+    
     console.log('[TEST_SETUP] ✅ Connessione DB chiusa');
   } catch (error) {
     console.error('[TEST_SETUP] ❌ Errore chiusura DB:', error);

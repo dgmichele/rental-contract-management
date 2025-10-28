@@ -4,7 +4,7 @@ import db from '../../config/db';
 import * as emailService from '../../services/email.services';
 import dayjs from 'dayjs';
 import bcrypt from 'bcrypt';
-import { beforeEach, afterEach, it, expect, describe, jest } from '@jest/globals';
+import { beforeEach, afterEach, afterAll, it, expect, describe, jest } from '@jest/globals';
 
 /**
  * Test suite completa per autenticazione.
@@ -17,6 +17,12 @@ const mockedEmailService = emailService as jest.Mocked<typeof emailService>;
 
 describe('Auth Integration Tests', () => {
   
+  // Pulizia dopo OGNI test per evitare contaminazione
+  afterEach(async () => {
+    // Aspetta che tutte le operazioni pending siano completate
+    await new Promise(resolve => setTimeout(resolve, 100));
+  });
+
   // ============= REGISTER TESTS =============
   describe('POST /api/auth/register', () => {
     
@@ -67,6 +73,9 @@ describe('Auth Integration Tests', () => {
         .post('/api/auth/register')
         .send(validRegisterData);
 
+      // Aspetta che il primo inserimento sia completato
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // Tenta registrazione duplicata
       const response = await request(app)
         .post('/api/auth/register')
@@ -80,6 +89,7 @@ describe('Auth Integration Tests', () => {
     it('❌ Dovrebbe fallire con password debole', async () => {
       const weakPasswordData = {
         ...validRegisterData,
+        email: 'weak@test.com', // Email unica per evitare conflitti
         password: 'weak', // Troppo corta, senza maiuscole/numeri
       };
 
@@ -134,6 +144,9 @@ describe('Auth Integration Tests', () => {
           surname: 'Verdi',
           ...userCredentials,
         });
+      
+      // Aspetta che la registrazione sia completata
+      await new Promise(resolve => setTimeout(resolve, 100));
     });
 
     it('✅ Dovrebbe fare login con credenziali corrette', async () => {
@@ -207,6 +220,9 @@ describe('Auth Integration Tests', () => {
 
       validRefreshToken = registerResponse.body.data.refreshToken;
       userId = registerResponse.body.data.user.id;
+      
+      // Aspetta che sia tutto salvato
+      await new Promise(resolve => setTimeout(resolve, 100));
     });
 
     it('✅ Dovrebbe rinnovare access token con refresh token valido', async () => {
@@ -224,6 +240,9 @@ describe('Auth Integration Tests', () => {
     it('❌ Dovrebbe fallire con refresh token blacklisted', async () => {
       // Blacklista il token
       await db('blacklisted_tokens').insert({ token: validRefreshToken });
+      
+      // Aspetta che l'inserimento sia completato
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       const response = await request(app)
         .post('/api/auth/refresh')
@@ -282,6 +301,9 @@ describe('Auth Integration Tests', () => {
         });
 
       refreshToken = response.body.data.refreshToken;
+      
+      // Aspetta che sia tutto salvato
+      await new Promise(resolve => setTimeout(resolve, 100));
     });
 
     it('✅ Dovrebbe fare logout e blacklistare il token', async () => {
@@ -292,6 +314,9 @@ describe('Auth Integration Tests', () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Logout effettuato con successo');
+
+      // Aspetta che il token sia blacklistato
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Verifica che il token sia stato blacklistato
       const blacklistedToken = await db('blacklisted_tokens')
@@ -307,6 +332,9 @@ describe('Auth Integration Tests', () => {
         .post('/api/auth/logout')
         .send({ refreshToken })
         .expect(200);
+
+      // Aspetta che il primo logout sia completato
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Secondo logout con stesso token
       const response = await request(app)
@@ -345,6 +373,9 @@ describe('Auth Integration Tests', () => {
           email: userEmail,
           password: 'ForgotPass123',
         });
+      
+      // Aspetta che la registrazione sia completata
+      await new Promise(resolve => setTimeout(resolve, 100));
     });
 
     it('✅ Dovrebbe inviare email reset e creare token', async () => {
@@ -355,6 +386,9 @@ describe('Auth Integration Tests', () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.message).toContain('Email per il reset della password inviata');
+
+      // Aspetta che il token sia creato
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Verifica che il token sia stato creato nel DB
       const tokenInDb = await db('password_reset_tokens')
@@ -423,6 +457,9 @@ describe('Auth Integration Tests', () => {
       });
 
       validToken = token;
+      
+      // Aspetta che sia tutto salvato
+      await new Promise(resolve => setTimeout(resolve, 100));
     });
 
     it('✅ Dovrebbe resettare password con token valido', async () => {
@@ -436,6 +473,9 @@ describe('Auth Integration Tests', () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Password resettata con successo');
+
+      // Aspetta che l'aggiornamento sia completato
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Verifica che la password sia stata aggiornata
       const updatedUser = await db('users').where({ id: userId }).first();
@@ -458,6 +498,9 @@ describe('Auth Integration Tests', () => {
         expires_at: dayjs().subtract(1, 'hour').toDate(), // Scaduto
         used: false,
       });
+      
+      // Aspetta che l'inserimento sia completato
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       const response = await request(app)
         .post('/api/auth/reset-password')
@@ -476,6 +519,9 @@ describe('Auth Integration Tests', () => {
       await db('password_reset_tokens')
         .where({ token: validToken })
         .update({ used: true });
+      
+      // Aspetta che l'aggiornamento sia completato
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       const response = await request(app)
         .post('/api/auth/reset-password')

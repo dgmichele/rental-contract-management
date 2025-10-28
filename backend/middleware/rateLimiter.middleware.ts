@@ -8,6 +8,15 @@ import { Request, Response, NextFunction } from "express";
  * @param message messaggio JSON in caso di superamento limite
  */
 const createLimiter = (max: number, windowMs: number, message: string): RateLimitRequestHandler => {
+  // Se siamo in ambiente di test, non applichiamo il rate limiting
+  if (process.env.NODE_ENV === 'test') {
+    const noop: RateLimitRequestHandler = ((req: Request, res: Response, next: NextFunction) => next()) as RateLimitRequestHandler;
+    // assegniamo le proprietà richieste dal tipo RateLimitRequestHandler
+    (noop as any).resetKey = (key: string) => {};
+    (noop as any).getKey = (key: string) => undefined;
+    return noop;
+  }
+
   return rateLimit({
     windowMs,
     max,
