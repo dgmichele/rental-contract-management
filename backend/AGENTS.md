@@ -110,6 +110,7 @@ backend/
 │   └── token.utils.ts
 ├── .env.dev
 ├── .env.production
+├── .env.test
 ├── .gitignore
 ├── jest.config.js
 ├── jest.global-setup.ts

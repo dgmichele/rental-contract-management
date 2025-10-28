@@ -10,6 +10,17 @@ export interface User {
   updated_at: Date;
 }
 
+export interface UpdateUserRequest {
+  name: string;
+  surname: string;
+  email: string;
+}
+
+export interface UpdatePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
 export interface Owner {
   id: number;
   name: string;

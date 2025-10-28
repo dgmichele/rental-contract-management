@@ -7,6 +7,7 @@ import path from 'path';
 
 // Import routes
 import authRoutes from './routes/auth.routes';
+import userRoutes from './routes/user.routes';
 
 // Carica le variabili d'ambiente in base a NODE_ENV
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.dev';
@@ -85,14 +86,9 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 console.log('[SERVER] ✅ Route /api/auth montate');
 
-// TODO: Aggiungere altre routes nella Fase 2
-// app.use('/api/users', authMiddleware, userRoutes);
-// app.use('/api/owners', authMiddleware, ownerRoutes);
-// app.use('/api/contracts', authMiddleware, contractRoutes);
-// app.use('/api/dashboard', authMiddleware, dashboardRoutes);
-
-// ============= ERROR HANDLER =============
-app.use(errorHandler);
+// User routes
+app.use('/api/user', userRoutes);
+console.log('[SERVER] ✅ Route /api/user montate');
 
 // ============= 404 HANDLER =============
 app.use((req, res) => {
@@ -101,6 +97,9 @@ app.use((req, res) => {
     message: 'Endpoint non trovato',
   });
 });
+
+// ============= ERROR HANDLER =============
+app.use(errorHandler);
 
 // ============= AVVIO SERVER =============
 // Avvia il server solo se non siamo in ambiente di test
