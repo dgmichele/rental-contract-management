@@ -1,39 +1,61 @@
 import db from '../config/db';
 import * as path from 'path';
-
+import { beforeAll, beforeEach, afterAll } from '@jest/globals';
 
 /**
- * Setup globale per tutti i test.
- * - beforeAll: Esegue migrations sul DB di test
- * - beforeEach: Pulisce tutte le tabelle prima di ogni test
+ * Setup per ogni test suite.
+ * - beforeAll: Esegue migrations e verifica connessione
+ * - beforeEach: Pulisce tutte le tabelle (in ordine corretto per FK)
  * - afterAll: Chiude connessione DB
  */
 
 beforeAll(async () => {
   console.log('[TEST_SETUP] 🚀 Inizio setup test suite');
+  console.log('[TEST_SETUP] NODE_ENV:', process.env.NODE_ENV);
+  console.log('[TEST_SETUP] DB_NAME:', process.env.DB_NAME);
   
   try {
     // Verifica connessione DB
     await db.raw('SELECT 1');
     console.log('[TEST_SETUP] ✅ Connessione DB stabilita');
 
-    // Esegui migrations (crea tutte le tabelle)
+    // Rollback di tutte le migrations (per partire puliti)
+    await db.migrate.rollback(
+      {
+        directory: path.resolve(__dirname, '..', 'db', 'migrations'),
+      },
+      true // all: true = rollback completo
+    );
+    console.log('[TEST_SETUP] ✅ Rollback migrations completato');
+
+    // Esegui tutte le migrations (crea tutte le tabelle)
     await db.migrate.latest({
       directory: path.resolve(__dirname, '..', 'db', 'migrations'),
     });
     console.log('[TEST_SETUP] ✅ Migrations completate');
+
+    // Verifica che le tabelle siano state create
+    const tables = await db.raw(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_type = 'BASE TABLE'
+    `);
+    
+    console.log('[TEST_SETUP] ✅ Tabelle create:', tables.rows.map((r: any) => r.table_name).join(', '));
   } catch (error) {
     console.error('[TEST_SETUP] ❌ Errore setup:', error);
     throw error;
   }
-});
+}, 30000); // Timeout 30s per migrations
 
 beforeEach(async () => {
   console.log('[TEST_SETUP] 🧹 Pulizia tabelle...');
   
   try {
-    // Pulisci tutte le tabelle in ordine inverso alle dipendenze
-    // (per rispettare i foreign key constraints)
+    // IMPORTANTE: Pulisci in ordine inverso alle dipendenze (per rispettare FK)
+    // Le tabelle figlie vanno eliminate prima delle tabelle parent
+    
     await db('notifications').del();
     await db('annuities').del();
     await db('contracts').del();

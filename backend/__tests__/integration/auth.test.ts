@@ -4,6 +4,7 @@ import db from '../../config/db';
 import * as emailService from '../../services/email.services';
 import dayjs from 'dayjs';
 import bcrypt from 'bcrypt';
+import { beforeEach, afterEach, it, expect, describe, jest } from '@jest/globals';
 
 /**
  * Test suite completa per autenticazione.
