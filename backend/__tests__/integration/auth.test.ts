@@ -1,7 +1,7 @@
 import request from 'supertest';
 import app from '../../server';
 import db from '../../config/db';
-import * as emailService from '../../services/email.services';
+import * as emailService from '../../services/email.service';
 import dayjs from 'dayjs';
 import bcrypt from 'bcrypt';
 import { beforeEach, afterEach, afterAll, it, expect, describe, jest } from '@jest/globals';
@@ -12,15 +12,14 @@ import { beforeEach, afterEach, afterAll, it, expect, describe, jest } from '@je
  */
 
 // Mock del servizio email per evitare invii reali durante i test
-jest.mock('../../services/email.services');
+jest.mock('../../services/email.service');
 const mockedEmailService = emailService as jest.Mocked<typeof emailService>;
 
 describe('Auth Integration Tests', () => {
   
-  // Pulizia dopo OGNI test per evitare contaminazione
+  // Pulizia dopo OGNI test per evitare contaminazione (aumentato timeout a 200ms)
   afterEach(async () => {
-    // Aspetta che tutte le operazioni pending siano completate
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 200));
   });
 
   // ============= REGISTER TESTS =============
@@ -74,7 +73,7 @@ describe('Auth Integration Tests', () => {
         .send(validRegisterData);
 
       // Aspetta che il primo inserimento sia completato
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
 
       // Tenta registrazione duplicata
       const response = await request(app)
@@ -89,8 +88,8 @@ describe('Auth Integration Tests', () => {
     it('❌ Dovrebbe fallire con password debole', async () => {
       const weakPasswordData = {
         ...validRegisterData,
-        email: 'weak@test.com', // Email unica per evitare conflitti
-        password: 'weak', // Troppo corta, senza maiuscole/numeri
+        email: 'weak@test.com',
+        password: 'weak',
       };
 
       const response = await request(app)
@@ -120,7 +119,7 @@ describe('Auth Integration Tests', () => {
     it('❌ Dovrebbe fallire con campi mancanti', async () => {
       const response = await request(app)
         .post('/api/auth/register')
-        .send({ email: 'test@test.com' }) // Mancano name, surname, password
+        .send({ email: 'test@test.com' })
         .expect(400);
 
       expect(response.body.success).toBe(false);
@@ -145,8 +144,7 @@ describe('Auth Integration Tests', () => {
           ...userCredentials,
         });
       
-      // Aspetta che la registrazione sia completata
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
     });
 
     it('✅ Dovrebbe fare login con credenziali corrette', async () => {
@@ -208,7 +206,6 @@ describe('Auth Integration Tests', () => {
     let userId: number;
 
     beforeEach(async () => {
-      // Crea utente e ottieni refresh token
       const registerResponse = await request(app)
         .post('/api/auth/register')
         .send({
@@ -221,8 +218,7 @@ describe('Auth Integration Tests', () => {
       validRefreshToken = registerResponse.body.data.refreshToken;
       userId = registerResponse.body.data.user.id;
       
-      // Aspetta che sia tutto salvato
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
     });
 
     it('✅ Dovrebbe rinnovare access token con refresh token valido', async () => {
@@ -238,11 +234,8 @@ describe('Auth Integration Tests', () => {
     });
 
     it('❌ Dovrebbe fallire con refresh token blacklisted', async () => {
-      // Blacklista il token
       await db('blacklisted_tokens').insert({ token: validRefreshToken });
-      
-      // Aspetta che l'inserimento sia completato
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
 
       const response = await request(app)
         .post('/api/auth/refresh')
@@ -254,7 +247,6 @@ describe('Auth Integration Tests', () => {
     });
 
     it('❌ Dovrebbe fallire con refresh token non esistente in DB', async () => {
-      // Token valido sintatticamente ma non in DB
       const fakeToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjk5OTksImVtYWlsIjoidGVzdEB0ZXN0LmNvbSIsImlhdCI6MTYwMDAwMDAwMCwiZXhwIjoxOTAwMDAwMDAwfQ.fake_signature';
 
       const response = await request(app)
@@ -290,7 +282,6 @@ describe('Auth Integration Tests', () => {
     let refreshToken: string;
 
     beforeEach(async () => {
-      // Crea utente e ottieni refresh token
       const response = await request(app)
         .post('/api/auth/register')
         .send({
@@ -301,9 +292,7 @@ describe('Auth Integration Tests', () => {
         });
 
       refreshToken = response.body.data.refreshToken;
-      
-      // Aspetta che sia tutto salvato
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
     });
 
     it('✅ Dovrebbe fare logout e blacklistare il token', async () => {
@@ -315,10 +304,8 @@ describe('Auth Integration Tests', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Logout effettuato con successo');
 
-      // Aspetta che il token sia blacklistato
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Verifica che il token sia stato blacklistato
       const blacklistedToken = await db('blacklisted_tokens')
         .where({ token: refreshToken })
         .first();
@@ -327,16 +314,13 @@ describe('Auth Integration Tests', () => {
     });
 
     it('✅ Dovrebbe gestire logout idempotente (token già blacklistato)', async () => {
-      // Primo logout
       await request(app)
         .post('/api/auth/logout')
         .send({ refreshToken })
         .expect(200);
 
-      // Aspetta che il primo logout sia completato
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Secondo logout con stesso token
       const response = await request(app)
         .post('/api/auth/logout')
         .send({ refreshToken })
@@ -361,10 +345,8 @@ describe('Auth Integration Tests', () => {
     const userEmail = 'forgot@test.com';
 
     beforeEach(async () => {
-      // Mock dell'email service
       mockedEmailService.sendPasswordResetEmail.mockResolvedValue();
 
-      // Crea utente
       await request(app)
         .post('/api/auth/register')
         .send({
@@ -374,8 +356,7 @@ describe('Auth Integration Tests', () => {
           password: 'ForgotPass123',
         });
       
-      // Aspetta che la registrazione sia completata
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
     });
 
     it('✅ Dovrebbe inviare email reset e creare token', async () => {
@@ -387,10 +368,8 @@ describe('Auth Integration Tests', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.message).toContain('Email per il reset della password inviata');
 
-      // Aspetta che il token sia creato
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Verifica che il token sia stato creato nel DB
       const tokenInDb = await db('password_reset_tokens')
         .where({ used: false })
         .orderBy('created_at', 'desc')
@@ -400,15 +379,13 @@ describe('Auth Integration Tests', () => {
       expect(tokenInDb.token).toBeTruthy();
       expect(dayjs(tokenInDb.expires_at).isAfter(dayjs())).toBe(true);
 
-      // Verifica che l'email service sia stato chiamato
       expect(mockedEmailService.sendPasswordResetEmail).toHaveBeenCalledWith(
         userEmail,
         expect.any(String)
       );
     });
 
-    it('❌ Dovrebbe fallire con email non registrata ma non rivelare che non esiste', async () => {
-      // Per sicurezza, la response dovrebbe essere uguale anche se email non esiste
+    it('❌ Dovrebbe fallire con email non registrata', async () => {
       const response = await request(app)
         .post('/api/auth/forgot-password')
         .send({ email: 'nonexistent@test.com' })
@@ -435,7 +412,6 @@ describe('Auth Integration Tests', () => {
     const newPassword = 'NewSecurePass123';
 
     beforeEach(async () => {
-      // Crea utente
       const user = await db('users')
         .insert({
           name: 'Reset',
@@ -447,7 +423,6 @@ describe('Auth Integration Tests', () => {
 
       userId = user[0].id;
 
-      // Crea token reset valido
       const token = 'valid_reset_token_abc123';
       await db('password_reset_tokens').insert({
         user_id: userId,
@@ -457,9 +432,7 @@ describe('Auth Integration Tests', () => {
       });
 
       validToken = token;
-      
-      // Aspetta che sia tutto salvato
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
     });
 
     it('✅ Dovrebbe resettare password con token valido', async () => {
@@ -474,15 +447,12 @@ describe('Auth Integration Tests', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Password resettata con successo');
 
-      // Aspetta che l'aggiornamento sia completato
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Verifica che la password sia stata aggiornata
       const updatedUser = await db('users').where({ id: userId }).first();
       const passwordMatches = await bcrypt.compare(newPassword, updatedUser.password_hash);
       expect(passwordMatches).toBe(true);
 
-      // Verifica che il token sia marcato come usato
       const tokenRecord = await db('password_reset_tokens')
         .where({ token: validToken })
         .first();
@@ -490,17 +460,15 @@ describe('Auth Integration Tests', () => {
     });
 
     it('❌ Dovrebbe fallire con token scaduto', async () => {
-      // Crea token scaduto
       const expiredToken = 'expired_token_xyz';
       await db('password_reset_tokens').insert({
         user_id: userId,
         token: expiredToken,
-        expires_at: dayjs().subtract(1, 'hour').toDate(), // Scaduto
+        expires_at: dayjs().subtract(1, 'hour').toDate(),
         used: false,
       });
       
-      // Aspetta che l'inserimento sia completato
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
 
       const response = await request(app)
         .post('/api/auth/reset-password')
@@ -515,13 +483,11 @@ describe('Auth Integration Tests', () => {
     });
 
     it('❌ Dovrebbe fallire con token già usato', async () => {
-      // Marca token come usato
       await db('password_reset_tokens')
         .where({ token: validToken })
         .update({ used: true });
       
-      // Aspetta che l'aggiornamento sia completato
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
 
       const response = await request(app)
         .post('/api/auth/reset-password')

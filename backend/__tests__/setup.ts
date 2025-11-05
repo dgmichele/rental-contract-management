@@ -67,8 +67,8 @@ beforeEach(async () => {
     await db.raw('TRUNCATE TABLE password_reset_tokens CASCADE');
     await db.raw('TRUNCATE TABLE users RESTART IDENTITY CASCADE');
     
-    // Aspetta che tutte le operazioni siano completate
-    await new Promise(resolve => setTimeout(resolve, 50));
+    // Aspetta che tutte le operazioni siano completate (aumentato a 200ms per maggiore robustezza)
+    await new Promise(resolve => setTimeout(resolve, 200));
     
     console.log('[TEST_SETUP] ✅ Tabelle pulite');
   } catch (error) {
@@ -81,7 +81,7 @@ afterAll(async () => {
   console.log('[TEST_SETUP] 🛑 Chiusura connessione DB');
   
   try {
-    // Aspetta che tutte le query pending siano completate
+    // Aspetta che tutte le query pending siano completate (aumentato a 500ms)
     await new Promise(resolve => setTimeout(resolve, 500));
     
     // Chiudi tutte le connessioni al pool

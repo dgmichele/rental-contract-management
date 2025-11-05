@@ -1,28 +1,12 @@
 import knex from "knex";
-import * as dotenv from "dotenv";
-import * as path from "path";
 
 /**
  * Configurazione database con supporto per environment test, dev e production.
- * Carica automaticamente il file .env corretto in base a NODE_ENV.
+ * 
+ * IMPORTANTE: Le variabili d'ambiente vengono caricate da server.ts o setup.ts,
+ * NON caricare dotenv qui per evitare duplicazioni.
  */
 
-// Determina quale file .env caricare
-let envFile: string;
-
-if (process.env.NODE_ENV === "test") {
-  envFile = ".env.test";
-} else if (process.env.NODE_ENV === "production") {
-  envFile = ".env.production";
-} else {
-  envFile = ".env.dev";
-}
-
-// Carica le variabili d'ambiente
-const envPath = path.resolve(__dirname, "..", envFile);
-dotenv.config({ path: envPath });
-
-console.log(`[DB_CONFIG] Caricamento env da: ${envFile}`);
 console.log(`[DB_CONFIG] NODE_ENV: ${process.env.NODE_ENV}`);
 console.log(`[DB_CONFIG] DB_NAME: ${process.env.DB_NAME}`);
 
@@ -43,8 +27,8 @@ const db = knex({
     min: 2,
     max: 10,
   },
-  // IMPORTANTE: Abilita debug SQL solo in development, non in test per evitare log verbosi
-  debug: process.env.NODE_ENV === "development" ? false : false,
+  // Debug SQL disabilitato per evitare log verbosi
+  debug: false,
 });
 
 export default db;

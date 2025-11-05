@@ -1,21 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/token.utils';
 import { JwtPayload } from '../types/auth';
-import  db  from '../config/db';
+import db from '../config/db';
 import AppError from '../utils/AppError';
-
-/**
- * Estende il tipo Request di Express per includere l'utente autenticato.
- */
-export interface AuthenticatedRequest extends Request {
-  user?: JwtPayload;
-}
+import { AuthenticatedRequest } from '../types/express';
 
 /**
  * Middleware di autenticazione JWT.
  * Verifica la presenza e validità dell'access token nell'header Authorization.
  * Controlla che il token non sia in blacklist.
- * Aggiunge i dati utente (userId, email) a req.user per uso nei controller.
+ * Aggiunge userId e userEmail a req per uso nei controller.
  * 
  * @throws AppError 401 se token mancante, invalido, scaduto o blacklisted
  */
@@ -71,13 +65,11 @@ export const authMiddleware = async (
       throw new AppError('Utente non autorizzato', 401);
     }
 
-    // 5. Attach dei dati utente alla request
-    req.user = {
-      userId: decoded.userId,
-      email: decoded.email,
-    };
+    // 5. Attach dei dati utente alla request (STANDARDIZZATO)
+    req.userId = decoded.userId;
+    req.userEmail = decoded.email;
 
-    console.log('[AUTH_MIDDLEWARE] Autenticazione completata, userId:', req.user.userId);
+    console.log('[AUTH_MIDDLEWARE] Autenticazione completata, userId:', req.userId);
 
     // 6. Passa al prossimo middleware/controller
     next();
