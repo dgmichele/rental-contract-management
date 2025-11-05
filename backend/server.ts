@@ -1,18 +1,20 @@
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Carica le variabili d'ambiente prima di qualsiasi altro import
+// Questo è cruciale per assicurare che le variabili siano disponibili a tutti i moduli
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.dev';
+dotenv.config({ path: path.resolve(__dirname, envFile) });
+
 import express, { Application } from 'express';
 import { errorHandler } from './middleware/errorHandler.middleware';
 import cors from 'cors';
 import helmet from 'helmet';
-import dotenv from 'dotenv';
-import path from 'path';
 
 // Import routes
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import ownerRoutes from './routes/owner.routes';
-
-// Carica le variabili d'ambiente in base a NODE_ENV
-const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.dev';
-dotenv.config({ path: path.resolve(__dirname, envFile) });
 
 // ============= VALIDAZIONE VARIABILI D'AMBIENTE =============
 const requiredEnvVars = [
