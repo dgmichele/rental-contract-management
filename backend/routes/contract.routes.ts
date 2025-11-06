@@ -1,0 +1,63 @@
+import { Router, RequestHandler } from 'express';
+import * as contractController from '../controllers/contract.controller';
+import { authMiddleware } from '../middleware/auth.middleware';
+
+const router = Router();
+
+/**
+ * Tutte le routes contract richiedono autenticazione.
+ * Il middleware auth aggiunge userId e userEmail alla request.
+ */
+router.use(authMiddleware as RequestHandler);
+
+/**
+ * @route   GET /api/contracts
+ * @desc    Ottieni lista contratti con filtri e paginazione
+ * @access  Private (richiede JWT)
+ * @query   page, limit, ownerId (opzionale), search (opzionale), expiryMonth (opzionale), expiryYear (opzionale)
+ * @example GET /api/contracts?page=1&limit=12&ownerId=5&search=mario&expiryMonth=10&expiryYear=2025
+ */
+router.get('/', contractController.getContractsController as RequestHandler);
+
+/**
+ * @route   GET /api/contracts/:id
+ * @desc    Ottieni dettagli completi di un singolo contratto
+ * @access  Private (richiede JWT)
+ * @returns Contratto con dettagli owner e tenant (NO annuities in Fase 2)
+ */
+router.get('/:id', contractController.getContractByIdController as RequestHandler);
+
+/**
+ * @route   POST /api/contracts
+ * @desc    Crea nuovo contratto
+ * @access  Private (richiede JWT)
+ * @body    { owner_id, tenant_id OR tenant_data, start_date, end_date, cedolare_secca, typology, canone_concordato, monthly_rent, last_annuity_paid? }
+ * @note    Se tenant_data fornito, crea nuovo tenant; altrimenti usa tenant_id esistente
+ */
+router.post('/', contractController.createContractController as RequestHandler);
+
+/**
+ * @route   PUT /api/contracts/:id
+ * @desc    Aggiorna contratto esistente
+ * @access  Private (richiede JWT)
+ * @body    Campi opzionali da aggiornare
+ */
+router.put('/:id', contractController.updateContractController as RequestHandler);
+
+/**
+ * @route   DELETE /api/contracts/:id
+ * @desc    Elimina contratto (CASCADE annuities)
+ * @access  Private (richiede JWT)
+ */
+router.delete('/:id', contractController.deleteContractController as RequestHandler);
+
+/**
+ * ============= ROUTES NON IMPLEMENTATE (FASE 3) =============
+ * 
+ * Le seguenti routes verranno implementate in Fase 3:
+ * - PUT /api/contracts/:id/renew - Rinnovo contratto
+ * - PUT /api/contracts/:id/annuity - Aggiorna annualità successiva
+ * - GET /api/contracts/:id/annuities - Timeline annualità contratto
+ */
+
+export default router;

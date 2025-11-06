@@ -15,6 +15,7 @@ import helmet from 'helmet';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import ownerRoutes from './routes/owner.routes';
+import contractRoutes from './routes/contract.routes';
 
 // ============= VALIDAZIONE VARIABILI D'AMBIENTE =============
 const requiredEnvVars = [
@@ -96,6 +97,10 @@ console.log('[SERVER] ✅ Route /api/user montate');
 // Owner routes
 app.use('/api/owner', ownerRoutes);
 console.log('[SERVER] ✅ Route /api/owner montate');
+
+// Contract routes
+app.use('/api/contract', contractRoutes);
+console.log('[SERVER] ✅ Route /api/contract montate');
 
 // ============= 404 HANDLER =============
 app.use((req, res) => {
