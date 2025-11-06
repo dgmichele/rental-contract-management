@@ -11,16 +11,16 @@ const router = Router();
 router.use(authMiddleware as RequestHandler);
 
 /**
- * @route   GET /api/contracts
+ * @route   GET /api/contract
  * @desc    Ottieni lista contratti con filtri e paginazione
  * @access  Private (richiede JWT)
  * @query   page, limit, ownerId (opzionale), search (opzionale), expiryMonth (opzionale), expiryYear (opzionale)
- * @example GET /api/contracts?page=1&limit=12&ownerId=5&search=mario&expiryMonth=10&expiryYear=2025
+ * @example GET /api/contract?page=1&limit=12&ownerId=5&search=mario&expiryMonth=10&expiryYear=2025
  */
 router.get('/', contractController.getContractsController as RequestHandler);
 
 /**
- * @route   GET /api/contracts/:id
+ * @route   GET /api/contract/:id
  * @desc    Ottieni dettagli completi di un singolo contratto
  * @access  Private (richiede JWT)
  * @returns Contratto con dettagli owner e tenant (NO annuities in Fase 2)
@@ -28,7 +28,7 @@ router.get('/', contractController.getContractsController as RequestHandler);
 router.get('/:id', contractController.getContractByIdController as RequestHandler);
 
 /**
- * @route   POST /api/contracts
+ * @route   POST /api/contract
  * @desc    Crea nuovo contratto
  * @access  Private (richiede JWT)
  * @body    { owner_id, tenant_id OR tenant_data, start_date, end_date, cedolare_secca, typology, canone_concordato, monthly_rent, last_annuity_paid? }
@@ -37,7 +37,7 @@ router.get('/:id', contractController.getContractByIdController as RequestHandle
 router.post('/', contractController.createContractController as RequestHandler);
 
 /**
- * @route   PUT /api/contracts/:id
+ * @route   PUT /api/contract/:id
  * @desc    Aggiorna contratto esistente
  * @access  Private (richiede JWT)
  * @body    Campi opzionali da aggiornare
@@ -45,7 +45,7 @@ router.post('/', contractController.createContractController as RequestHandler);
 router.put('/:id', contractController.updateContractController as RequestHandler);
 
 /**
- * @route   DELETE /api/contracts/:id
+ * @route   DELETE /api/contract/:id
  * @desc    Elimina contratto (CASCADE annuities)
  * @access  Private (richiede JWT)
  */
@@ -55,9 +55,9 @@ router.delete('/:id', contractController.deleteContractController as RequestHand
  * ============= ROUTES NON IMPLEMENTATE (FASE 3) =============
  * 
  * Le seguenti routes verranno implementate in Fase 3:
- * - PUT /api/contracts/:id/renew - Rinnovo contratto
- * - PUT /api/contracts/:id/annuity - Aggiorna annualità successiva
- * - GET /api/contracts/:id/annuities - Timeline annualità contratto
+ * - PUT /api/contract/:id/renew - Rinnovo contratto
+ * - PUT /api/contract/:id/annuity - Aggiorna annualità successiva
+ * - GET /api/contract/:id/annuities - Timeline annualità contratto
  */
 
 export default router;

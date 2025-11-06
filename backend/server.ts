@@ -102,6 +102,11 @@ console.log('[SERVER] ✅ Route /api/owner montate');
 app.use('/api/contract', contractRoutes);
 console.log('[SERVER] ✅ Route /api/contract montate');
 
+// Dashboard routes
+import dashboardRoutes from "./routes/dashboard.routes";
+app.use("/api/dashboard", dashboardRoutes);
+console.log("[SERVER] ✅ Route /api/dashboard montate");
+
 // ============= 404 HANDLER =============
 app.use((req, res) => {
   res.status(404).json({

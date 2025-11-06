@@ -139,3 +139,12 @@ export interface ExpiringItem {
   expiryDate: string;
   annuityYear?: number;
 }
+
+// types/api.ts
+export interface DashboardStatsResponse {
+  totalOwners: number;
+  totalContracts: number;
+  totalMonthlyRent: number;
+  expiringContractsCurrentMonth: number;
+  expiringContractsNextMonth: number;
+}
