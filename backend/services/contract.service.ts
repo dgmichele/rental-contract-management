@@ -197,8 +197,8 @@ export const getContracts = async (
     }
 
     // Count totale (senza paginazione)
-    const [{ count }] = await query.clone().count<{ count: string }[]>('* as count');
-    const total = parseInt(count, 10);
+    const countResult = await query.clone().clearSelect().count<{ count: string }>('* as count').first();
+    const total = parseInt(countResult?.count || '0', 10);
 
     // Dati paginati
     const contracts = await query
