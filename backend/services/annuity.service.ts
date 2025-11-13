@@ -3,6 +3,8 @@ import { Contract, Annuity, NewAnnuity } from '../types/database';
 import AppError from '../utils/AppError';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { Knex } from 'knex';
+
 dayjs.extend(utc);
 
 /**
@@ -10,7 +12,7 @@ dayjs.extend(utc);
  * Logica:
  * - Se cedolare_secca: true → return []
  * - Calcola anni intermedi tra start_date e end_date (ESCLUSI primo e ultimo)
- * - Per ogni anno: crea annuity con due_date = start_date + N anni
+ * - Per ogni anno: crea annuity con two_date = start_date + N anni
  * - is_paid basato su last_annuity_paid del contratto
  * 
  * Esempi:
@@ -19,19 +21,22 @@ dayjs.extend(utc);
  * - 2025-2030: genera [2026, 2027, 2028, 2029]
  * 
  * @param contractId - ID del contratto
+ * @param trx - Transaction Knex opzionale (per uso in altre transaction)
  * @returns Array di annuities create (vuoto se cedolare secca)
  * @throws AppError 404 se contratto non trovato
  * @throws AppError 500 per errori generici
  */
 export const generateAnnuitiesForContract = async (
-  contractId: number
+  contractId: number,
+  trx?: Knex.Transaction
 ): Promise<Annuity[]> => {
   console.log('[ANNUITY_SERVICE] Generazione annuities per contractId:', contractId);
 
   try {
-    return await db.transaction(async (trx) => {
+    // Funzione helper per eseguire la logica
+    const executeGeneration = async (transaction: Knex.Transaction) => {
       // 1. Recupera il contratto
-      const contract = await trx<Contract>('contracts')
+      const contract = await transaction<Contract>('contracts')
         .where({ id: contractId })
         .first();
 
@@ -96,7 +101,7 @@ export const generateAnnuitiesForContract = async (
       console.log('[ANNUITY_SERVICE] Annuities da inserire:', annuitiesToInsert.length);
 
       // 5. Inserimento atomico in transaction
-      const createdAnnuities = await trx<Annuity>('annuities')
+      const createdAnnuities = await transaction<Annuity>('annuities')
         .insert(annuitiesToInsert)
         .returning('*');
 
@@ -109,7 +114,18 @@ export const generateAnnuitiesForContract = async (
       console.log('[ANNUITY_SERVICE] ✅ Annuities create con successo:', formattedAnnuities.length);
 
       return formattedAnnuities;
-    });
+    };
+
+    // Se è stata passata una transaction, usala; altrimenti creane una nuova
+    if (trx) {
+      // Usa la transaction esistente (chiamata da createContract)
+      return await executeGeneration(trx);
+    } else {
+      // Crea una nuova transaction (chiamata standalone)
+      return await db.transaction(async (newTrx) => {
+        return await executeGeneration(newTrx);
+      });
+    }
   } catch (error) {
     if (error instanceof AppError) throw error;
 

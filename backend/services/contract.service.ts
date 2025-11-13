@@ -3,6 +3,7 @@ import { Contract, NewContract, UpdateContract, Owner, Tenant, NewTenant } from 
 import { CreateContractBody, UpdateContractBody } from '../types/api';
 import AppError from '../utils/AppError';
 import dayjs from 'dayjs';
+import * as annuityService from './annuity.service';
 
 /**
  * Crea un nuovo contratto.
@@ -10,7 +11,7 @@ import dayjs from 'dayjs';
  * 1. Tenant esistente (tenant_id fornito)
  * 2. Tenant nuovo (tenant_data fornito)
  * 
- * IMPORTANTE: NON genera annuities (verrà fatto in Fase 3)
+ * FASE 3: Genera automaticamente annuities dopo creazione contratto (se non cedolare_secca)
  * 
  * @param userId - ID utente autenticato
  * @param data - Dati contratto da creare
@@ -107,7 +108,22 @@ export const createContract = async (
 
       console.log('[CONTRACT_SERVICE] Contratto creato, id:', contract.id);
 
-      // NOTA: Annuities NON generate in questa fase (Fase 3)
+      // 5. FASE 3: Genera annuities automaticamente (se NON cedolare_secca)
+      if (!contract.cedolare_secca) {
+        console.log('[CONTRACT_SERVICE] Generazione annuities per contratto:', contract.id);
+        
+        try {
+          // Usa la funzione esistente di annuity.service
+          await annuityService.generateAnnuitiesForContract(contract.id, trx);
+          console.log('[CONTRACT_SERVICE] ✅ Annuities generate con successo');
+        } catch (error) {
+          console.error('[CONTRACT_SERVICE] ❌ Errore generazione annuities:', error);
+          // Rollback automatico della transaction in caso di errore
+          throw new AppError('Errore durante la generazione delle annualità', 500);
+        }
+      } else {
+        console.log('[CONTRACT_SERVICE] Contratto in cedolare_secca, nessuna annuity generata');
+      }
 
       return contract;
     });
@@ -248,11 +264,11 @@ export const getContracts = async (
 
 /**
  * Ottiene dettagli completi di un singolo contratto.
- * Include owner e tenant. Annuities NON incluse (Fase 3).
+ * Include owner, tenant e annuities (FASE 3).
  * 
  * @param userId - ID utente autenticato
  * @param contractId - ID contratto
- * @returns Contratto con dettagli owner e tenant
+ * @returns Contratto con dettagli owner, tenant e annuities
  */
 export const getContractById = async (
   userId: number,
@@ -286,6 +302,25 @@ export const getContractById = async (
       throw new AppError('Contratto non trovato o accesso negato', 404);
     }
 
+    // FASE 3: Recupera annuities associate al contratto
+    const annuities = await db('annuities')
+      .where({ contract_id: contractId })
+      .orderBy('year', 'asc');
+
+    console.log('[CONTRACT_SERVICE] Annuities trovate:', annuities.length);
+
+    // Formatta annuities (converti due_date in formato stringa YYYY-MM-DD)
+    const formattedAnnuities = annuities.map(annuity => ({
+      id: annuity.id,
+      contract_id: annuity.contract_id,
+      year: annuity.year,
+      due_date: dayjs(annuity.due_date).format('YYYY-MM-DD'),
+      is_paid: annuity.is_paid,
+      paid_at: annuity.paid_at,
+      created_at: annuity.created_at,
+      updated_at: annuity.updated_at,
+    }));
+
     // Formatta response
     const formattedContract = {
       id: contract.id,
@@ -314,7 +349,7 @@ export const getContractById = async (
         email: contract.tenant_email,
         phone: contract.tenant_phone,
       },
-      // NOTA: annuities NON incluse (Fase 3)
+      annuities: formattedAnnuities, // FASE 3: Includi annuities nella response
     };
 
     console.log('[CONTRACT_SERVICE] Contratto trovato:', formattedContract.id);

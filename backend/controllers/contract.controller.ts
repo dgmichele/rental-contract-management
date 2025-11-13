@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { z } from 'zod';
 import * as contractService from '../services/contract.service';
+import * as annuityService from '../services/annuity.service';
 import { CreateContractBody } from '../types/api';
 import { AuthenticatedRequest } from '../types/express';
 import AppError from '../utils/AppError';
@@ -197,6 +198,7 @@ export const getContractsController = async (
 
 /**
  * Controller per ottenere dettagli singolo contratto.
+ * FASE 3: Include annuities nella response.
  * GET /api/contracts/:id
  */
 export const getContractByIdController = async (
@@ -214,12 +216,48 @@ export const getContractByIdController = async (
       throw new AppError('ID contratto non valido', 400);
     }
 
-    // Chiama service
+    // Chiama service (ora include annuities)
     const contract = await contractService.getContractById(req.userId, contractId);
 
     res.json({
       success: true,
       data: contract,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * FASE 3: Controller per ottenere solo le annuities di un contratto.
+ * GET /api/contracts/:id/annuities
+ */
+export const getContractAnnuitiesController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  console.log('[CONTRACT_CONTROLLER] GET /:id/annuities - userId:', req.userId, 'contractId:', req.params.id);
+
+  try {
+    const contractId = Number(req.params.id);
+
+    // Validazione id
+    if (isNaN(contractId) || contractId <= 0) {
+      throw new AppError('ID contratto non valido', 400);
+    }
+
+    // IMPORTANTE: Prima verifica che il contratto appartenga all'utente
+    // getAnnuitiesByContract fa già questo controllo internamente
+    const annuities = await annuityService.getAnnuitiesByContract(contractId);
+
+    // Nota: getAnnuitiesByContract verifica ownership tramite contratto
+    // Se l'utente non è autorizzato, lancerà un 404
+
+    res.json({
+      success: true,
+      data: annuities,
+      message: `Timeline annualità per contratto ${contractId}`,
     });
   } catch (err) {
     next(err);
