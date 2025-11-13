@@ -365,10 +365,11 @@ export const getContractById = async (
 /**
  * Aggiorna un contratto esistente.
  * Verifica ownership tramite owner_id.
+ * ⭐ AGGIORNATO: Supporta anche aggiornamento dati tenant tramite tenant_data.
  * 
  * @param userId - ID utente autenticato
  * @param contractId - ID contratto da aggiornare
- * @param data - Dati da aggiornare
+ * @param data - Dati da aggiornare (include opzionale tenant_data)
  * @returns Contratto aggiornato
  */
 export const updateContract = async (
@@ -393,7 +394,41 @@ export const updateContract = async (
         throw new AppError('Contratto non trovato o accesso negato', 404);
       }
 
-      // 2. Validazione date se fornite
+      // ⭐ 2. NUOVO: Se tenant_data è fornito, aggiorna i dati del tenant
+      if (data.tenant_data) {
+        console.log('[CONTRACT_SERVICE] Aggiornamento dati tenant, tenantId:', existingContract.tenant_id);
+        
+        // Verifica che il tenant appartenga allo stesso utente (sicurezza extra)
+        const tenant = await trx<Tenant>('tenants')
+          .join('owners', 'tenants.user_id', 'owners.user_id')
+          .where('tenants.id', existingContract.tenant_id)
+          .andWhere('owners.user_id', userId)
+          .select('tenants.*')
+          .first();
+
+        if (!tenant) {
+          console.log('[CONTRACT_SERVICE] Tenant non trovato o accesso negato');
+          throw new AppError('Inquilino non trovato o accesso negato', 404);
+        }
+
+        // Prepara dati update tenant (solo campi forniti)
+        const tenantUpdateData: Partial<Tenant> = {
+          ...(data.tenant_data.name && { name: data.tenant_data.name }),
+          ...(data.tenant_data.surname && { surname: data.tenant_data.surname }),
+          ...(data.tenant_data.phone !== undefined && { phone: data.tenant_data.phone }),
+          ...(data.tenant_data.email !== undefined && { email: data.tenant_data.email }),
+          updated_at: new Date(),
+        };
+
+        // Aggiorna tenant
+        await trx<Tenant>('tenants')
+          .where({ id: existingContract.tenant_id })
+          .update(tenantUpdateData);
+
+        console.log('[CONTRACT_SERVICE] ✅ Dati tenant aggiornati');
+      }
+
+      // 3. Validazione date se fornite
       if (data.start_date && data.end_date) {
         const startDate = dayjs(data.start_date);
         const endDate = dayjs(data.end_date);
@@ -407,19 +442,21 @@ export const updateContract = async (
         }
       }
 
-      // 3. Prepara dati update (solo campi forniti)
+      // 4. Prepara dati update contratto (solo campi forniti, ESCLUSO tenant_data)
+      const { tenant_data, ...contractData } = data; // Rimuovi tenant_data dai dati contratto
+      
       const updateData: Partial<Contract> = {
-        ...data,
+        ...contractData,
         updated_at: new Date(),
       };
 
-      // 4. Aggiorna contratto
+      // 5. Aggiorna contratto
       const [updatedContract] = await trx<Contract>('contracts')
         .where({ id: contractId })
         .update(updateData)
         .returning('*');
 
-      console.log('[CONTRACT_SERVICE] Contratto aggiornato:', updatedContract.id);
+      console.log('[CONTRACT_SERVICE] ✅ Contratto aggiornato:', updatedContract.id);
       return updatedContract;
     });
   } catch (error) {

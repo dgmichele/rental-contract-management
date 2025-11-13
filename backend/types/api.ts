@@ -75,9 +75,15 @@ export interface CreateTenantData {
   email: string;
 }
 
+/**
+ * Body per aggiornamento contratto.
+ * IMPORTANTE: Se tenant_data è fornito, i dati del tenant associato verranno aggiornati.
+ * Questo permette di modificare contestualmente contratto e inquilino nella stessa operazione.
+ */
 export interface UpdateContractBody {
   owner_id?: number;
   tenant_id?: number;
+  tenant_data?: UpdateTenantData; // ⭐ AGGIUNTO: Permette update dati tenant
   start_date?: string;
   end_date?: string;
   cedolare_secca?: boolean;
@@ -85,6 +91,17 @@ export interface UpdateContractBody {
   canone_concordato?: boolean;
   monthly_rent?: number;
   last_annuity_paid?: number | null;
+}
+
+/**
+ * Dati aggiornabili per tenant (tutti opzionali).
+ * Usato quando si vuole modificare l'inquilino durante update contratto.
+ */
+export interface UpdateTenantData {
+  name?: string;
+  surname?: string;
+  phone?: string;
+  email?: string;
 }
 
 export interface RenewContractBody {
@@ -140,7 +157,6 @@ export interface ExpiringItem {
   annuityYear?: number;
 }
 
-// types/api.ts
 export interface DashboardStatsResponse {
   totalOwners: number;
   totalContracts: number;

@@ -19,6 +19,16 @@ const tenantDataSchema = z.object({
 });
 
 /**
+ * Schema per aggiornamento dati tenant (tutti campi opzionali)
+ */
+const updateTenantDataSchema = z.object({
+  name: z.string().min(1, 'Nome inquilino non può essere vuoto').trim().optional(),
+  surname: z.string().min(1, 'Cognome inquilino non può essere vuoto').trim().optional(),
+  phone: z.string().optional(),
+  email: z.string().email('Email inquilino non valida').optional(),
+});
+
+/**
  * Schema validazione creazione contratto.
  * Validazione custom: end_date deve essere successiva a start_date.
  * Accetta tenant_id (esistente) OPPURE tenant_data (nuovo).
@@ -62,11 +72,13 @@ const createContractSchema = z
 /**
  * Schema validazione aggiornamento contratto.
  * Tutti i campi opzionali. Validazione date solo se entrambe fornite.
+ * ⭐ AGGIUNTO: tenant_data per permettere update dati inquilino
  */
 const updateContractSchema = z
   .object({
     owner_id: z.number().int().positive().optional(),
     tenant_id: z.number().int().positive().optional(),
+    tenant_data: updateTenantDataSchema.optional(), // ⭐ AGGIUNTO
     start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     cedolare_secca: z.boolean().optional(),
@@ -266,6 +278,7 @@ export const getContractAnnuitiesController = async (
 
 /**
  * Controller per aggiornare un contratto esistente.
+ * ⭐ AGGIORNATO: Supporta anche update dati tenant tramite tenant_data
  * PUT /api/contracts/:id
  */
 export const updateContractController = async (
@@ -283,9 +296,13 @@ export const updateContractController = async (
       throw new AppError('ID contratto non valido', 400);
     }
 
-    // Validazione body
+    // Validazione body (ora include tenant_data)
     const validatedData = updateContractSchema.parse(req.body);
     console.log('[CONTRACT_CONTROLLER] Dati validati per update contratto');
+    
+    if (validatedData.tenant_data) {
+      console.log('[CONTRACT_CONTROLLER] Richiesto update dati tenant');
+    }
 
     // Chiama service
     const updatedContract = await contractService.updateContract(
