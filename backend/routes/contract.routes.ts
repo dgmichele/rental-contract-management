@@ -54,6 +54,31 @@ router.post('/', contractController.createContractController as RequestHandler);
 router.put('/:id', contractController.updateContractController as RequestHandler);
 
 /**
+ * ⭐ FASE 3.3: @route   PUT /api/contract/:id/renew
+ * @desc    Rinnova contratto esistente (mantiene owner/tenant, aggiorna condizioni)
+ * @access  Private (richiede JWT)
+ * @body    { start_date, end_date, cedolare_secca, typology, canone_concordato, monthly_rent }
+ * @returns Contratto rinnovato con timeline annuities aggiornata
+ * 
+ * @note    Operazioni eseguite:
+ *          1. Elimina vecchie annuities
+ *          2. Aggiorna contratto con nuove date e condizioni
+ *          3. Setta last_annuity_paid = anno start_date
+ *          4. Rigenera annuities (se NON cedolare_secca)
+ * 
+ * @example PUT /api/contract/5/renew
+ * Body: {
+ *   "start_date": "2028-01-15",
+ *   "end_date": "2032-01-15",
+ *   "cedolare_secca": false,
+ *   "typology": "residenziale",
+ *   "canone_concordato": true,
+ *   "monthly_rent": 950.00
+ * }
+ */
+router.put('/:id/renew', contractController.renewContractController as RequestHandler);
+
+/**
  * @route   DELETE /api/contract/:id
  * @desc    Elimina contratto (CASCADE annuities)
  * @access  Private (richiede JWT)
@@ -61,10 +86,9 @@ router.put('/:id', contractController.updateContractController as RequestHandler
 router.delete('/:id', contractController.deleteContractController as RequestHandler);
 
 /**
- * ============= ROUTES NON IMPLEMENTATE (FASE 3 SUCCESSIVA) =============
+ * ============= ROUTES NON IMPLEMENTATE (FASE 3.4 SUCCESSIVA) =============
  * 
- * Le seguenti routes verranno implementate nei prossimi step:
- * - PUT /api/contract/:id/renew - Rinnovo contratto
+ * La seguente route verrà implementata nel prossimo step:
  * - PUT /api/contract/:id/annuity - Aggiorna annualità successiva
  */
 

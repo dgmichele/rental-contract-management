@@ -1,6 +1,6 @@
 import db from '../config/db';
 import { Contract, NewContract, UpdateContract, Owner, Tenant, NewTenant } from '../types/database';
-import { CreateContractBody, UpdateContractBody } from '../types/api';
+import { CreateContractBody, UpdateContractBody, RenewContractBody } from '../types/api';
 import AppError from '../utils/AppError';
 import dayjs from 'dayjs';
 import * as annuityService from './annuity.service';
@@ -508,5 +508,202 @@ export const deleteContract = async (
 
     console.error('[CONTRACT_SERVICE] Errore delete contract:', error);
     throw new AppError('Errore durante l\'eliminazione del contratto', 500);
+  }
+};
+
+/**
+ * ⭐ FASE 3.3: Rinnova un contratto esistente.
+ * 
+ * Operazioni eseguite in TRANSACTION:
+ * 1. Verifica ownership del contratto
+ * 2. Elimina tutte le vecchie annuities
+ * 3. Aggiorna il contratto con nuove date e condizioni
+ * 4. Setta last_annuity_paid = anno della nuova start_date
+ * 5. Rigenera annuities in base alle nuove date (se NON cedolare_secca)
+ * 
+ * Logica last_annuity_paid:
+ * - Quando si rinnova un contratto, l'anno del rinnovo coincide con la prima annualità pagata
+ * - Esempio: rinnovo 2028-01-15 → last_annuity_paid = 2028
+ * - Questo perché il pagamento dell'annualità è implicito nel rinnovo stesso
+ * 
+ * @param userId - ID utente autenticato
+ * @param contractId - ID contratto da rinnovare
+ * @param data - Nuove condizioni contrattuali (date, cedolare_secca, canone, ecc.)
+ * @returns Contratto rinnovato con annuities aggiornate
+ * 
+ * @example
+ * const renewed = await renewContract(userId, contractId, {
+ *   start_date: "2028-01-15",
+ *   end_date: "2032-01-15",
+ *   cedolare_secca: false,
+ *   typology: "residenziale",
+ *   canone_concordato: true,
+ *   monthly_rent: 950.00
+ * });
+ */
+export const renewContract = async (
+  userId: number,
+  contractId: number,
+  data: RenewContractBody
+): Promise<any> => {
+  console.log('[CONTRACT_SERVICE] 🔄 Rinnovo contratto:', contractId, 'userId:', userId);
+
+  try {
+    return await db.transaction(async (trx) => {
+      // 1. Verifica ownership e recupera contratto esistente
+      const existingContract = await trx<Contract>('contracts')
+        .join('owners', 'contracts.owner_id', 'owners.id')
+        .where('contracts.id', contractId)
+        .andWhere('owners.user_id', userId)
+        .select('contracts.*')
+        .first();
+
+      if (!existingContract) {
+        console.log('[CONTRACT_SERVICE] ❌ Contratto non trovato o accesso negato:', contractId);
+        throw new AppError('Contratto non trovato o accesso negato', 404);
+      }
+
+      console.log('[CONTRACT_SERVICE] ✅ Contratto trovato, owner_id:', existingContract.owner_id, 'tenant_id:', existingContract.tenant_id);
+
+      // 2. Validazione date (flessibile: permette gap tra vecchio end_date e nuovo start_date)
+      const startDate = dayjs(data.start_date);
+      const endDate = dayjs(data.end_date);
+
+      if (!startDate.isValid() || !endDate.isValid()) {
+        throw new AppError('Date non valide', 400);
+      }
+
+      if (endDate.isBefore(startDate) || endDate.isSame(startDate)) {
+        throw new AppError('La data di fine deve essere successiva alla data di inizio', 400);
+      }
+
+      console.log('[CONTRACT_SERVICE] ✅ Date validate:', data.start_date, '→', data.end_date);
+
+      // 3. Calcola last_annuity_paid: anno della nuova start_date
+      // Logica: il rinnovo implica il pagamento dell'annualità dell'anno di inizio
+      const lastAnnuityPaid = startDate.year();
+      console.log('[CONTRACT_SERVICE] 📅 last_annuity_paid settato a:', lastAnnuityPaid);
+
+      // 4. Elimina vecchie annuities (pulizia completa)
+      const deletedCount = await trx('annuities')
+        .where({ contract_id: contractId })
+        .del();
+
+      console.log('[CONTRACT_SERVICE] 🗑️  Annuities vecchie eliminate:', deletedCount);
+
+      // 5. Aggiorna contratto con nuove condizioni
+      const updateData: Partial<Contract> = {
+        start_date: data.start_date,
+        end_date: data.end_date,
+        cedolare_secca: data.cedolare_secca,
+        typology: data.typology,
+        canone_concordato: data.canone_concordato,
+        monthly_rent: data.monthly_rent,
+        last_annuity_paid: lastAnnuityPaid, // ⭐ Anno del rinnovo
+        updated_at: new Date(),
+      };
+
+      const [updatedContract] = await trx<Contract>('contracts')
+        .where({ id: contractId })
+        .update(updateData)
+        .returning('*');
+
+      console.log('[CONTRACT_SERVICE] ✅ Contratto aggiornato con nuove condizioni');
+
+      // 6. Rigenera annuities (se NON cedolare_secca)
+      let newAnnuities: any[] = [];
+
+      if (!data.cedolare_secca) {
+        console.log('[CONTRACT_SERVICE] 🔄 Generazione nuove annuities...');
+
+        try {
+          // Usa annuity.service per generare annuities (rispetta logica esistente)
+          await annuityService.generateAnnuitiesForContract(contractId, trx);
+          
+          // Recupera le annuities appena generate per includerle nella response
+          newAnnuities = await trx('annuities')
+            .where({ contract_id: contractId })
+            .orderBy('year', 'asc');
+
+          console.log('[CONTRACT_SERVICE] ✅ Nuove annuities generate:', newAnnuities.length);
+        } catch (error) {
+          console.error('[CONTRACT_SERVICE] ❌ Errore generazione nuove annuities:', error);
+          throw new AppError('Errore durante la generazione delle nuove annualità', 500);
+        }
+      } else {
+        console.log('[CONTRACT_SERVICE] ℹ️  Contratto in cedolare_secca, nessuna annuity generata');
+      }
+
+      // 7. Recupera dettagli completi per response (owner, tenant, annuities)
+      const contractDetails = await trx<Contract>('contracts')
+        .join('owners', 'contracts.owner_id', 'owners.id')
+        .join('tenants', 'contracts.tenant_id', 'tenants.id')
+        .where('contracts.id', contractId)
+        .select(
+          'contracts.*',
+          'owners.name as owner_name',
+          'owners.surname as owner_surname',
+          'owners.email as owner_email',
+          'owners.phone as owner_phone',
+          'tenants.name as tenant_name',
+          'tenants.surname as tenant_surname',
+          'tenants.email as tenant_email',
+          'tenants.phone as tenant_phone'
+        )
+        .first();
+
+      // Formatta annuities per response
+      const formattedAnnuities = newAnnuities.map(annuity => ({
+        id: annuity.id,
+        contract_id: annuity.contract_id,
+        year: annuity.year,
+        due_date: dayjs(annuity.due_date).format('YYYY-MM-DD'),
+        is_paid: annuity.is_paid,
+        paid_at: annuity.paid_at,
+        created_at: annuity.created_at,
+        updated_at: annuity.updated_at,
+      }));
+
+      // Response completa con tutti i dettagli
+      const response = {
+        id: contractDetails.id,
+        owner_id: contractDetails.owner_id,
+        tenant_id: contractDetails.tenant_id,
+        start_date: contractDetails.start_date,
+        end_date: contractDetails.end_date,
+        cedolare_secca: contractDetails.cedolare_secca,
+        typology: contractDetails.typology,
+        canone_concordato: contractDetails.canone_concordato,
+        monthly_rent: parseFloat(contractDetails.monthly_rent as any),
+        last_annuity_paid: contractDetails.last_annuity_paid,
+        created_at: contractDetails.created_at,
+        updated_at: contractDetails.updated_at,
+        owner: {
+          id: contractDetails.owner_id,
+          name: contractDetails.owner_name,
+          surname: contractDetails.owner_surname,
+          email: contractDetails.owner_email,
+          phone: contractDetails.owner_phone,
+        },
+        tenant: {
+          id: contractDetails.tenant_id,
+          name: contractDetails.tenant_name,
+          surname: contractDetails.tenant_surname,
+          email: contractDetails.tenant_email,
+          phone: contractDetails.tenant_phone,
+        },
+        annuities: formattedAnnuities, // ⭐ Timeline completa per frontend
+      };
+
+      console.log('[CONTRACT_SERVICE] ✅ Contratto rinnovato con successo. Dati inviati al client.');
+
+      return response;
+    });
+  } catch (error) {
+    console.error(`[CONTRACT_SERVICE] ❌ Errore durante il rinnovo del contratto ${contractId}:`, error);
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError('Errore del server durante il rinnovo del contratto', 500);
   }
 };

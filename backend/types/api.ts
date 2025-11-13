@@ -104,6 +104,33 @@ export interface UpdateTenantData {
   email?: string;
 }
 
+/**
+ * ⭐ FASE 3.3: Body per rinnovo contratto.
+ * Il rinnovo mantiene stesso owner e tenant, ma aggiorna tutte le condizioni contrattuali.
+ * 
+ * Logica:
+ * - Owner e tenant rimangono invariati (NO cambio soggetti)
+ * - Date completamente flessibili (gestite manualmente dal frontend)
+ * - last_annuity_paid viene settato all'anno della nuova start_date
+ * - Le vecchie annuities vengono eliminate e rigenerate in base alle nuove date
+ * 
+ * @property start_date - Nuova data inizio contratto (formato YYYY-MM-DD)
+ * @property end_date - Nuova data fine contratto (formato YYYY-MM-DD)
+ * @property cedolare_secca - Se true, NO annuities intermedie
+ * @property typology - Tipo contratto (residenziale/commerciale)
+ * @property canone_concordato - Se contratto a canone concordato
+ * @property monthly_rent - Nuovo canone mensile
+ * 
+ * @example
+ * {
+ *   "start_date": "2028-01-15",
+ *   "end_date": "2032-01-15",
+ *   "cedolare_secca": false,
+ *   "typology": "residenziale",
+ *   "canone_concordato": true,
+ *   "monthly_rent": 950.00
+ * }
+ */
 export interface RenewContractBody {
   start_date: string;
   end_date: string;
@@ -111,7 +138,6 @@ export interface RenewContractBody {
   typology: 'residenziale' | 'commerciale';
   canone_concordato: boolean;
   monthly_rent: number;
-  last_annuity_paid?: number | null;
 }
 
 export interface RenewAnnuityBody {

@@ -104,6 +104,37 @@ const updateContractSchema = z
   );
 
 /**
+ * ⭐ FASE 3.3: Schema validazione rinnovo contratto.
+ * Tutti i campi obbligatori (nuove condizioni complete).
+ * Validazione custom: end_date > start_date.
+ * 
+ * NO tenant_id/owner_id: il rinnovo mantiene sempre gli stessi soggetti.
+ */
+const renewContractSchema = z
+  .object({
+    start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato data non valido (YYYY-MM-DD)'),
+    end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato data non valido (YYYY-MM-DD)'),
+    cedolare_secca: z.boolean({ error: 'Cedolare secca obbligatoria' }),
+    typology: z.enum(['residenziale', 'commerciale'] as const, {
+      error: 'Tipologia deve essere residenziale o commerciale',
+    }),
+    canone_concordato: z.boolean({ error: 'Canone concordato obbligatorio' }),
+    monthly_rent: z.number().positive('Canone mensile deve essere positivo'),
+  })
+  .refine(
+    (data) => {
+      // Validazione custom: end_date > start_date
+      const start = new Date(data.start_date);
+      const end = new Date(data.end_date);
+      return end > start;
+    },
+    {
+      message: 'La data di fine deve essere successiva alla data di inizio',
+      path: ['end_date'],
+    }
+  );
+
+/**
  * Schema validazione query params paginazione
  */
 const paginationSchema = z.object({
@@ -352,6 +383,73 @@ export const deleteContractController = async (
       message: 'Contratto eliminato con successo',
     });
   } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * ⭐ FASE 3.3: Controller per rinnovare un contratto esistente.
+ * PUT /api/contracts/:id/renew
+ * 
+ * Validazione:
+ * - Tutti i campi obbligatori (nuove condizioni complete)
+ * - Date valide con end_date > start_date
+ * - NO cambio owner/tenant (gestito automaticamente dal service)
+ * 
+ * Response:
+ * - Contratto aggiornato con dettagli owner, tenant
+ * - Timeline annuities completa (se NON cedolare_secca)
+ * 
+ * @example Body
+ * {
+ *   "start_date": "2028-01-15",
+ *   "end_date": "2032-01-15",
+ *   "cedolare_secca": false,
+ *   "typology": "residenziale",
+ *   "canone_concordato": true,
+ *   "monthly_rent": 950.00
+ * }
+ */
+export const renewContractController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  console.log('[CONTRACT_CONTROLLER] 🔄 PUT /:id/renew - userId:', req.userId, 'contractId:', req.params.id);
+
+  try {
+    const contractId = Number(req.params.id);
+
+    // Validazione id
+    if (isNaN(contractId) || contractId <= 0) {
+      throw new AppError('ID contratto non valido', 400);
+    }
+
+    // Validazione body con schema rinnovo
+    const validatedData = renewContractSchema.parse(req.body);
+    console.log('[CONTRACT_CONTROLLER] ✅ Dati rinnovo validati:', {
+      start_date: validatedData.start_date,
+      end_date: validatedData.end_date,
+      cedolare_secca: validatedData.cedolare_secca,
+    });
+
+    // Chiama service per rinnovo
+    const renewedContract = await contractService.renewContract(
+      req.userId,
+      contractId,
+      validatedData
+    );
+
+    res.json({
+      success: true,
+      data: renewedContract,
+      message: 'Contratto rinnovato con successo',
+    });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      console.log('[CONTRACT_CONTROLLER] ❌ Errore validazione rinnovo:', err.issues);
+      return next(new AppError('Dati di rinnovo non validi', 400));
+    }
     next(err);
   }
 };
