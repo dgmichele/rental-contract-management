@@ -2,7 +2,8 @@ import { Response, NextFunction } from 'express';
 import { z } from 'zod';
 import * as contractService from '../services/contract.service';
 import * as annuityService from '../services/annuity.service';
-import { CreateContractBody } from '../types/api';
+// AGGIUNTO RenewAnnuityBody
+import { CreateContractBody, RenewAnnuityBody } from '../types/api'; 
 import { AuthenticatedRequest } from '../types/express';
 import AppError from '../utils/AppError';
 
@@ -107,8 +108,7 @@ const updateContractSchema = z
  * ⭐ FASE 3.3: Schema validazione rinnovo contratto.
  * Tutti i campi obbligatori (nuove condizioni complete).
  * Validazione custom: end_date > start_date.
- * 
- * NO tenant_id/owner_id: il rinnovo mantiene sempre gli stessi soggetti.
+ * * NO tenant_id/owner_id: il rinnovo mantiene sempre gli stessi soggetti.
  */
 const renewContractSchema = z
   .object({
@@ -133,6 +133,14 @@ const renewContractSchema = z
       path: ['end_date'],
     }
   );
+
+/**
+ * ⭐ FASE 3.4: Schema validazione aggiornamento annualità.
+ * Accetta solo l'anno da marcare come pagato.
+ */
+const updateAnnuitySchema = z.object({
+  last_annuity_paid: z.number().int().positive('Anno annualità non valido'),
+});
 
 /**
  * Schema validazione query params paginazione
@@ -390,24 +398,21 @@ export const deleteContractController = async (
 /**
  * ⭐ FASE 3.3: Controller per rinnovare un contratto esistente.
  * PUT /api/contracts/:id/renew
- * 
- * Validazione:
+ * * Validazione:
  * - Tutti i campi obbligatori (nuove condizioni complete)
  * - Date valide con end_date > start_date
  * - NO cambio owner/tenant (gestito automaticamente dal service)
- * 
- * Response:
+ * * Response:
  * - Contratto aggiornato con dettagli owner, tenant
  * - Timeline annuities completa (se NON cedolare_secca)
- * 
- * @example Body
+ * * @example Body
  * {
- *   "start_date": "2028-01-15",
- *   "end_date": "2032-01-15",
- *   "cedolare_secca": false,
- *   "typology": "residenziale",
- *   "canone_concordato": true,
- *   "monthly_rent": 950.00
+ * "start_date": "2028-01-15",
+ * "end_date": "2032-01-15",
+ * "cedolare_secca": false,
+ * "typology": "residenziale",
+ * "canone_concordato": true,
+ * "monthly_rent": 950.00
  * }
  */
 export const renewContractController = async (
@@ -449,6 +454,59 @@ export const renewContractController = async (
     if (err instanceof z.ZodError) {
       console.log('[CONTRACT_CONTROLLER] ❌ Errore validazione rinnovo:', err.issues);
       return next(new AppError('Dati di rinnovo non validi', 400));
+    }
+    next(err);
+  }
+};
+
+/**
+ * ⭐ FASE 3.4: Controller per aggiornare annualità successiva.
+ * PUT /api/contracts/:id/annuity
+ *
+ * Validazione:
+ * - Body { last_annuity_paid: <anno> }
+ *
+ * Logica (delegata a annuity.service):
+ * - Aggiorna contract.last_annuity_paid = <anno>
+ * - Aggiorna annuity(contract_id, <anno>) -> is_paid = true, paid_at = NOW
+ */
+export const updateContractAnnuityController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  console.log('[CONTRACT_CONTROLLER] 💹 PUT /:id/annuity - userId:', req.userId, 'contractId:', req.params.id);
+
+  try {
+    const contractId = Number(req.params.id);
+
+    // 1. Validazione ID
+    if (isNaN(contractId) || contractId <= 0) {
+      throw new AppError('ID contratto non valido', 400);
+    }
+
+    // 2. Validazione Body
+    const validatedData = updateAnnuitySchema.parse(req.body) as RenewAnnuityBody;
+    const { last_annuity_paid } = validatedData;
+    console.log(`[CONTRACT_CONTROLLER] ✅ Dati validati: pagata annualità ${last_annuity_paid}`);
+
+    // 3. Chiama service
+    // Il service gestisce la doppia logica e la verifica di ownership
+    const updatedContract = await annuityService.updateAnnuityPaid(
+      contractId,
+      last_annuity_paid
+    );
+
+    res.json({
+      success: true,
+      data: updatedContract, // Restituisce il contratto aggiornato (con annuities)
+      message: `Annualità ${last_annuity_paid} pagata con successo`,
+    });
+
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      console.log('[CONTRACT_CONTROLLER] ❌ Errore validazione annualità:', err.issues);
+      return next(new AppError('Dati per aggiornamento annualità non validi', 400));
     }
     next(err);
   }
