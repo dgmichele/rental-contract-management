@@ -2,7 +2,6 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 // Carica le variabili d'ambiente prima di qualsiasi altro import
-// Questo è cruciale per assicurare che le variabili siano disponibili a tutti i moduli
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.dev';
 dotenv.config({ path: path.resolve(__dirname, envFile) });
 
@@ -10,12 +9,15 @@ import express, { Application } from 'express';
 import { errorHandler } from './middleware/errorHandler.middleware';
 import cors from 'cors';
 import helmet from 'helmet';
+import cron from 'node-cron'; // Import node-cron
+import * as notificationService from './services/notification.service'; // Import notification service
 
 // Import routes
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import ownerRoutes from './routes/owner.routes';
 import contractRoutes from './routes/contract.routes';
+import dashboardRoutes from "./routes/dashboard.routes";
 
 // ============= VALIDAZIONE VARIABILI D'AMBIENTE =============
 const requiredEnvVars = [
@@ -30,6 +32,7 @@ const requiredEnvVars = [
   'FRONTEND_URL',
   'FROM_EMAIL',
   'FROM_NAME',
+  'CRON_NOTIFICATION_TIME', // Aggiunto alla validazione
 ];
 
 const missingEnvVars = requiredEnvVars.filter((varName) => !process.env[varName]);
@@ -103,7 +106,6 @@ app.use('/api/contract', contractRoutes);
 console.log('[SERVER] ✅ Route /api/contract montate');
 
 // Dashboard routes
-import dashboardRoutes from "./routes/dashboard.routes";
 app.use("/api/dashboard", dashboardRoutes);
 console.log("[SERVER] ✅ Route /api/dashboard montate");
 
@@ -127,19 +129,38 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`[SERVER] 🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
     console.log(`[SERVER] 📍 Health check: http://localhost:${PORT}/health`);
     console.log(`[SERVER] 🔐 Auth endpoints: http://localhost:${PORT}/api/auth`);
+    
+    // ============= CRON JOB SCHEDULER =============
+    // Legge l'orario dal .env (es: "0 8 * * *" per le 08:00 di mattina)
+    const cronTime = process.env.CRON_NOTIFICATION_TIME || '0 8 * * *';
+    
+    console.log(`[CRON] 🕒 Scheduler inizializzato con orario: "${cronTime}"`);
+    
+    cron.schedule(cronTime, async () => {
+      console.log(`[CRON] 🔔 Esecuzione job notifiche automatiche: ${new Date().toISOString()}`);
+      
+      try {
+        // Esegue il servizio di notifica
+        const stats = await notificationService.sendExpiringContractsNotifications();
+        
+        console.log('[CRON] ✅ Job completato con successo.');
+        console.log('[CRON] 📊 Statistiche:', stats);
+      } catch (error) {
+        console.error('[CRON] ❌ Errore imprevisto durante l\'esecuzione del job:', error);
+      }
+    });
+
     console.log('='.repeat(50));
   });
 
   // ============= GRACEFUL SHUTDOWN =============
   process.on('SIGTERM', () => {
     console.log('[SERVER] SIGTERM ricevuto, chiusura graceful...');
-    // Qui andrebbe la logica di chiusura delle connessioni (es. DB)
     process.exit(0);
   });
 
   process.on('SIGINT', () => {
     console.log('[SERVER] SIGINT ricevuto, chiusura graceful...');
-    // Qui andrebbe la logica di chiusura delle connessioni (es. DB)
     process.exit(0);
   });
 }
