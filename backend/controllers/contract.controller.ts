@@ -46,6 +46,7 @@ const createContractSchema = z
     canone_concordato: z.boolean(),
     monthly_rent: z.number().positive('Canone mensile deve essere positivo'),
     last_annuity_paid: z.number().int().nullable().optional(),
+    address: z.string().max(255, 'Indirizzo troppo lungo').optional(),
   })
   .refine(
     (data) => {
@@ -87,6 +88,7 @@ const updateContractSchema = z
     canone_concordato: z.boolean().optional(),
     monthly_rent: z.number().positive().optional(),
     last_annuity_paid: z.number().int().nullable().optional(),
+    address: z.string().max(255, 'Indirizzo troppo lungo').optional(),
   })
   .refine(
     (data) => {

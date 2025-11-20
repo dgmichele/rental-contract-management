@@ -55,10 +55,14 @@ export interface OwnerWithStats extends Owner {
 }
 
 // ============= CONTRACT ENDPOINTS =============
+
+/**
+ * ⭐ AGGIORNATO: Aggiunto campo address opzionale
+ */
 export interface CreateContractBody {
   owner_id: number;
-  tenant_id?: number; // Se tenant esiste
-  tenant_data?: CreateTenantData; // Se tenant nuovo
+  tenant_id?: number;
+  tenant_data?: CreateTenantData;
   start_date: string;
   end_date: string;
   cedolare_secca: boolean;
@@ -66,6 +70,7 @@ export interface CreateContractBody {
   canone_concordato: boolean;
   monthly_rent: number;
   last_annuity_paid?: number | null;
+  address?: string; // ⭐ NUOVO: Indirizzo immobile
 }
 
 export interface CreateTenantData {
@@ -76,14 +81,12 @@ export interface CreateTenantData {
 }
 
 /**
- * Body per aggiornamento contratto.
- * IMPORTANTE: Se tenant_data è fornito, i dati del tenant associato verranno aggiornati.
- * Questo permette di modificare contestualmente contratto e inquilino nella stessa operazione.
+ * ⭐ AGGIORNATO: Aggiunto campo address opzionale
  */
 export interface UpdateContractBody {
   owner_id?: number;
   tenant_id?: number;
-  tenant_data?: UpdateTenantData; // ⭐ AGGIUNTO: Permette update dati tenant
+  tenant_data?: UpdateTenantData;
   start_date?: string;
   end_date?: string;
   cedolare_secca?: boolean;
@@ -91,12 +94,9 @@ export interface UpdateContractBody {
   canone_concordato?: boolean;
   monthly_rent?: number;
   last_annuity_paid?: number | null;
+  address?: string; // ⭐ NUOVO: Indirizzo immobile
 }
 
-/**
- * Dati aggiornabili per tenant (tutti opzionali).
- * Usato quando si vuole modificare l'inquilino durante update contratto.
- */
 export interface UpdateTenantData {
   name?: string;
   surname?: string;
@@ -105,31 +105,8 @@ export interface UpdateTenantData {
 }
 
 /**
- * ⭐ FASE 3.3: Body per rinnovo contratto.
- * Il rinnovo mantiene stesso owner e tenant, ma aggiorna tutte le condizioni contrattuali.
- * 
- * Logica:
- * - Owner e tenant rimangono invariati (NO cambio soggetti)
- * - Date completamente flessibili (gestite manualmente dal frontend)
- * - last_annuity_paid viene settato all'anno della nuova start_date
- * - Le vecchie annuities vengono eliminate e rigenerate in base alle nuove date
- * 
- * @property start_date - Nuova data inizio contratto (formato YYYY-MM-DD)
- * @property end_date - Nuova data fine contratto (formato YYYY-MM-DD)
- * @property cedolare_secca - Se true, NO annuities intermedie
- * @property typology - Tipo contratto (residenziale/commerciale)
- * @property canone_concordato - Se contratto a canone concordato
- * @property monthly_rent - Nuovo canone mensile
- * 
- * @example
- * {
- *   "start_date": "2028-01-15",
- *   "end_date": "2032-01-15",
- *   "cedolare_secca": false,
- *   "typology": "residenziale",
- *   "canone_concordato": true,
- *   "monthly_rent": 950.00
- * }
+ * Body per rinnovo contratto.
+ * NOTA: address NON è modificabile nel rinnovo (mantiene l'immobile originale)
  */
 export interface RenewContractBody {
   start_date: string;

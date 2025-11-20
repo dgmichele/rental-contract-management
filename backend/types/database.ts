@@ -59,6 +59,9 @@ export interface Tenant {
 
 export type ContractTypology = 'residenziale' | 'commerciale';
 
+/**
+ * ⭐ AGGIORNATO: Aggiunto campo address (nullable)
+ */
 export interface Contract {
   id: number;
   owner_id: number;
@@ -70,6 +73,7 @@ export interface Contract {
   canone_concordato: boolean;
   monthly_rent: number; // Decimal in DB, number in TS
   last_annuity_paid: number | null;
+  address?: string; // ⭐ NUOVO: Indirizzo immobile (opzionale)
   created_at: Date;
   updated_at: Date;
 }
