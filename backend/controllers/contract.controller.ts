@@ -148,8 +148,8 @@ const updateAnnuitySchema = z.object({
  * Schema validazione query params paginazione
  */
 const paginationSchema = z.object({
-  page: z.preprocess((v) => Number(v), z.number().min(1).default(1)),
-  limit: z.preprocess((v) => Number(v), z.number().min(1).max(100).default(12)),
+  page: z.preprocess((v) => (v ? Number(v) : undefined), z.number().min(1).default(1)),
+  limit: z.preprocess((v) => (v ? Number(v) : undefined), z.number().min(1).max(100).default(12)),
 });
 
 /**
@@ -191,7 +191,8 @@ export const createContractController = async (
   } catch (err) {
     if (err instanceof z.ZodError) {
       console.log('[CONTRACT_CONTROLLER] Errore validazione:', err.issues);
-      return next(new AppError('Dati di input non validi', 400));
+      const errorMessage = err.issues.map(i => i.message).join(', ');
+      return next(new AppError(errorMessage, 400));
     }
     next(err);
   }
@@ -243,7 +244,8 @@ export const getContractsController = async (
   } catch (err) {
     if (err instanceof z.ZodError) {
       console.log('[CONTRACT_CONTROLLER] Errore validazione query:', err.issues);
-      return next(new AppError('Parametri non validi', 400));
+      const errorMessage = err.issues.map(i => i.message).join(', ');
+      return next(new AppError(errorMessage, 400));
     }
     next(err);
   }
@@ -360,7 +362,8 @@ export const updateContractController = async (
   } catch (err) {
     if (err instanceof z.ZodError) {
       console.log('[CONTRACT_CONTROLLER] Errore validazione:', err.issues);
-      return next(new AppError('Dati di input non validi', 400));
+      const errorMessage = err.issues.map(i => i.message).join(', ');
+      return next(new AppError(errorMessage, 400));
     }
     next(err);
   }
@@ -455,7 +458,8 @@ export const renewContractController = async (
   } catch (err) {
     if (err instanceof z.ZodError) {
       console.log('[CONTRACT_CONTROLLER] ❌ Errore validazione rinnovo:', err.issues);
-      return next(new AppError('Dati di rinnovo non validi', 400));
+      const errorMessage = err.issues.map(i => i.message).join(', ');
+      return next(new AppError(errorMessage, 400));
     }
     next(err);
   }
@@ -508,7 +512,8 @@ export const updateContractAnnuityController = async (
   } catch (err) {
     if (err instanceof z.ZodError) {
       console.log('[CONTRACT_CONTROLLER] ❌ Errore validazione annualità:', err.issues);
-      return next(new AppError('Dati per aggiornamento annualità non validi', 400));
+      const errorMessage = err.issues.map(i => i.message).join(', ');
+      return next(new AppError(errorMessage, 400));
     }
     next(err);
   }
