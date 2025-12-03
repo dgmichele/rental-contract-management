@@ -1,8 +1,11 @@
 import { Resend } from 'resend';
 import { render } from '@react-email/render';
-import ResetPasswordEmail from '../emails/ResetPasswordEmail';
-import ExpirationReminderInternal from '../emails/ExpirationReminderInternal';
-import ExpirationReminderClient from '../emails/ExpirationReminderClient';
+// @ts-ignore
+import ResetPasswordEmail from '../dist/emails/ResetPasswordEmail.js';
+// @ts-ignore
+import ExpirationReminderInternal from '../dist/emails/ExpirationReminderInternal.js';
+// @ts-ignore
+import ExpirationReminderClient from '../dist/emails/ExpirationReminderClient.js';
 import AppError from '../utils/AppError';
 import { ContractWithRelations } from '../types/api';
 import dayjs from 'dayjs';

@@ -6,7 +6,8 @@
   "type": "commonjs",
   "scripts": {
     "dev": "ts-node server.ts",
-    "build": "tsc",
+    "build:emails": "tsc -p tsconfig.emails.json",
+    "build": "npm run build:emails && tsc",
     "start": "node dist/server.js",
     "migrate:make": "knex migrate:make --knexfile db/knexfile.ts -x ts",
     "migrate:latest": "knex migrate:latest --knexfile db/knexfile.ts",
