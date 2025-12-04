@@ -32,7 +32,7 @@ const requiredEnvVars = [
   'FRONTEND_URL',
   'FROM_EMAIL',
   'FROM_NAME',
-  'CRON_NOTIFICATION_TIME', // Aggiunto alla validazione
+  // CRON_NOTIFICATION_TIME è opzionale, ha un default ('0 8 * * *')
 ];
 
 const missingEnvVars = requiredEnvVars.filter((varName) => !process.env[varName]);
