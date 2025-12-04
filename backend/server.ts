@@ -125,7 +125,7 @@ app.use(errorHandler);
 // Passenger gestisce lui stesso il listening, quindi non dobbiamo chiamare app.listen()
 const isPassenger = !!(process.env.PASSENGER_APP_ENV || process.env.PHUSION_PASSENGER);
 
-if (process.env.NODE_ENV !== 'test' && !isPassenger) {
+if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
     console.log('='.repeat(50));
     console.log(`[SERVER] 🚀 Server avviato su porta ${PORT}: http://localhost:${PORT}/`);
