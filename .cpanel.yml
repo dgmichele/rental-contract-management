@@ -1,0 +1,7 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/ljxvcewj/rental_contract_management/
+    - /bin/cp -r backend $DEPLOYPATH
+    - /bin/cp -r frontend $DEPLOYPATH
+    - /bin/cp README.md $DEPLOYPATH
