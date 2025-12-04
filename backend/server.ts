@@ -1,9 +1,18 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
-// Carica le variabili d'ambiente prima di qualsiasi altro import
-const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.dev';
-dotenv.config({ path: path.resolve(__dirname, envFile) });
+// ============= CARICAMENTO VARIABILI D'AMBIENTE =============
+// FIX: Carica .env solo se NON siamo in produzione.
+// In produzione su Netsons/cPanel usiamo le variabili d'ambiente dell'interfaccia.
+if (process.env.NODE_ENV !== 'production') {
+  // In dev (locale), cerca il file .env.dev nella root (salendo di un livello da /dist se serve)
+  const envPath = path.resolve(__dirname, process.env.NODE_ENV === 'test' ? '..' : '', '.env.dev');
+  dotenv.config({ path: envPath });
+  console.log('[SERVER] 🔧 Loaded local env file from:', envPath);
+} else {
+  console.log('[SERVER] 🚀 Production mode: Using system environment variables (cPanel).');
+}
+// ==================================================================
 
 import express, { Application } from 'express';
 import { errorHandler } from './middleware/errorHandler.middleware';
@@ -40,7 +49,6 @@ const missingEnvVars = requiredEnvVars.filter((varName) => !process.env[varName]
 // Se mancano variabili d'ambiente obbligatorie, esci con errore
 if (missingEnvVars.length > 0) {
   console.error('[SERVER] ❌ ERRORE: Variabili d\'ambiente mancanti:', missingEnvVars.join(', '));
-  console.error('[SERVER] Controlla il file:', envFile);
   process.exit(1);
 }
 
@@ -121,18 +129,14 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 // ============= AVVIO SERVER =============
-// Avvia il server solo se non siamo in ambiente di test o se non è gestito da Passenger
-// Passenger gestisce lui stesso il listening, quindi non dobbiamo chiamare app.listen()
-const isPassenger = !!(process.env.PASSENGER_APP_ENV || process.env.PHUSION_PASSENGER);
-
 if (process.env.NODE_ENV !== 'test') {
+  // IMPORTANTE: Su cPanel la porta non è un numero, è una "named pipe".
+  // Dobbiamo usare quella stringa esattamente come arriva.
+  const PORT = process.env.PORT || 3000;
+  
   app.listen(PORT, () => {
-    console.log('='.repeat(50));
-    console.log(`[SERVER] 🚀 Server avviato su porta ${PORT}: http://localhost:${PORT}/`);
-    console.log(`[SERVER] 🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`[SERVER] 📍 Health check: http://localhost:${PORT}/health`);
-    console.log(`[SERVER] 🔐 Auth endpoints: http://localhost:${PORT}/api/auth`);
-    console.log('='.repeat(50));
+    console.log(`[SERVER] 🚀 Server avviato in ambiente: ${process.env.NODE_ENV}`);
+    // Non stampare URL con localhost in produzione perché usiamo una pipe
   });
 
   // ============= GRACEFUL SHUTDOWN =============
