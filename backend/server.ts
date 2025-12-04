@@ -121,35 +121,17 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 // ============= AVVIO SERVER =============
-// Avvia il server solo se non siamo in ambiente di test
-if (process.env.NODE_ENV !== 'test') {
+// Avvia il server solo se non siamo in ambiente di test o se non è gestito da Passenger
+// Passenger gestisce lui stesso il listening, quindi non dobbiamo chiamare app.listen()
+const isPassenger = !!(process.env.PASSENGER_APP_ENV || process.env.PHUSION_PASSENGER);
+
+if (process.env.NODE_ENV !== 'test' && !isPassenger) {
   app.listen(PORT, () => {
     console.log('='.repeat(50));
     console.log(`[SERVER] 🚀 Server avviato su porta ${PORT}: http://localhost:${PORT}/`);
     console.log(`[SERVER] 🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
     console.log(`[SERVER] 📍 Health check: http://localhost:${PORT}/health`);
     console.log(`[SERVER] 🔐 Auth endpoints: http://localhost:${PORT}/api/auth`);
-    
-    // ============= CRON JOB SCHEDULER =============
-    // Legge l'orario dal .env (es: "0 8 * * *" per le 08:00 di mattina)
-    const cronTime = process.env.CRON_NOTIFICATION_TIME || '0 8 * * *';
-    
-    console.log(`[CRON] 🕒 Scheduler inizializzato con orario: "${cronTime}"`);
-    
-    cron.schedule(cronTime, async () => {
-      console.log(`[CRON] 🔔 Esecuzione job notifiche automatiche: ${new Date().toISOString()}`);
-      
-      try {
-        // Esegue il servizio di notifica
-        const stats = await notificationService.sendExpiringContractsNotifications();
-        
-        console.log('[CRON] ✅ Job completato con successo.');
-        console.log('[CRON] 📊 Statistiche:', stats);
-      } catch (error) {
-        console.error('[CRON] ❌ Errore imprevisto durante l\'esecuzione del job:', error);
-      }
-    });
-
     console.log('='.repeat(50));
   });
 
@@ -162,6 +144,29 @@ if (process.env.NODE_ENV !== 'test') {
   process.on('SIGINT', () => {
     console.log('[SERVER] SIGINT ricevuto, chiusura graceful...');
     process.exit(0);
+  });
+}
+
+// ============= CRON JOB SCHEDULER =============
+// Inizializza il cron job sia in sviluppo che in produzione
+if (process.env.NODE_ENV !== 'test') {
+  // Legge l'orario dal .env (es: "0 8 * * *" per le 08:00 di mattina)
+  const cronTime = process.env.CRON_NOTIFICATION_TIME || '0 8 * * *';
+  
+  console.log(`[CRON] 🕒 Scheduler inizializzato con orario: "${cronTime}"`);
+  
+  cron.schedule(cronTime, async () => {
+    console.log(`[CRON] 🔔 Esecuzione job notifiche automatiche: ${new Date().toISOString()}`);
+    
+    try {
+      // Esegue il servizio di notifica
+      const stats = await notificationService.sendExpiringContractsNotifications();
+      
+      console.log('[CRON] ✅ Job completato con successo.');
+      console.log('[CRON] 📊 Statistiche:', stats);
+    } catch (error) {
+      console.error('[CRON] ❌ Errore imprevisto durante l\'esecuzione del job:', error);
+    }
   });
 }
 
