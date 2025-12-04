@@ -58,7 +58,6 @@ console.log('[SERVER] Ambiente:', process.env.NODE_ENV || 'development');
 
 // ============= INIZIALIZZAZIONE APP =============
 const app: Application = express();
-const PORT = process.env.PORT || 3000;
 
 // ============= MIDDLEWARE GLOBALI =============
 
