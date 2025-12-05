@@ -21,12 +21,20 @@ import helmet from 'helmet';
 import cron from 'node-cron'; // Import node-cron
 import * as notificationService from './services/notification.service'; // Import notification service
 
-// Import routes
-import authRoutes from './routes/auth.routes';
-import userRoutes from './routes/user.routes';
-import ownerRoutes from './routes/owner.routes';
-import contractRoutes from './routes/contract.routes';
-import dashboardRoutes from "./routes/dashboard.routes";
+// Import routes (Nuova Implementazione)
+import * as authModule from './routes/auth.routes';
+import * as userModule from './routes/user.routes';
+import * as ownerModule from './routes/owner.routes';
+import * as contractModule from './routes/contract.routes';
+import * as dashboardModule from "./routes/dashboard.routes";
+
+// Estrai il router, gestendo il potenziale annidamento sotto la proprietà 'default'
+// Se .default esiste, usalo, altrimenti usa l'oggetto modulo completo
+const authRoutes = (authModule as any).default || authModule;
+const userRoutes = (userModule as any).default || userModule;
+const ownerRoutes = (ownerModule as any).default || ownerModule;
+const contractRoutes = (contractModule as any).default || contractModule;
+const dashboardRoutes = (dashboardModule as any).default || dashboardModule;
 
 // ============= VALIDAZIONE VARIABILI D'AMBIENTE =============
 const requiredEnvVars = [
