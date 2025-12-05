@@ -74,18 +74,16 @@ app.use(
 );
 console.log('[SERVER] ✅ CORS configurato per:', process.env.FRONTEND_URL);
 
-// ============= CONFIGURAZIONE FILE STATICI (DEBUG) =============
-// Definiamo esplicitamente la cartella da cui servire i file statici
-// L'AppRoot è /home/ljxvcewj/rental_contract_management/backend
-// Dobbiamo risalire di un livello da __dirname (che è /dist)
-
-// Solo se siamo in produzione, altrimenti è irrilevante
-if (process.env.NODE_ENV === 'production') {
-  const staticPath = path.resolve(__dirname, '..');
-  app.use(express.static(staticPath));
-  console.log(`[SERVER] 📁 Servizio statico configurato per la root: ${staticPath}`);
-}
-// =============================================================
+// ============= ROTTA DI TEST ASSOLUTO =============
+app.get('/test-server-live', (req, res) => {
+  console.log('[SERVER] 🔥 Rotta di Test Live Trovata!'); // Questo DEVE apparire nel log
+  res.status(200).json({ 
+    success: true, 
+    message: 'Risposta diretta dal Server.js (Rotta di test OK)',
+    timestamp: new Date().toISOString()
+  });
+});
+// =================================================
 
 // Body parser
 app.use(express.json());
