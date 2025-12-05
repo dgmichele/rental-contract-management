@@ -74,11 +74,18 @@ app.use(
 );
 console.log('[SERVER] ✅ CORS configurato per:', process.env.FRONTEND_URL);
 
-// [DEBUG] Log di ogni richiesta in ingresso
-app.use((req, res, next) => {
-  console.log(`[DEBUG REQUEST] Method: ${req.method} | URL: ${req.url} | OriginalUrl: ${req.originalUrl}`);
-  next();
-});
+// ============= CONFIGURAZIONE FILE STATICI (DEBUG) =============
+// Definiamo esplicitamente la cartella da cui servire i file statici
+// L'AppRoot è /home/ljxvcewj/rental_contract_management/backend
+// Dobbiamo risalire di un livello da __dirname (che è /dist)
+
+// Solo se siamo in produzione, altrimenti è irrilevante
+if (process.env.NODE_ENV === 'production') {
+  const staticPath = path.resolve(__dirname, '..');
+  app.use(express.static(staticPath));
+  console.log(`[SERVER] 📁 Servizio statico configurato per la root: ${staticPath}`);
+}
+// =============================================================
 
 // Body parser
 app.use(express.json());
