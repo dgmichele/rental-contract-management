@@ -22,7 +22,7 @@ import cron from 'node-cron'; // Import node-cron
 import * as notificationService from './services/notification.service'; // Import notification service
 
 // Import routes
-const authRoutes = require('./routes/auth.routes');
+import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import ownerRoutes from './routes/owner.routes';
 import contractRoutes from './routes/contract.routes';
