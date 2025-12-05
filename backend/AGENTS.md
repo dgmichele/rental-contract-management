@@ -621,7 +621,7 @@ FROM_EMAIL=noreply@bichimmobiliare.it
 FROM_NAME=Bich Immobiliare
 
 # Frontend
-FRONTEND_URL=https://contratti.bichimmobiliare.it
+FRONTEND_URL=https://api.bichimmobiliare.it
 
 # Cron
 CRON_NOTIFICATION_TIME=0 8 * * *
@@ -655,7 +655,7 @@ CRON_NOTIFICATION_DAYS_BEFORE=7
 
 ### Security
 
-- ✅ HTTPS attivo su `contratti.bichimmobiliare.it`
+- ✅ HTTPS attivo su `api.bichimmobiliare.it`
 - ✅ Helmet middleware attivo
 - ✅ Secrets JWT forti (min 32 caratteri)
 - ✅ `.env` file NON committato
