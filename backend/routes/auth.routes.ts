@@ -51,4 +51,4 @@ router.post('/logout', logoutController);
 router.post('/forgot-password', forgotPasswordController);
 router.post('/reset-password', forgotPasswordLimiter, resetPasswordController);
 
-export default router;
+module.exports = router;
