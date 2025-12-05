@@ -74,6 +74,12 @@ app.use(
 );
 console.log('[SERVER] ✅ CORS configurato per:', process.env.FRONTEND_URL);
 
+// [DEBUG] Log di ogni richiesta in ingresso
+app.use((req, res, next) => {
+  console.log(`[DEBUG REQUEST] Method: ${req.method} | URL: ${req.url} | OriginalUrl: ${req.originalUrl}`);
+  next();
+});
+
 // Body parser
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
