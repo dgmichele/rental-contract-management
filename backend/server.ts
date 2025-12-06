@@ -2,31 +2,30 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 // ============= CARICAMENTO VARIABILI D'AMBIENTE =============
-// FIX: Carica .env solo se NON siamo in produzione.
-// In produzione su Netsons/cPanel usiamo le variabili d'ambiente dell'interfaccia.
 if (process.env.NODE_ENV !== 'production') {
-  // In dev (locale), cerca il file .env.dev nella root (salendo di un livello da /dist se serve)
   const envPath = path.resolve(__dirname, process.env.NODE_ENV === 'test' ? '..' : '', '.env.dev');
   dotenv.config({ path: envPath });
   console.log('[SERVER] 🔧 Loaded local env file from:', envPath);
 } else {
   console.log('[SERVER] 🚀 Production mode: Using system environment variables (cPanel).');
 }
-// ==================================================================
 
-import express, { Application } from 'express';
+import express, { Application, Request, Response, NextFunction } from 'express';
 import { errorHandler } from './middleware/errorHandler.middleware';
 import cors from 'cors';
 import helmet from 'helmet';
-import cron from 'node-cron'; // Import node-cron
-import * as notificationService from './services/notification.service'; // Import notification service
+import cron from 'node-cron';
+import * as notificationService from './services/notification.service';
 
-// Import routes
-import authRoutes from './routes/auth.routes';
-import userRoutes from './routes/user.routes';
-import ownerRoutes from './routes/owner.routes';
-import contractRoutes from './routes/contract.routes';
-import dashboardRoutes from "./routes/dashboard.routes";
+// ============= LOGGING MIDDLEWARE GLOBALE =============
+// Questo DEVE essere il primo middleware per tracciare TUTTE le richieste
+const requestLogger = (req: Request, res: Response, next: NextFunction) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${req.method} ${req.path}`);
+  console.log('[REQUEST] Headers:', JSON.stringify(req.headers, null, 2));
+  console.log('[REQUEST] Body:', JSON.stringify(req.body, null, 2));
+  next();
+};
 
 // ============= VALIDAZIONE VARIABILI D'AMBIENTE =============
 const requiredEnvVars = [
@@ -41,31 +40,31 @@ const requiredEnvVars = [
   'FRONTEND_URL',
   'FROM_EMAIL',
   'FROM_NAME',
-  // CRON_NOTIFICATION_TIME è opzionale, ha un default ('0 8 * * *')
 ];
 
 const missingEnvVars = requiredEnvVars.filter((varName) => !process.env[varName]);
 
-// Se mancano variabili d'ambiente obbligatorie, esci con errore
 if (missingEnvVars.length > 0) {
   console.error('[SERVER] ❌ ERRORE: Variabili d\'ambiente mancanti:', missingEnvVars.join(', '));
   process.exit(1);
 }
 
-// Log variabili d'ambiente caricate (senza valori sensibili)
 console.log('[SERVER] ✅ Variabili d\'ambiente caricate e validate');
 console.log('[SERVER] Ambiente:', process.env.NODE_ENV || 'development');
 
 // ============= INIZIALIZZAZIONE APP =============
 const app: Application = express();
 
-// ============= MIDDLEWARE GLOBALI =============
+// ============= MIDDLEWARE GLOBALI (ORDINE CRITICO) =============
 
-// Security headers
+// 1. LOGGING (prima di tutto per tracciare ogni richiesta)
+app.use(requestLogger);
+
+// 2. Security headers
 app.use(helmet());
 console.log('[SERVER] ✅ Helmet configurato');
 
-// CORS
+// 3. CORS
 app.use(
   cors({
     origin: process.env.FRONTEND_URL,
@@ -74,24 +73,14 @@ app.use(
 );
 console.log('[SERVER] ✅ CORS configurato per:', process.env.FRONTEND_URL);
 
-// ============= ROTTA DI TEST ASSOLUTO =============
-app.get('/test-server-live', (req, res) => {
-  console.log('[SERVER] 🔥 Rotta di Test Live Trovata!'); // Questo DEVE apparire nel log
-  res.status(200).json({ 
-    success: true, 
-    message: 'Risposta diretta dal Server.js (Rotta di test OK)',
-    timestamp: new Date().toISOString()
-  });
-});
-// =================================================
-
-// Body parser
+// 4. Body parser
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 console.log('[SERVER] ✅ Body parser configurato');
 
 // ============= HEALTH CHECK =============
 app.get('/health', (req, res) => {
+  console.log('[HEALTH] Endpoint raggiunto');
   res.status(200).json({
     success: true,
     message: 'Server is running',
@@ -100,38 +89,99 @@ app.get('/health', (req, res) => {
   });
 });
 
+// ============= ROTTA DI TEST ASSOLUTO =============
+app.get('/test-server-live', (req, res) => {
+  console.log('[SERVER] 🔥 Rotta di Test Live raggiunta');
+  res.status(200).json({ 
+    success: true, 
+    message: 'Risposta diretta dal Server.js (Rotta di test OK)',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // ============= ROUTES =============
 
 // Rotta base di test
 app.get('/', (req, res) => {
+  console.log('[SERVER] Homepage raggiunta');
   res.send('Server pronto 🥳');
 });
 
-// Auth routes
-app.use('/api/auth', authRoutes);
-console.log('[SERVER] ✅ Route /api/auth montate');
+// ============= IMPORT ROUTES CON TRY/CATCH =============
+console.log('[SERVER] 📦 Tentativo di importazione routes...');
 
-// User routes
-app.use('/api/user', userRoutes);
-console.log('[SERVER] ✅ Route /api/user montate');
+try {
+  // Import con path logging
+  console.log('[SERVER] Importing auth routes from:', path.join(__dirname, 'routes', 'auth.routes'));
+  const authRoutes = require('./routes/auth.routes').default;
+  app.use('/api/auth', authRoutes);
+  console.log('[SERVER] ✅ Route /api/auth montate con successo');
+} catch (error) {
+  console.error('[SERVER] ❌ ERRORE nel montare auth routes:', error);
+}
 
-// Owner routes
-app.use('/api/owner', ownerRoutes);
-console.log('[SERVER] ✅ Route /api/owner montate');
+try {
+  console.log('[SERVER] Importing user routes from:', path.join(__dirname, 'routes', 'user.routes'));
+  const userRoutes = require('./routes/user.routes').default;
+  app.use('/api/user', userRoutes);
+  console.log('[SERVER] ✅ Route /api/user montate con successo');
+} catch (error) {
+  console.error('[SERVER] ❌ ERRORE nel montare user routes:', error);
+}
 
-// Contract routes
-app.use('/api/contract', contractRoutes);
-console.log('[SERVER] ✅ Route /api/contract montate');
+try {
+  console.log('[SERVER] Importing owner routes from:', path.join(__dirname, 'routes', 'owner.routes'));
+  const ownerRoutes = require('./routes/owner.routes').default;
+  app.use('/api/owner', ownerRoutes);
+  console.log('[SERVER] ✅ Route /api/owner montate con successo');
+} catch (error) {
+  console.error('[SERVER] ❌ ERRORE nel montare owner routes:', error);
+}
 
-// Dashboard routes
-app.use("/api/dashboard", dashboardRoutes);
-console.log("[SERVER] ✅ Route /api/dashboard montate");
+try {
+  console.log('[SERVER] Importing contract routes from:', path.join(__dirname, 'routes', 'contract.routes'));
+  const contractRoutes = require('./routes/contract.routes').default;
+  app.use('/api/contract', contractRoutes);
+  console.log('[SERVER] ✅ Route /api/contract montate con successo');
+} catch (error) {
+  console.error('[SERVER] ❌ ERRORE nel montare contract routes:', error);
+}
+
+try {
+  console.log('[SERVER] Importing dashboard routes from:', path.join(__dirname, 'routes', 'dashboard.routes'));
+  const dashboardRoutes = require('./routes/dashboard.routes').default;
+  app.use('/api/dashboard', dashboardRoutes);
+  console.log('[SERVER] ✅ Route /api/dashboard montate con successo');
+} catch (error) {
+  console.error('[SERVER] ❌ ERRORE nel montare dashboard routes:', error);
+}
+
+// ============= DEBUG: STAMPA TUTTE LE ROUTES REGISTRATE =============
+console.log('[SERVER] 📋 Routes registrate:');
+app._router.stack.forEach((middleware: any) => {
+  if (middleware.route) {
+    // Route dirette
+    console.log(`  ${Object.keys(middleware.route.methods).join(', ').toUpperCase()} ${middleware.route.path}`);
+  } else if (middleware.name === 'router') {
+    // Router montati
+    middleware.handle.stack.forEach((handler: any) => {
+      if (handler.route) {
+        const path = handler.route.path;
+        const methods = Object.keys(handler.route.methods).join(', ').toUpperCase();
+        console.log(`  ${methods} ${path}`);
+      }
+    });
+  }
+});
 
 // ============= 404 HANDLER =============
 app.use((req, res) => {
+  console.log('[404] Endpoint non trovato:', req.method, req.path);
   res.status(404).json({
     success: false,
     message: 'Endpoint non trovato',
+    requestedPath: req.path,
+    method: req.method
   });
 });
 
@@ -140,13 +190,11 @@ app.use(errorHandler);
 
 // ============= AVVIO SERVER =============
 if (process.env.NODE_ENV !== 'test') {
-  // IMPORTANTE: Su cPanel la porta non è un numero, è una "named pipe".
-  // Dobbiamo usare quella stringa esattamente come arriva.
   const PORT = process.env.PORT || 3000;
   
   app.listen(PORT, () => {
     console.log(`[SERVER] 🚀 Server avviato in ambiente: ${process.env.NODE_ENV}`);
-    // Non stampare URL con localhost in produzione perché usiamo una pipe
+    console.log(`[SERVER] 📍 Listening on port/pipe: ${PORT}`);
   });
 
   // ============= GRACEFUL SHUTDOWN =============
@@ -162,20 +210,16 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 // ============= CRON JOB SCHEDULER =============
-// Inizializza il cron job sia in sviluppo che in produzione
 if (process.env.NODE_ENV !== 'test') {
-  // Legge l'orario dal .env (es: "0 8 * * *" per le 08:00 di mattina)
   const cronTime = process.env.CRON_NOTIFICATION_TIME || '0 8 * * *';
   
-  console.log(`[CRON] 🕒 Scheduler inizializzato con orario: "${cronTime}"`);
+  console.log(`[CRON] 🕐 Scheduler inizializzato con orario: "${cronTime}"`);
   
   cron.schedule(cronTime, async () => {
     console.log(`[CRON] 🔔 Esecuzione job notifiche automatiche: ${new Date().toISOString()}`);
     
     try {
-      // Esegue il servizio di notifica
       const stats = await notificationService.sendExpiringContractsNotifications();
-      
       console.log('[CRON] ✅ Job completato con successo.');
       console.log('[CRON] 📊 Statistiche:', stats);
     } catch (error) {
