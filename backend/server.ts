@@ -107,18 +107,14 @@ app.get('/', (req, res) => {
   res.send('Server pronto 🥳');
 });
 
-// ============= IMPORT ROUTES CON TRY/CATCH =============
+// ============= IMPORT ROUTES SENZA TRY/CATCH (per vedere l'errore) =============
 console.log('[SERVER] 📦 Tentativo di importazione routes...');
 
-try {
-  // Import con path logging
-  console.log('[SERVER] Importing auth routes from:', path.join(__dirname, 'routes', 'auth.routes'));
-  const authRoutes = require('./routes/auth.routes').default;
-  app.use('/api/auth', authRoutes);
-  console.log('[SERVER] ✅ Route /api/auth montate con successo');
-} catch (error) {
-  console.error('[SERVER] ❌ ERRORE nel montare auth routes:', error);
-}
+// Import con path logging - SENZA try/catch per vedere l'errore reale
+console.log('[SERVER] Importing auth routes from:', path.join(__dirname, 'routes', 'auth.routes'));
+const authRoutes = require('./routes/auth.routes').default;
+app.use('/api/auth', authRoutes);
+console.log('[SERVER] ✅ Route /api/auth montate con successo');
 
 try {
   console.log('[SERVER] Importing user routes from:', path.join(__dirname, 'routes', 'user.routes'));
