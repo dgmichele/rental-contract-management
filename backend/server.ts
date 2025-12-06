@@ -18,28 +18,17 @@ import cron from 'node-cron';
 import * as notificationService from './services/notification.service';
 
 // ============= LOGGING MIDDLEWARE GLOBALE =============
-// Questo DEVE essere il primo middleware per tracciare TUTTE le richieste
 const requestLogger = (req: Request, res: Response, next: NextFunction) => {
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] ${req.method} ${req.path}`);
-  console.log('[REQUEST] Headers:', JSON.stringify(req.headers, null, 2));
-  console.log('[REQUEST] Body:', JSON.stringify(req.body, null, 2));
   next();
 };
 
 // ============= VALIDAZIONE VARIABILI D'AMBIENTE =============
 const requiredEnvVars = [
-  'DB_HOST',
-  'DB_PORT',
-  'DB_USER',
-  'DB_PASSWORD',
-  'DB_NAME',
-  'ACCESS_TOKEN_SECRET',
-  'REFRESH_TOKEN_SECRET',
-  'RESEND_API_KEY',
-  'FRONTEND_URL',
-  'FROM_EMAIL',
-  'FROM_NAME',
+  'DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'DB_NAME',
+  'ACCESS_TOKEN_SECRET', 'REFRESH_TOKEN_SECRET', 'RESEND_API_KEY',
+  'FRONTEND_URL', 'FROM_EMAIL', 'FROM_NAME',
 ];
 
 const missingEnvVars = requiredEnvVars.filter((varName) => !process.env[varName]);
@@ -55,32 +44,23 @@ console.log('[SERVER] Ambiente:', process.env.NODE_ENV || 'development');
 // ============= INIZIALIZZAZIONE APP =============
 const app: Application = express();
 
-// ============= MIDDLEWARE GLOBALI (ORDINE CRITICO) =============
-
-// 1. LOGGING (prima di tutto per tracciare ogni richiesta)
+// ============= MIDDLEWARE GLOBALI =============
 app.use(requestLogger);
-
-// 2. Security headers
 app.use(helmet());
 console.log('[SERVER] ✅ Helmet configurato');
 
-// 3. CORS
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL,
-    credentials: true,
-  })
-);
+app.use(cors({
+  origin: process.env.FRONTEND_URL,
+  credentials: true,
+}));
 console.log('[SERVER] ✅ CORS configurato per:', process.env.FRONTEND_URL);
 
-// 4. Body parser
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 console.log('[SERVER] ✅ Body parser configurato');
 
 // ============= HEALTH CHECK =============
 app.get('/health', (req, res) => {
-  console.log('[HEALTH] Endpoint raggiunto');
   res.status(200).json({
     success: true,
     message: 'Server is running',
@@ -89,86 +69,79 @@ app.get('/health', (req, res) => {
   });
 });
 
-// ============= ROTTA DI TEST ASSOLUTO =============
+// ============= ROTTA DI TEST =============
 app.get('/test-server-live', (req, res) => {
-  console.log('[SERVER] 🔥 Rotta di Test Live raggiunta');
   res.status(200).json({ 
     success: true, 
-    message: 'Risposta diretta dal Server.js (Rotta di test OK)',
+    message: 'Server OK',
     timestamp: new Date().toISOString()
   });
 });
 
-// ============= ROUTES =============
-
-// Rotta base di test
 app.get('/', (req, res) => {
-  console.log('[SERVER] Homepage raggiunta');
   res.send('Server pronto 🥳');
 });
 
-// ============= IMPORT ROUTES SENZA TRY/CATCH (per vedere l'errore) =============
-console.log('[SERVER] 📦 Tentativo di importazione routes...');
+// ============= IMPORT ROUTES CON LOGGING DETTAGLIATO =============
+console.log('[SERVER] 📦 Inizio import routes...');
 
-// Import con path logging - SENZA try/catch per vedere l'errore reale
-console.log('[SERVER] Importing auth routes from:', path.join(__dirname, 'routes', 'auth.routes'));
-const authRoutes = require('./routes/auth.routes').default;
-app.use('/api/auth', authRoutes);
-console.log('[SERVER] ✅ Route /api/auth montate con successo');
-
+// Auth routes - TEST NUCLEARE
+console.log('[SERVER] 1️⃣ Tentativo import auth.routes...');
 try {
-  console.log('[SERVER] Importing user routes from:', path.join(__dirname, 'routes', 'user.routes'));
-  const userRoutes = require('./routes/user.routes').default;
-  app.use('/api/user', userRoutes);
-  console.log('[SERVER] ✅ Route /api/user montate con successo');
-} catch (error) {
-  console.error('[SERVER] ❌ ERRORE nel montare user routes:', error);
+  const authRoutes = require('./routes/auth.routes');
+  console.log('[SERVER] ✅ auth.routes importato, type:', typeof authRoutes);
+  console.log('[SERVER] ✅ authRoutes.default exists?', !!authRoutes.default);
+  
+  const router = authRoutes.default || authRoutes;
+  app.use('/api/auth', router);
+  console.log('[SERVER] ✅✅✅ Route /api/auth MONTATE!');
+} catch (error: any) {
+  console.error('[SERVER] ❌❌❌ ERRORE IMPORT AUTH:');
+  console.error('[SERVER] Message:', error.message);
+  console.error('[SERVER] Stack:', error.stack);
 }
 
+// User routes
+console.log('[SERVER] 2️⃣ Tentativo import user.routes...');
 try {
-  console.log('[SERVER] Importing owner routes from:', path.join(__dirname, 'routes', 'owner.routes'));
-  const ownerRoutes = require('./routes/owner.routes').default;
-  app.use('/api/owner', ownerRoutes);
-  console.log('[SERVER] ✅ Route /api/owner montate con successo');
-} catch (error) {
-  console.error('[SERVER] ❌ ERRORE nel montare owner routes:', error);
+  const userRoutes = require('./routes/user.routes');
+  app.use('/api/user', userRoutes.default || userRoutes);
+  console.log('[SERVER] ✅ Route /api/user montate');
+} catch (error: any) {
+  console.error('[SERVER] ❌ ERRORE user routes:', error.message);
 }
 
+// Owner routes
+console.log('[SERVER] 3️⃣ Tentativo import owner.routes...');
 try {
-  console.log('[SERVER] Importing contract routes from:', path.join(__dirname, 'routes', 'contract.routes'));
-  const contractRoutes = require('./routes/contract.routes').default;
-  app.use('/api/contract', contractRoutes);
-  console.log('[SERVER] ✅ Route /api/contract montate con successo');
-} catch (error) {
-  console.error('[SERVER] ❌ ERRORE nel montare contract routes:', error);
+  const ownerRoutes = require('./routes/owner.routes');
+  app.use('/api/owner', ownerRoutes.default || ownerRoutes);
+  console.log('[SERVER] ✅ Route /api/owner montate');
+} catch (error: any) {
+  console.error('[SERVER] ❌ ERRORE owner routes:', error.message);
 }
 
+// Contract routes
+console.log('[SERVER] 4️⃣ Tentativo import contract.routes...');
 try {
-  console.log('[SERVER] Importing dashboard routes from:', path.join(__dirname, 'routes', 'dashboard.routes'));
-  const dashboardRoutes = require('./routes/dashboard.routes').default;
-  app.use('/api/dashboard', dashboardRoutes);
-  console.log('[SERVER] ✅ Route /api/dashboard montate con successo');
-} catch (error) {
-  console.error('[SERVER] ❌ ERRORE nel montare dashboard routes:', error);
+  const contractRoutes = require('./routes/contract.routes');
+  app.use('/api/contract', contractRoutes.default || contractRoutes);
+  console.log('[SERVER] ✅ Route /api/contract montate');
+} catch (error: any) {
+  console.error('[SERVER] ❌ ERRORE contract routes:', error.message);
 }
 
-// ============= DEBUG: STAMPA TUTTE LE ROUTES REGISTRATE =============
-console.log('[SERVER] 📋 Routes registrate:');
-app._router.stack.forEach((middleware: any) => {
-  if (middleware.route) {
-    // Route dirette
-    console.log(`  ${Object.keys(middleware.route.methods).join(', ').toUpperCase()} ${middleware.route.path}`);
-  } else if (middleware.name === 'router') {
-    // Router montati
-    middleware.handle.stack.forEach((handler: any) => {
-      if (handler.route) {
-        const path = handler.route.path;
-        const methods = Object.keys(handler.route.methods).join(', ').toUpperCase();
-        console.log(`  ${methods} ${path}`);
-      }
-    });
-  }
-});
+// Dashboard routes
+console.log('[SERVER] 5️⃣ Tentativo import dashboard.routes...');
+try {
+  const dashboardRoutes = require('./routes/dashboard.routes');
+  app.use('/api/dashboard', dashboardRoutes.default || dashboardRoutes);
+  console.log('[SERVER] ✅ Route /api/dashboard montate');
+} catch (error: any) {
+  console.error('[SERVER] ❌ ERRORE dashboard routes:', error.message);
+}
+
+console.log('[SERVER] 📦 Import routes completato');
 
 // ============= 404 HANDLER =============
 app.use((req, res) => {
@@ -193,7 +166,6 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`[SERVER] 📍 Listening on port/pipe: ${PORT}`);
   });
 
-  // ============= GRACEFUL SHUTDOWN =============
   process.on('SIGTERM', () => {
     console.log('[SERVER] SIGTERM ricevuto, chiusura graceful...');
     process.exit(0);
@@ -205,21 +177,18 @@ if (process.env.NODE_ENV !== 'test') {
   });
 }
 
-// ============= CRON JOB SCHEDULER =============
+// ============= CRON JOB =============
 if (process.env.NODE_ENV !== 'test') {
   const cronTime = process.env.CRON_NOTIFICATION_TIME || '0 8 * * *';
-  
-  console.log(`[CRON] 🕐 Scheduler inizializzato con orario: "${cronTime}"`);
+  console.log(`[CRON] 🕐 Scheduler inizializzato: "${cronTime}"`);
   
   cron.schedule(cronTime, async () => {
-    console.log(`[CRON] 🔔 Esecuzione job notifiche automatiche: ${new Date().toISOString()}`);
-    
+    console.log(`[CRON] 🔔 Job notifiche: ${new Date().toISOString()}`);
     try {
       const stats = await notificationService.sendExpiringContractsNotifications();
-      console.log('[CRON] ✅ Job completato con successo.');
-      console.log('[CRON] 📊 Statistiche:', stats);
+      console.log('[CRON] ✅ Job completato:', stats);
     } catch (error) {
-      console.error('[CRON] ❌ Errore imprevisto durante l\'esecuzione del job:', error);
+      console.error('[CRON] ❌ Errore job:', error);
     }
   });
 }
