@@ -1,36 +1,54 @@
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
+import {
+  registerController,
+  loginController,
+  refreshTokenController,
+  logoutController,
+  forgotPasswordController,
+  resetPasswordController,
+} from '../controllers/auth.controller';
+import { loginLimiter, registerLimiter, forgotPasswordLimiter } from "../middleware/rateLimiter.middleware";
 
 const router = Router();
 
-console.log('[AUTH_ROUTES] ✅ File caricato correttamente');
+/**
+ * @route   POST /api/auth/register
+ * @desc    Registra un nuovo utente
+ * @access  Public
+ * @body    { name, surname, email, password }
+ * @returns { accessToken, refreshToken, user }
+ */
+router.post('/register', registerLimiter, registerController);
 
-// Route minimali senza NESSUNA dipendenza esterna
-router.post('/register', (req: Request, res: Response) => {
-  console.log('[AUTH] /register chiamato');
-  res.json({ success: true, message: 'Register route OK' });
-});
+/**
+ * @route   POST /api/auth/login
+ * @desc    Login utente esistente
+ * @access  Public
+ * @body    { email, password }
+ * @returns { accessToken, refreshToken, user }
+ */
+router.post('/login', loginLimiter, loginController);
 
-router.post('/login', (req: Request, res: Response) => {
-  console.log('[AUTH] /login chiamato');
-  res.json({ success: true, message: 'Login route OK' });
-});
+/**
+ * @route   POST /api/auth/refresh
+ * @desc    Rinnova access token usando refresh token
+ * @access  Public
+ * @body    { refreshToken }
+ * @returns { accessToken }
+ */
+router.post('/refresh', refreshTokenController);
 
-router.post('/refresh', (req: Request, res: Response) => {
-  res.json({ success: true, message: 'Refresh route OK' });
-});
+/**
+ * @route   POST /api/auth/logout
+ * @desc    Logout utente (blacklist refresh token)
+ * @access  Public
+ * @body    { refreshToken }
+ * @returns { success, message }
+ */
+router.post('/logout', logoutController);
 
-router.post('/logout', (req: Request, res: Response) => {
-  res.json({ success: true, message: 'Logout route OK' });
-});
-
-router.post('/forgot-password', (req: Request, res: Response) => {
-  res.json({ success: true, message: 'Forgot password route OK' });
-});
-
-router.post('/reset-password', (req: Request, res: Response) => {
-  res.json({ success: true, message: 'Reset password route OK' });
-});
-
-console.log('[AUTH_ROUTES] ✅ Tutte le route definite');
+// Password reset
+router.post('/forgot-password', forgotPasswordController);
+router.post('/reset-password', forgotPasswordLimiter, resetPasswordController);
 
 export default router;
