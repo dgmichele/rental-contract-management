@@ -621,7 +621,7 @@ FROM_EMAIL=noreply@bichimmobiliare.it
 FROM_NAME=Bich Immobiliare
 
 # Frontend
-FRONTEND_URL=https://api.bichimmobiliare.it
+FRONTEND_URL=https://contratti.bichimmobiliare.it
 
 # Cron
 CRON_NOTIFICATION_TIME=0 8 * * *
@@ -1248,23 +1248,26 @@ npx tsc --init
 - Optimize queries (add missing indexes se necessario)
 - Clean console.logs (keep only critical)
 
-### 5.3 Deploy Netsons
+### 5.3 Creazione database su phppgadmin
+
+### 5.4 Creazione server Node.js su cPanel
+
+- Update `.env.production` con DB credentials
+
+### 5.5 Deploy Netsons e avvio server Node.js
 
 **Checklist:**
 
-1. Create DB production su phpPgAdmin
-2. Update `.env.production` con DB credentials
-3. Upload codice (escludi node_modules, .env.dev)
-4. `npm install --production`
-5. Run migrations: `npx knex migrate:latest --env production`
-6. Test manuale endpoints chiave
-7. Verify cron job running (check logs dopo 24h)
-8. Test email Resend (trigger manual notification)
+- Upload codice (escludi node_modules, .env.dev)
+- `npm install --production`
+- Run migrations: `npx knex migrate:latest --env production`
+- Test manuale endpoints chiave
+- Test email Resend (trigger manual notification)
 
-### 5.4 Monitoring
+### 5.6 Monitoring
 
 - Setup basic health check endpoint: GET `/health` → 200 OK
-- Monitor logs per errori cron
+- Verify cron job running (check logs dopo 24h) - Monitor logs per errori cron
 - Test reset password flow end-to-end
 
 ---
