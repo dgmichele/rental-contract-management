@@ -398,4 +398,183 @@ describe('Annuities Logic Unit Tests', () => {
       ).rejects.toThrow('Contratto non trovato');
     });
   });
+
+  // ============= TEST 7: RECALCULATE ANNUITY DUE DATES =============
+  describe('recalculateAnnuityDueDates', () => {
+    
+    it('✅ Dovrebbe aggiornare due_date quando end_date viene estesa', async () => {
+      // 1. Crea contratto 2025-2028 (anni intermedi: 2026, 2027)
+      const contract = await createTestContract({
+        start_date: '2025-01-15',
+        end_date: '2028-01-15',
+        cedolare_secca: false,
+      });
+
+      // 2. Genera annuities iniziali
+      await annuityService.generateAnnuitiesForContract(contract.id);
+
+      // 3. Modifica end_date a 2030
+      await db('contracts')
+        .where({ id: contract.id })
+        .update({ end_date: '2030-01-15' });
+
+      // 4. Ricalcola annuities
+      const recalculated = await annuityService.recalculateAnnuityDueDates(contract.id);
+
+      // 5. Verifica: ora dovrebbero esserci 4 annuities (2026, 2027, 2028, 2029)
+      expect(recalculated.length).toBe(4);
+      expect(recalculated.map(a => a.year)).toEqual([2026, 2027, 2028, 2029]);
+      
+      // Verifica che le due_date siano corrette
+      recalculated.forEach(annuity => {
+        expect(annuity.due_date).toBe(`${annuity.year}-01-15`);
+      });
+    });
+
+    it('✅ Dovrebbe eliminare annuities quando end_date viene ridotta', async () => {
+      // 1. Crea contratto 2025-2030 (anni intermedi: 2026, 2027, 2028, 2029)
+      const contract = await createTestContract({
+        start_date: '2025-02-20',
+        end_date: '2030-02-20',
+        cedolare_secca: false,
+      });
+
+      // 2. Genera annuities iniziali
+      await annuityService.generateAnnuitiesForContract(contract.id);
+
+      // 3. Modifica end_date a 2027
+      await db('contracts')
+        .where({ id: contract.id })
+        .update({ end_date: '2027-02-20' });
+
+      // 4. Ricalcola annuities
+      const recalculated = await annuityService.recalculateAnnuityDueDates(contract.id);
+
+      // 5. Verifica: ora dovrebbe esserci solo 1 annuity (2026)
+      expect(recalculated.length).toBe(1);
+      expect(recalculated[0].year).toBe(2026);
+      expect(recalculated[0].due_date).toBe('2026-02-20');
+    });
+
+    it('✅ Dovrebbe aggiornare due_date quando start_date cambia', async () => {
+      // 1. Crea contratto con start_date 15 gennaio
+      const contract = await createTestContract({
+        start_date: '2025-01-15',
+        end_date: '2028-01-15',
+        cedolare_secca: false,
+      });
+
+      // 2. Genera annuities iniziali
+      await annuityService.generateAnnuitiesForContract(contract.id);
+
+      // 3. Modifica start_date a 20 febbraio (mantiene end_date)
+      await db('contracts')
+        .where({ id: contract.id })
+        .update({ 
+          start_date: '2025-02-20',
+          end_date: '2028-02-20' 
+        });
+
+      // 4. Ricalcola annuities
+      const recalculated = await annuityService.recalculateAnnuityDueDates(contract.id);
+
+      // 5. Verifica: le due_date devono riflettere il nuovo giorno/mese
+      expect(recalculated.length).toBe(2);
+      expect(recalculated[0].due_date).toBe('2026-02-20');
+      expect(recalculated[1].due_date).toBe('2027-02-20');
+    });
+
+    it('✅ Dovrebbe eliminare tutte le annuities se contratto diventa cedolare secca', async () => {
+      // 1. Crea contratto NON cedolare secca
+      const contract = await createTestContract({
+        start_date: '2025-01-01',
+        end_date: '2028-01-01',
+        cedolare_secca: false,
+      });
+
+      // 2. Genera annuities iniziali
+      await annuityService.generateAnnuitiesForContract(contract.id);
+
+      // 3. Cambia a cedolare secca
+      await db('contracts')
+        .where({ id: contract.id })
+        .update({ cedolare_secca: true });
+
+      // 4. Ricalcola annuities
+      const recalculated = await annuityService.recalculateAnnuityDueDates(contract.id);
+
+      // 5. Verifica: nessuna annuity deve rimanere
+      expect(recalculated).toEqual([]);
+      
+      // Verifica DB
+      const annuitiesInDb = await db('annuities')
+        .where({ contract_id: contract.id });
+      expect(annuitiesInDb.length).toBe(0);
+    });
+
+    it('✅ Dovrebbe preservare is_paid quando ricalcola', async () => {
+      // 1. Crea contratto con last_annuity_paid
+      const contract = await createTestContract({
+        start_date: '2025-01-01',
+        end_date: '2028-01-01',
+        cedolare_secca: false,
+        last_annuity_paid: 2026,
+      });
+
+      // 2. Genera annuities iniziali (2026 sarà is_paid: true)
+      await annuityService.generateAnnuitiesForContract(contract.id);
+
+      // 3. Estendi end_date a 2030
+      await db('contracts')
+        .where({ id: contract.id })
+        .update({ end_date: '2030-01-01' });
+
+      // 4. Ricalcola annuities
+      const recalculated = await annuityService.recalculateAnnuityDueDates(contract.id);
+
+      // 5. Verifica: 2026 deve rimanere is_paid: true
+      const annuity2026 = recalculated.find(a => a.year === 2026);
+      expect(annuity2026?.is_paid).toBe(true);
+      
+      // Le nuove annuities (2028, 2029) devono essere is_paid: false
+      const annuity2028 = recalculated.find(a => a.year === 2028);
+      const annuity2029 = recalculated.find(a => a.year === 2029);
+      expect(annuity2028?.is_paid).toBe(false);
+      expect(annuity2029?.is_paid).toBe(false);
+    });
+
+    it('✅ Dovrebbe gestire riduzione a nessun anno intermedio', async () => {
+      // 1. Crea contratto 2025-2028
+      const contract = await createTestContract({
+        start_date: '2025-01-01',
+        end_date: '2028-01-01',
+        cedolare_secca: false,
+      });
+
+      // 2. Genera annuities iniziali
+      await annuityService.generateAnnuitiesForContract(contract.id);
+
+      // 3. Riduci end_date a 2026 (nessun anno intermedio)
+      await db('contracts')
+        .where({ id: contract.id })
+        .update({ end_date: '2026-01-01' });
+
+      // 4. Ricalcola annuities
+      const recalculated = await annuityService.recalculateAnnuityDueDates(contract.id);
+
+      // 5. Verifica: nessuna annuity
+      expect(recalculated).toEqual([]);
+      
+      // Verifica DB
+      const annuitiesInDb = await db('annuities')
+        .where({ contract_id: contract.id });
+      expect(annuitiesInDb.length).toBe(0);
+    });
+
+    it('❌ Dovrebbe fallire se contratto non trovato', async () => {
+      await expect(
+        annuityService.recalculateAnnuityDueDates(99999)
+      ).rejects.toThrow('Contratto non trovato');
+    });
+  });
 });

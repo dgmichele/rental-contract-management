@@ -367,6 +367,7 @@ export const getContractById = async (
  * Aggiorna un contratto esistente.
  * Verifica ownership tramite owner_id.
  * ⭐ AGGIORNATO: Supporta anche aggiornamento dati tenant tramite tenant_data.
+ * ⭐ NUOVO: Ricalcola automaticamente le due_date delle annualità se vengono modificate le date del contratto.
  * 
  * @param userId - ID utente autenticato
  * @param contractId - ID contratto da aggiornare
@@ -458,6 +459,16 @@ export const updateContract = async (
         .returning('*');
 
       console.log('[CONTRACT_SERVICE] ✅ Contratto aggiornato:', updatedContract.id);
+
+      // ⭐ 6. NUOVO: Ricalcola annuities se sono state modificate le date del contratto
+      const datesChanged = data.start_date || data.end_date;
+      
+      if (datesChanged) {
+        console.log('[CONTRACT_SERVICE] Date modificate, ricalcolo annuities...');
+        await annuityService.recalculateAnnuityDueDates(contractId, trx);
+        console.log('[CONTRACT_SERVICE] ✅ Annuities ricalcolate');
+      }
+
       return updatedContract;
     });
   } catch (error) {

@@ -269,3 +269,171 @@ export const updateAnnuityPaid = async (
     throw new AppError('Errore durante l\'aggiornamento dell\'annualità', 500);
   }
 };
+
+/**
+ * Ricalcola le due_date delle annualità esistenti quando viene modificata la end_date del contratto.
+ * Questa funzione viene chiamata quando si aggiorna un contratto per mantenere la coerenza dei dati.
+ * 
+ * Logica:
+ * - Recupera il contratto aggiornato
+ * - Se cedolare_secca: elimina tutte le annuities (non dovrebbero esistere)
+ * - Calcola i nuovi anni intermedi basati su start_date e end_date aggiornate
+ * - Elimina annuities per anni che non sono più intermedi
+ * - Aggiorna le due_date delle annuities esistenti
+ * - Crea nuove annuities per anni intermedi mancanti
+ * 
+ * @param contractId - ID del contratto
+ * @param trx - Transaction Knex opzionale (per uso in altre transaction)
+ * @returns Array di annuities aggiornate/create
+ * @throws AppError 404 se contratto non trovato
+ * @throws AppError 500 per errori generici
+ */
+export const recalculateAnnuityDueDates = async (
+  contractId: number,
+  trx?: Knex.Transaction
+): Promise<Annuity[]> => {
+  console.log('[ANNUITY_SERVICE] Ricalcolo due_date annuities per contractId:', contractId);
+
+  try {
+    // Funzione helper per eseguire la logica
+    const executeRecalculation = async (transaction: Knex.Transaction) => {
+      // 1. Recupera il contratto aggiornato
+      const contract = await transaction<Contract>('contracts')
+        .where({ id: contractId })
+        .first();
+
+      if (!contract) {
+        console.log('[ANNUITY_SERVICE] Contratto non trovato:', contractId);
+        throw new AppError('Contratto non trovato', 404);
+      }
+
+      console.log('[ANNUITY_SERVICE] Contratto trovato:', {
+        id: contract.id,
+        cedolare_secca: contract.cedolare_secca,
+        start_date: contract.start_date,
+        end_date: contract.end_date,
+      });
+
+      // 2. Se cedolare secca, elimina tutte le annuities (non dovrebbero esistere)
+      if (contract.cedolare_secca) {
+        await transaction<Annuity>('annuities')
+          .where({ contract_id: contractId })
+          .delete();
+        
+        console.log('[ANNUITY_SERVICE] Contratto in cedolare secca, annuities eliminate');
+        return [];
+      }
+
+      // 3. Calcola i nuovi anni intermedi
+      const startYear = dayjs(contract.start_date).year();
+      const endYear = dayjs(contract.end_date).year();
+
+      const newIntermediateYears: number[] = [];
+      for (let year = startYear + 1; year < endYear; year++) {
+        newIntermediateYears.push(year);
+      }
+
+      console.log('[ANNUITY_SERVICE] Nuovi anni intermedi calcolati:', newIntermediateYears);
+
+      // 4. Recupera annuities esistenti
+      const existingAnnuities = await transaction<Annuity>('annuities')
+        .where({ contract_id: contractId })
+        .orderBy('year', 'asc');
+
+      console.log('[ANNUITY_SERVICE] Annuities esistenti:', existingAnnuities.length);
+
+      // 5. Identifica annuities da eliminare (anni non più intermedi)
+      const yearsToDelete = existingAnnuities
+        .filter(a => !newIntermediateYears.includes(a.year))
+        .map(a => a.year);
+
+      if (yearsToDelete.length > 0) {
+        await transaction<Annuity>('annuities')
+          .where({ contract_id: contractId })
+          .whereIn('year', yearsToDelete)
+          .delete();
+
+        console.log('[ANNUITY_SERVICE] Annuities eliminate per anni non più intermedi:', yearsToDelete);
+      }
+
+      // 6. Aggiorna le due_date delle annuities esistenti che rimangono valide
+      const yearsToUpdate = existingAnnuities
+        .filter(a => newIntermediateYears.includes(a.year))
+        .map(a => a.year);
+
+      for (const year of yearsToUpdate) {
+        const newDueDate = dayjs(contract.start_date)
+          .year(year)
+          .format('YYYY-MM-DD');
+
+        await transaction<Annuity>('annuities')
+          .where({ contract_id: contractId, year })
+          .update({
+            due_date: newDueDate,
+            updated_at: new Date(),
+          });
+
+        console.log(`[ANNUITY_SERVICE] Annuity ${year} aggiornata con nuova due_date:`, newDueDate);
+      }
+
+      // 7. Crea nuove annuities per anni intermedi mancanti
+      const existingYears = existingAnnuities.map(a => a.year);
+      const yearsToCreate = newIntermediateYears.filter(year => !existingYears.includes(year));
+
+      if (yearsToCreate.length > 0) {
+        const annuitiesToInsert: NewAnnuity[] = yearsToCreate.map((year) => {
+          const dueDate = dayjs(contract.start_date)
+            .year(year)
+            .format('YYYY-MM-DD');
+
+          // Determina is_paid basandosi su last_annuity_paid
+          const isPaid = contract.last_annuity_paid 
+            ? year <= contract.last_annuity_paid 
+            : false;
+
+          return {
+            contract_id: contractId,
+            year,
+            due_date: dueDate,
+            is_paid: isPaid,
+            paid_at: isPaid ? new Date() : null,
+          };
+        });
+
+        await transaction<Annuity>('annuities')
+          .insert(annuitiesToInsert);
+
+        console.log('[ANNUITY_SERVICE] Nuove annuities create per anni mancanti:', yearsToCreate);
+      }
+
+      // 8. Recupera tutte le annuities finali
+      const finalAnnuities = await transaction<Annuity>('annuities')
+        .where({ contract_id: contractId })
+        .orderBy('year', 'asc');
+
+      // Formatta le date
+      const formattedAnnuities = finalAnnuities.map(annuity => ({
+        ...annuity,
+        due_date: dayjs(annuity.due_date).format('YYYY-MM-DD'),
+      }));
+
+      console.log('[ANNUITY_SERVICE] ✅ Ricalcolo completato, annuities finali:', formattedAnnuities.length);
+
+      return formattedAnnuities;
+    };
+
+    // Se è stata passata una transaction, usala; altrimenti creane una nuova
+    if (trx) {
+      return await executeRecalculation(trx);
+    } else {
+      return await db.transaction(async (newTrx) => {
+        return await executeRecalculation(newTrx);
+      });
+    }
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+
+    console.error('[ANNUITY_SERVICE] Errore ricalcolo annuities:', error);
+    throw new AppError('Errore durante il ricalcolo delle annualità', 500);
+  }
+};
