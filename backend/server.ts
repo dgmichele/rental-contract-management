@@ -29,6 +29,7 @@ import userRoutes from './routes/user.routes';
 import ownerRoutes from './routes/owner.routes';
 import contractRoutes from './routes/contract.routes';
 import dashboardRoutes from "./routes/dashboard.routes";
+import cronRoutes from './routes/cron.routes';
 
 // ============= VALIDAZIONE VARIABILI D'AMBIENTE =============
 const requiredEnvVars = [
@@ -117,6 +118,10 @@ logInfo('[SERVER] ✅ Route /api/contract montate');
 // Dashboard routes
 app.use("/api/dashboard", dashboardRoutes);
 logInfo("[SERVER] ✅ Route /api/dashboard montate");
+
+// Cron routes (manual trigger for testing)
+app.use("/api/cron", cronRoutes);
+logInfo("[SERVER] ✅ Route /api/cron montate");
 
 // ============= 404 HANDLER =============
 app.use((req, res) => {

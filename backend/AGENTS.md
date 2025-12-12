@@ -1316,6 +1316,7 @@ Il progetto utilizza **Winston** per un sistema di logging professionale con rot
 - ✅ Formato JSON strutturato per parsing
 - ✅ Console colorata in sviluppo
 - ✅ Retention automatica (14-30 giorni)
+- ✅ Integrato in: Server, Cron Job, Email Service, Error Handler
 
 ### 15.2 Struttura File Log
 
@@ -1376,6 +1377,35 @@ logCronError("[CRON] Errore job", error);
 }
 ```
 
+**Logging degli Errori (Error Handler):**
+
+Il middleware `errorHandler` logga automaticamente tutti gli errori con il livello appropriato:
+
+```typescript
+// Errori 4xx (client) → logWarn
+logWarn("[ERROR_HANDLER] AppError operazionale (404): Contratto non trovato");
+
+// Errori 5xx (server) → logError
+logError("[ERROR_HANDLER] AppError operazionale (500): Errore database", {
+  message: "Connection timeout",
+  stack: "...",
+});
+
+// Errori non gestiti → logError con stack trace completo
+logError("[ERROR_HANDLER] ❌ ERRORE NON GESTITO", {
+  message: err.message,
+  stack: err.stack,
+  type: "TypeError",
+});
+```
+
+**Vantaggi:**
+
+- ✅ Tutti gli errori 500 vengono automaticamente loggati in `error.log`
+- ✅ Stack trace completo per debug in produzione
+- ✅ Contesto della richiesta (method, path)
+- ✅ Errori 4xx loggati come warning (meno critici)
+
 ### 15.4 Accesso ai Log in Produzione
 
 **Via File Manager cPanel:**
@@ -1423,10 +1453,34 @@ WHERE sent_at >= CURRENT_DATE
 ORDER BY sent_at DESC;
 ```
 
-**Metodo 3: Endpoint di test (opzionale)**
+**Metodo 3: Endpoint di test** ⭐ (IMPLEMENTATO)
 
-- Creare endpoint `POST /api/cron/trigger` (solo admin)
-- Permette di triggerare manualmente il job per test
+Usa l'endpoint `POST /api/cron/trigger-notifications` per triggerare manualmente il job:
+
+```bash
+# Con curl (richiede JWT token)
+curl -X POST http://localhost:3000/api/cron/trigger-notifications \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+# Response esempio:
+# {
+#   "success": true,
+#   "message": "Job notifiche eseguito con successo",
+#   "data": {
+#     "processed": 5,
+#     "sent": 3,
+#     "skipped": 1,
+#     "failed": 1
+#   }
+# }
+```
+
+**Vantaggi:**
+
+- ✅ Test immediato senza aspettare 24h
+- ✅ Verifica funzionamento in qualsiasi momento
+- ✅ Protetto da autenticazione JWT
+- ✅ Ritorna statistiche dettagliate
 
 ### 15.6 Configurazione Ambiente
 

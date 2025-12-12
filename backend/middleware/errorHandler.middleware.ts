@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
 import AppError from '../utils/AppError';
+import { logError, logWarn, logInfo } from '../services/logger.service';
 
 /**
  * Middleware centrale per la gestione degli errori.
@@ -20,14 +21,22 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ): void => {
-  console.error('[ERROR_HANDLER] Errore catturato:');
-  console.error('[ERROR_HANDLER] Tipo:', err.constructor.name);
-  console.error('[ERROR_HANDLER] Messaggio:', err.message);
-  console.error('[ERROR_HANDLER] Path:', req.method, req.path);
+  // Log iniziale dell'errore con contesto
+  logError(`[ERROR_HANDLER] Errore catturato - Tipo: ${err.constructor.name}, Path: ${req.method} ${req.path}`, {
+    type: err.constructor.name,
+    message: err.message,
+    method: req.method,
+    path: req.path,
+  });
 
   // ============= 1. ERRORI OPERAZIONALI (AppError) =============
   if (err instanceof AppError && err.isOperational) {
-    console.log('[ERROR_HANDLER] AppError operazionale, statusCode:', err.statusCode);
+    // Log come warning per errori operazionali (4xx) o error per errori server (5xx)
+    if (err.statusCode >= 500) {
+      logError(`[ERROR_HANDLER] AppError operazionale (${err.statusCode}): ${err.message}`);
+    } else {
+      logWarn(`[ERROR_HANDLER] AppError operazionale (${err.statusCode}): ${err.message}`);
+    }
     
     return res.status(err.statusCode).json({
       success: false,
@@ -37,7 +46,7 @@ export const errorHandler = (
 
   // ============= 2. ERRORI DI VALIDAZIONE (Zod) =============
   if (err instanceof ZodError) {
-    console.log('[ERROR_HANDLER] Errore validazione Zod');
+    logWarn('[ERROR_HANDLER] Errore validazione Zod', { issues: err.issues });
     
     const formattedErrors = err.issues.map((issue) => ({
       field: issue.path.join('.'),
@@ -53,7 +62,7 @@ export const errorHandler = (
 
   // ============= 3. ERRORI JWT =============
   if (err instanceof TokenExpiredError) {
-    console.log('[ERROR_HANDLER] Token JWT scaduto');
+    logWarn('[ERROR_HANDLER] Token JWT scaduto');
     
     return res.status(401).json({
       success: false,
@@ -62,7 +71,7 @@ export const errorHandler = (
   }
 
   if (err instanceof JsonWebTokenError) {
-    console.log('[ERROR_HANDLER] Token JWT non valido');
+    logWarn('[ERROR_HANDLER] Token JWT non valido');
     
     return res.status(401).json({
       success: false,
@@ -73,7 +82,7 @@ export const errorHandler = (
   // ============= 4. ERRORI DATABASE (Knex/PostgreSQL) =============
   // Errori comuni di Knex/PostgreSQL
   if (err.message.includes('unique constraint') || err.message.includes('duplicate key')) {
-    console.log('[ERROR_HANDLER] Errore unique constraint DB');
+    logWarn('[ERROR_HANDLER] Errore unique constraint DB: ' + err.message);
     
     return res.status(409).json({
       success: false,
@@ -82,7 +91,7 @@ export const errorHandler = (
   }
 
   if (err.message.includes('foreign key constraint')) {
-    console.log('[ERROR_HANDLER] Errore foreign key constraint DB');
+    logWarn('[ERROR_HANDLER] Errore foreign key constraint DB: ' + err.message);
     
     return res.status(400).json({
       success: false,
@@ -91,7 +100,7 @@ export const errorHandler = (
   }
 
   if (err.message.includes('violates not-null constraint')) {
-    console.log('[ERROR_HANDLER] Errore not-null constraint DB');
+    logWarn('[ERROR_HANDLER] Errore not-null constraint DB: ' + err.message);
     
     return res.status(400).json({
       success: false,
@@ -100,8 +109,12 @@ export const errorHandler = (
   }
 
   // ============= 5. ERRORE GENERICO (500) =============
-  console.error('[ERROR_HANDLER] ❌ ERRORE NON GESTITO:');
-  console.error('[ERROR_HANDLER] Stack trace:', err.stack);
+  // Log critico con stack trace completo
+  logError('[ERROR_HANDLER] ❌ ERRORE NON GESTITO', {
+    message: err.message,
+    stack: err.stack,
+    type: err.constructor.name,
+  });
 
   // In produzione, NON esporre dettagli interni
   const isProduction = process.env.NODE_ENV === 'production';
