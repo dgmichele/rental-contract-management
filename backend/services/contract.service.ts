@@ -100,6 +100,7 @@ export const createContract = async (
         canone_concordato: data.canone_concordato,
         monthly_rent: data.monthly_rent,
         last_annuity_paid: data.last_annuity_paid || null,
+        address: data.address,
       };
 
       const [contract] = await trx<Contract>('contracts')
