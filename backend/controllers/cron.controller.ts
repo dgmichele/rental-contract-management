@@ -15,7 +15,9 @@ import { logCron } from '../services/logger.service';
  */
 export const triggerNotifications = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    logCron('[CRON_CONTROLLER] 🔧 Trigger manuale job notifiche richiesto da utente: ' + req.userId);
+    // Safe access per userId (potrebbe essere any dalla route)
+    const userId = (req as any).userId || req.userId || 'unknown';
+    logCron('[CRON_CONTROLLER] 🔧 Trigger manuale job notifiche richiesto da utente: ' + userId);
 
     // Esegue il job di notifica
     const stats = await notificationService.sendExpiringContractsNotifications();
