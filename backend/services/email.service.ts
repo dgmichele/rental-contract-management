@@ -12,6 +12,7 @@ import { ContractWithRelations } from '../types/api';
 import dayjs from 'dayjs';
 import 'dayjs/locale/it'; // Locale italiano per formattazione date
 import utc from 'dayjs/plugin/utc';
+import { logInfo, logError } from './logger.service';
 
 // Configura Day.js
 dayjs.extend(utc);
@@ -29,16 +30,16 @@ const resend = new Resend(process.env.RESEND_API_KEY as string);
  * @throws AppError 500 se l'invio fallisce
  */
 export const sendPasswordResetEmail = async (to: string, token: string): Promise<void> => {
-  console.log('[EMAIL_SERVICE] Preparazione invio email reset password a:', to);
+  logInfo('[EMAIL_SERVICE] Preparazione invio email reset password a: ' + to);
 
   // Costruisce l'URL completo per il reset (frontend)
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
-  console.log('[EMAIL_SERVICE] Reset URL generato:', resetUrl);
+  logInfo('[EMAIL_SERVICE] Reset URL generato: ' + resetUrl);
 
   try {
     // Renderizza il componente React Email in HTML
     const html = await render(ResetPasswordEmail({ resetUrl }));
-    console.log('[EMAIL_SERVICE] Template email renderizzato');
+    logInfo('[EMAIL_SERVICE] Template email renderizzato');
 
     // Invia email tramite Resend API
     const { data, error } = await resend.emails.send({
@@ -49,11 +50,11 @@ export const sendPasswordResetEmail = async (to: string, token: string): Promise
     });
 
     if (error) {
-      console.error('[EMAIL_SERVICE] ❌ Errore Resend API:', error);
+      logError('[EMAIL_SERVICE] ❌ Errore Resend API:', error);
       throw new AppError('Impossibile inviare email di reset', 500);
     }
 
-    console.log('[EMAIL_SERVICE] ✅ Email reset inviata con successo. ID:', data?.id);
+    logInfo('[EMAIL_SERVICE] ✅ Email reset inviata con successo. ID: ' + data?.id);
   } catch (error) {
     // Se è già un AppError, rilancia
     if (error instanceof AppError) {
@@ -61,7 +62,7 @@ export const sendPasswordResetEmail = async (to: string, token: string): Promise
     }
 
     // Per errori generici
-    console.error('[EMAIL_SERVICE] ❌ Errore imprevisto durante invio email:', error);
+    logError('[EMAIL_SERVICE] ❌ Errore imprevisto durante invio email:', error);
     throw new AppError('Errore nell\'invio dell\'email di recupero password', 500);
   }
 };
@@ -93,7 +94,7 @@ export const sendExpirationReminderInternal = async (
   type: 'contract' | 'annuity',
   year?: number
 ): Promise<boolean> => {
-  console.log('[EMAIL_SERVICE] 📧 Preparazione email reminder interna per contratto:', contract.id);
+  logInfo('[EMAIL_SERVICE] 📧 Preparazione email reminder interna per contratto: ' + contract.id);
 
   try {
     // Estrai dati necessari dal contratto
@@ -125,7 +126,7 @@ export const sendExpirationReminderInternal = async (
       })
     );
 
-    console.log('[EMAIL_SERVICE] ✅ Template interno renderizzato');
+    logInfo('[EMAIL_SERVICE] ✅ Template interno renderizzato');
 
     // Determina subject dinamico
     const subject = type === 'contract' 
@@ -145,12 +146,12 @@ export const sendExpirationReminderInternal = async (
       return false; // Best effort: non bloccare il flusso
     }
 
-    console.log('[EMAIL_SERVICE] ✅ Email interna inviata con successo. ID:', data?.id);
+    logInfo('[EMAIL_SERVICE] ✅ Email interna inviata con successo. ID: ' + data?.id);
     return true;
 
   } catch (error) {
     // Log errore ma NON interrompere il flusso (best effort)
-    console.error('[EMAIL_SERVICE] ❌ Errore invio email interna:', error);
+    logError('[EMAIL_SERVICE] ❌ Errore invio email interna:', error);
     return false;
   }
 };
@@ -171,7 +172,7 @@ export const sendExpirationReminderClient = async (
   type: 'contract' | 'annuity',
   year?: number
 ): Promise<boolean> => {
-  console.log('[EMAIL_SERVICE] 📧 Preparazione email reminder cliente per contratto:', contract.id);
+  logInfo('[EMAIL_SERVICE] 📧 Preparazione email reminder cliente per contratto: ' + contract.id);
 
   try {
     // Estrai dati necessari dal contratto
@@ -208,7 +209,7 @@ export const sendExpirationReminderClient = async (
       })
     );
 
-    console.log('[EMAIL_SERVICE] ✅ Template cliente renderizzato');
+    logInfo('[EMAIL_SERVICE] ✅ Template cliente renderizzato');
 
     // Determina subject dinamico
     const subject = type === 'contract' 
@@ -228,12 +229,12 @@ export const sendExpirationReminderClient = async (
       return false; // Best effort: non bloccare il flusso
     }
 
-    console.log('[EMAIL_SERVICE] ✅ Email cliente inviata con successo a:', contract.owner.email, 'ID:', data?.id);
+    logInfo('[EMAIL_SERVICE] ✅ Email cliente inviata con successo a: ' + contract.owner.email + ' ID: ' + data?.id);
     return true;
 
   } catch (error) {
     // Log errore ma NON interrompere il flusso (best effort)
-    console.error('[EMAIL_SERVICE] ❌ Errore invio email cliente:', error);
+    logError('[EMAIL_SERVICE] ❌ Errore invio email cliente:', error);
     return false;
   }
 };

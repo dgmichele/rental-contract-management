@@ -80,6 +80,10 @@ backend/
 │   ├── ExpirationReminderClient.tsx
 │   ├── ExpirationReminderInternal.tsx
 │   └── ResetPasswordEmail.tsx
+├── logs/
+│   ├── error.log
+│   ├── combined.log
+│   ├── cron.log
 ├── middleware/
 │   ├── auth.middleware.ts
 │   ├── errorHandler.middleware.ts
@@ -98,6 +102,7 @@ backend/
 │   ├── notification.service.ts
 │   ├── owner.service.ts
 │   └── user.service.ts
+│   └── logger.service.ts
 ├── types/
 │   └── api.ts
 │   └── auth.ts
@@ -1270,6 +1275,13 @@ npx tsc --init
 - Verify cron job running (check logs dopo 24h) - Monitor logs per errori cron
 - Test reset password flow end-to-end
 
+### 5.7 Logging
+
+- Verify logs are created in `logs/` folder
+- Check `logs/combined.log` for general logs
+- Check `logs/error.log` for errors
+- Check `logs/cron.log` for cron job logs
+
 ---
 
 ## Note Finali
@@ -1290,9 +1302,165 @@ npx tsc --init
 
 ---
 
-## 15. Best Practices
+## 15. Sistema di Logging
 
-- **Logging:** `console.log('[SERVICE_NAME] Description', { data })` nei punti critici
+### 15.1 Overview
+
+Il progetto utilizza **Winston** per un sistema di logging professionale con rotazione automatica dei file.
+
+**Caratteristiche:**
+
+- ✅ Log persistenti su file (non si perdono al riavvio)
+- ✅ Rotazione automatica giornaliera
+- ✅ File separati per tipo (combined, error, cron)
+- ✅ Formato JSON strutturato per parsing
+- ✅ Console colorata in sviluppo
+- ✅ Retention automatica (14-30 giorni)
+
+### 15.2 Struttura File Log
+
+```
+backend/logs/
+├── combined-YYYY-MM-DD.log   # Tutti i log (info, warn, error)
+├── error-YYYY-MM-DD.log      # Solo errori
+└── cron-YYYY-MM-DD.log       # Log del cron job
+```
+
+**Configurazione rotazione:**
+
+- **combined**: Max 20MB/file, retention 14 giorni
+- **error**: Max 20MB/file, retention 30 giorni
+- **cron**: Max 10MB/file, retention 30 giorni
+
+### 15.3 Utilizzo nel Codice
+
+**Import:**
+
+```typescript
+import {
+  logInfo,
+  logError,
+  logWarn,
+  logCron,
+  logCronError,
+} from "./services/logger.service";
+```
+
+**Esempi:**
+
+```typescript
+// Log generico
+logInfo("[SERVICE_NAME] Operazione completata", { userId: 123 });
+
+// Log errore
+logError("[SERVICE_NAME] Errore durante operazione", error);
+
+// Log cron (va sia su cron.log che combined.log)
+logCron("[CRON] Job completato", { processed: 10, sent: 5 });
+logCronError("[CRON] Errore job", error);
+```
+
+**Formato output (JSON):**
+
+```json
+{
+  "timestamp": "2025-12-12 12:00:00",
+  "level": "info",
+  "message": "[CRON] 🔔 Esecuzione job notifiche automatiche",
+  "stats": {
+    "processed": 5,
+    "sent": 3,
+    "skipped": 1,
+    "failed": 1
+  }
+}
+```
+
+### 15.4 Accesso ai Log in Produzione
+
+**Via File Manager cPanel:**
+
+1. Naviga in `backend/logs/`
+2. Scarica il file `.log` del giorno corrente
+
+**Via FTP/SFTP:**
+
+- Scarica dalla cartella `/logs/`
+
+**Via SSH (se disponibile):**
+
+```bash
+# Visualizza ultimi 100 log
+tail -n 100 logs/combined-$(date +%Y-%m-%d).log
+
+# Segui log in tempo reale
+tail -f logs/combined-$(date +%Y-%m-%d).log
+
+# Solo log del cron
+tail -f logs/cron-$(date +%Y-%m-%d).log
+
+# Cerca errori
+grep -i "error" logs/combined-$(date +%Y-%m-%d).log
+```
+
+### 15.5 Verifica Cron Job
+
+**Metodo 1: Controllare i log**
+
+```bash
+# Cerca esecuzioni cron
+grep "Esecuzione job notifiche" logs/cron-$(date +%Y-%m-%d).log
+
+# Verifica statistiche
+grep "Job completato" logs/cron-$(date +%Y-%m-%d).log
+```
+
+**Metodo 2: Controllare tabella notifications**
+
+```sql
+SELECT * FROM notifications
+WHERE sent_at >= CURRENT_DATE
+ORDER BY sent_at DESC;
+```
+
+**Metodo 3: Endpoint di test (opzionale)**
+
+- Creare endpoint `POST /api/cron/trigger` (solo admin)
+- Permette di triggerare manualmente il job per test
+
+### 15.6 Configurazione Ambiente
+
+**Nessuna variabile d'ambiente richiesta** - il logger funziona out-of-the-box.
+
+**Comportamento per ambiente:**
+
+- **Development**: Log su console (colorati) + file
+- **Production**: Solo file (no console)
+- **Test**: Nessun log (evita spam nei test)
+
+### 15.7 Troubleshooting
+
+**Problema: Log non vengono creati**
+
+- Verifica permessi cartella `logs/` (deve essere scrivibile)
+- Controlla che Winston sia installato: `npm list winston`
+
+**Problema: File log troppo grandi**
+
+- La rotazione è automatica (max 20MB)
+- Se necessario, riduci retention in `logger.service.ts`
+
+**Problema: Non vedo log del cron**
+
+- Verifica che il cron sia attivo (log inizializzazione)
+- Controlla `CRON_NOTIFICATION_TIME` in `.env`
+- Testa manualmente: `await notificationService.sendExpiringContractsNotifications()`
+
+---
+
+## 16. Best Practices
+
+- **Logging:** Usa `logInfo()`, `logError()`, `logCron()` da `logger.service.ts` invece di `console.log()`. I log vengono salvati automaticamente su file in produzione.
 - **Error handling:** Mai esporre stack trace in produzione
 - **Validazione:** Sempre validare input utente (Zod)
 - **Query optimization:** Usa indici DB per query frequenti
@@ -1300,6 +1468,7 @@ npx tsc --init
 - **Security:** Mai loggare password, tokens completi
 - **Testing:** Mock date con `jest.useFakeTimers()` per test cron
 - **Migrations:** Mai modificare migration già eseguita in prod (crea nuova migration)
+- **Cron Monitoring:** Controlla regolarmente `logs/cron-YYYY-MM-DD.log` per verificare esecuzioni
 
 ---
 

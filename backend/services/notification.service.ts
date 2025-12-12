@@ -6,6 +6,7 @@ import {
 } from '../types/database';
 import { ContractWithRelations } from '../types/api';
 import * as emailService from './email.service';
+import { logCron, logCronError } from './logger.service';
 
 /**
  * Verifica se una notifica è già stata inviata per un determinato contratto/tipo/anno.
@@ -56,7 +57,7 @@ const getFullContract = async (contractId: number): Promise<ContractWithRelation
   ]);
 
   if (!owner || !tenant) {
-    console.error(`[NOTIFICATION_SERVICE] ❌ Dati incompleti (manca owner/tenant) per contratto ${contractId}`);
+    logCronError(`[NOTIFICATION_SERVICE] ❌ Dati incompleti (manca owner/tenant) per contratto ${contractId}`);
     return null;
   }
 
@@ -87,7 +88,7 @@ export const sendExpiringContractsNotifications = async () => {
   // Calcola data target formattata YYYY-MM-DD per match esatto DB
   const targetDate = dayjs().add(daysBefore, 'day').format('YYYY-MM-DD');
 
-  console.log(`[NOTIFICATION_SERVICE] 🚀 Avvio check scadenze per data target: ${targetDate}`);
+  logCron(`[NOTIFICATION_SERVICE] 🚀 Avvio check scadenze per data target: ${targetDate}`);
 
   const stats = {
     processed: 0,
@@ -120,7 +121,7 @@ export const sendExpiringContractsNotifications = async () => {
         continue;
       }
 
-      console.log(`[NOTIFICATION_SERVICE] 📧 Invio reminder CONTRATTO ID: ${contract.id}`);
+      logCron(`[NOTIFICATION_SERVICE] 📧 Invio reminder CONTRATTO ID: ${contract.id}`);
 
       // Invia email (Best effort)
       const sentInternal = await emailService.sendExpirationReminderInternal(fullContract, 'contract');
@@ -140,7 +141,7 @@ export const sendExpiringContractsNotifications = async () => {
         await db('notifications').insert(newNotification);
         stats.sent++;
       } else {
-        console.error(`[NOTIFICATION_SERVICE] ❌ Tutti i tentativi email falliti per contratto ${contract.id}`);
+        logCronError(`[NOTIFICATION_SERVICE] ❌ Tutti i tentativi email falliti per contratto ${contract.id}`);
         stats.failed++;
       }
     }
@@ -168,7 +169,7 @@ export const sendExpiringContractsNotifications = async () => {
         continue;
       }
 
-      console.log(`[NOTIFICATION_SERVICE] 📧 Invio reminder ANNUALITÀ ${annuity.year} Contratto ID: ${annuity.contract_id}`);
+      logCron(`[NOTIFICATION_SERVICE] 📧 Invio reminder ANNUALITÀ ${annuity.year} Contratto ID: ${annuity.contract_id}`);
 
       const sentInternal = await emailService.sendExpirationReminderInternal(fullContract, 'annuity', annuity.year);
       const sentClient = await emailService.sendExpirationReminderClient(fullContract, 'annuity', annuity.year);
@@ -186,16 +187,16 @@ export const sendExpiringContractsNotifications = async () => {
         await db('notifications').insert(newNotification);
         stats.sent++;
       } else {
-        console.error(`[NOTIFICATION_SERVICE] ❌ Tutti i tentativi email falliti per annualità contratto ${annuity.contract_id}`);
+        logCronError(`[NOTIFICATION_SERVICE] ❌ Tutti i tentativi email falliti per annualità contratto ${annuity.contract_id}`);
         stats.failed++;
       }
     }
 
   } catch (error) {
-    console.error('[NOTIFICATION_SERVICE] ❌ Errore critico durante esecuzione job:', error);
+    logCronError('[NOTIFICATION_SERVICE] ❌ Errore critico durante esecuzione job:', error);
     // Non rilanciamo l'errore per non far crashare il processo Node principale se il cron fallisce
   }
 
-  console.log('[NOTIFICATION_SERVICE] 🏁 Job completato. Statistiche:', stats);
+  logCron('[NOTIFICATION_SERVICE] 🏁 Job completato. Statistiche:', stats);
   return stats;
 };

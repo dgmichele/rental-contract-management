@@ -8,6 +8,7 @@ if (process.env.NODE_ENV !== 'production') {
   // In dev (locale), cerca il file .env.dev nella root (salendo di un livello da /dist se serve)
   const envPath = path.resolve(__dirname, process.env.NODE_ENV === 'test' ? '..' : '', '.env.dev');
   dotenv.config({ path: envPath });
+  // Usiamo console.log qui perché il logger non è ancora inizializzato
   console.log('[SERVER] 🔧 Loaded local env file from:', envPath);
 } else {
   console.log('[SERVER] 🚀 Production mode: Using system environment variables (cPanel).');
@@ -15,6 +16,7 @@ if (process.env.NODE_ENV !== 'production') {
 // ==================================================================
 
 import express, { Application } from 'express';
+import { logInfo, logError, logWarn, logCron, logCronError } from './services/logger.service';
 import { errorHandler } from './middleware/errorHandler.middleware';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -48,13 +50,13 @@ const missingEnvVars = requiredEnvVars.filter((varName) => !process.env[varName]
 
 // Se mancano variabili d'ambiente obbligatorie, esci con errore
 if (missingEnvVars.length > 0) {
-  console.error('[SERVER] ❌ ERRORE: Variabili d\'ambiente mancanti:', missingEnvVars.join(', '));
+  logError('[SERVER] ❌ ERRORE: Variabili d\'ambiente mancanti:', missingEnvVars.join(', '));
   process.exit(1);
 }
 
 // Log variabili d'ambiente caricate (senza valori sensibili)
-console.log('[SERVER] ✅ Variabili d\'ambiente caricate e validate');
-console.log('[SERVER] Ambiente:', process.env.NODE_ENV || 'development');
+logInfo('[SERVER] ✅ Variabili d\'ambiente caricate e validate');
+logInfo('[SERVER] Ambiente: ' + (process.env.NODE_ENV || 'development'));
 
 // ============= INIZIALIZZAZIONE APP =============
 const app: Application = express();
@@ -63,7 +65,7 @@ const app: Application = express();
 
 // Security headers
 app.use(helmet());
-console.log('[SERVER] ✅ Helmet configurato');
+logInfo('[SERVER] ✅ Helmet configurato');
 
 // CORS
 app.use(
@@ -72,12 +74,12 @@ app.use(
     credentials: true,
   })
 );
-console.log('[SERVER] ✅ CORS configurato per:', process.env.FRONTEND_URL);
+logInfo('[SERVER] ✅ CORS configurato per: ' + process.env.FRONTEND_URL);
 
 // Body parser
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-console.log('[SERVER] ✅ Body parser configurato');
+logInfo('[SERVER] ✅ Body parser configurato');
 
 // ============= HEALTH CHECK =============
 app.get('/health', (req, res) => {
@@ -98,23 +100,23 @@ app.get('/', (req, res) => {
 
 // Auth routes
 app.use('/api/auth', authRoutes);
-console.log('[SERVER] ✅ Route /api/auth montate');
+logInfo('[SERVER] ✅ Route /api/auth montate');
 
 // User routes
 app.use('/api/user', userRoutes);
-console.log('[SERVER] ✅ Route /api/user montate');
+logInfo('[SERVER] ✅ Route /api/user montate');
 
 // Owner routes
 app.use('/api/owner', ownerRoutes);
-console.log('[SERVER] ✅ Route /api/owner montate');
+logInfo('[SERVER] ✅ Route /api/owner montate');
 
 // Contract routes
 app.use('/api/contract', contractRoutes);
-console.log('[SERVER] ✅ Route /api/contract montate');
+logInfo('[SERVER] ✅ Route /api/contract montate');
 
 // Dashboard routes
 app.use("/api/dashboard", dashboardRoutes);
-console.log("[SERVER] ✅ Route /api/dashboard montate");
+logInfo("[SERVER] ✅ Route /api/dashboard montate");
 
 // ============= 404 HANDLER =============
 app.use((req, res) => {
@@ -134,18 +136,18 @@ if (process.env.NODE_ENV !== 'test') {
   const PORT = process.env.PORT || 3000;
   
   app.listen(PORT, () => {
-    console.log(`[SERVER] 🚀 Server avviato in ambiente: ${process.env.NODE_ENV}`);
+    logInfo(`[SERVER] 🚀 Server avviato in ambiente: ${process.env.NODE_ENV}`);
     // Non stampare URL con localhost in produzione perché usiamo una pipe
   });
 
   // ============= GRACEFUL SHUTDOWN =============
   process.on('SIGTERM', () => {
-    console.log('[SERVER] SIGTERM ricevuto, chiusura graceful...');
+    logInfo('[SERVER] SIGTERM ricevuto, chiusura graceful...');
     process.exit(0);
   });
 
   process.on('SIGINT', () => {
-    console.log('[SERVER] SIGINT ricevuto, chiusura graceful...');
+    logInfo('[SERVER] SIGINT ricevuto, chiusura graceful...');
     process.exit(0);
   });
 }
@@ -156,19 +158,18 @@ if (process.env.NODE_ENV !== 'test') {
   // Legge l'orario dal .env (es: "0 8 * * *" per le 08:00 di mattina)
   const cronTime = process.env.CRON_NOTIFICATION_TIME || '0 8 * * *';
   
-  console.log(`[CRON] 🕒 Scheduler inizializzato con orario: "${cronTime}"`);
+  logCron(`[CRON] 🕒 Scheduler inizializzato con orario: "${cronTime}"`);
   
   cron.schedule(cronTime, async () => {
-    console.log(`[CRON] 🔔 Esecuzione job notifiche automatiche: ${new Date().toISOString()}`);
+    logCron(`[CRON] 🔔 Esecuzione job notifiche automatiche: ${new Date().toISOString()}`);
     
     try {
       // Esegue il servizio di notifica
       const stats = await notificationService.sendExpiringContractsNotifications();
       
-      console.log('[CRON] ✅ Job completato con successo.');
-      console.log('[CRON] 📊 Statistiche:', stats);
+      logCron('[CRON] ✅ Job completato con successo.', stats);
     } catch (error) {
-      console.error('[CRON] ❌ Errore imprevisto durante l\'esecuzione del job:', error);
+      logCronError('[CRON] ❌ Errore imprevisto durante l\'esecuzione del job:', error);
     }
   });
 }
