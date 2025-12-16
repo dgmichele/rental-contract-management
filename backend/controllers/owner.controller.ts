@@ -130,10 +130,16 @@ export const getOwnerByIdController = async (
 
     // Chiama service
     const owner = await ownerService.getOwnerById(req.userId, ownerId);
+    
+    // Recupera statistiche owner
+    const stats = await ownerService.getOwnerStats(req.userId, ownerId);
 
     res.json({
       success: true,
-      data: owner,
+      data: {
+        ...owner,
+        stats,
+      },
     });
   } catch (err) {
     next(err);

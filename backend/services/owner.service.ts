@@ -83,3 +83,21 @@ export const getOwnerContracts = async (
 
   return { data, total };
 };
+
+export const getOwnerStats = async (
+  user_id: number,
+  owner_id: number
+): Promise<{ total_contracts: number; total_monthly_rent: number }> => {
+  const result = await knex<Contract>('contracts')
+    .join('owners', 'contracts.owner_id', 'owners.id')
+    .where('contracts.owner_id', owner_id)
+    .andWhere('owners.user_id', user_id)
+    .sum({ total_rent: 'monthly_rent' })
+    .count({ count: 'contracts.id' })
+    .first();
+
+  return {
+    total_contracts: parseInt((result?.count as string) || '0', 10),
+    total_monthly_rent: parseFloat((result?.total_rent as string) || '0'),
+  };
+};
