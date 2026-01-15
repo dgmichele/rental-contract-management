@@ -1278,19 +1278,76 @@ const { data } = useContracts({ page, limit: 12 });
 
 ## 18. Variabili d'Ambiente
 
-### `.env.dev`
+### 18.1. File di Configurazione
+
+**`.env.dev` (sviluppo locale):**
 
 ```bash
-VITE_API_URL=http://localhost:3000/api
-VITE_FRONTEND_URL=http://localhost:5173
+VITE_API_URL=http://localhost:3000/
 ```
 
-### `.env.production`
+**`.env.production` (produzione):**
 
 ```bash
-VITE_API_URL=https://api.bichimmobiliare.it/api
-VITE_FRONTEND_URL=https://contratti.bichimmobiliare.it
+VITE_API_URL=https://api.bichimmobiliare.it/
 ```
+
+### 18.2. Gestione con Git Version Control
+
+**⚠️ IMPORTANTE:** Se usi Git Version Control per deployare su cPanel, segui questo workflow:
+
+#### **Setup (una tantum):**
+
+1. **In locale:** Aggiungi `.env.*` al `.gitignore`
+
+   ```gitignore
+   # .gitignore
+   .env
+   .env.dev
+   .env.production
+   .env.local
+   ```
+
+2. **Su cPanel:** Crea `.env.production` manualmente nel file manager
+
+**Perché questo metodo:**
+
+- ✅ `.env.production` rimane su cPanel (non viene sovrascritto da Git)
+- ✅ Vite lo legge durante `npm run build` sul server
+- ✅ Non è committato su Git (sicurezza)
+- ✅ Valori vengono compilati nel bundle durante il build
+
+#### **Come Funziona:**
+
+```
+Locale:
+  .env.production (in .gitignore, NON committato)
+       ↓
+  git push (solo codice sorgente)
+       ↓
+cPanel:
+  .env.production (creato manualmente, persiste)
+       ↓
+  npm run build (Vite legge .env.production)
+       ↓
+  dist/ (valori hardcoded nel bundle)
+```
+
+### 18.3. Sicurezza
+
+**❌ NON mettere in `.env.production` frontend:**
+
+- API keys segrete (es. Stripe secret key)
+- Database credentials
+- Tokens sensibili
+
+**✅ OK mettere:**
+
+- URL pubblici (es. `VITE_API_URL`)
+- Chiavi pubbliche (es. Stripe publishable key)
+- Feature flags
+
+**Motivo:** Tutto finisce nel bundle JavaScript pubblico, visibile in DevTools.
 
 ---
 
@@ -1388,7 +1445,7 @@ cp .htaccess dist/.htaccess
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gestione Contratti - Bichi Immobiliare</title>
+    <title>Gestionale Contratti - Bich Immobiliare</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -1413,48 +1470,271 @@ cp .htaccess dist/.htaccess
 
 ---
 
-### 19.4. Checklist Deploy cPanel
+### 19.4. Deploy con Git Version Control su cPanel
 
-**Pre-deploy:**
+**⚠️ IMPORTANTE:** Questo metodo è consigliato se usi Git per deployare su cPanel. Il build avviene **sul server cPanel** dopo ogni push.
 
-1. ✅ Verifica variabili d'ambiente:
+---
 
-   - Frontend: `.env.production` con `VITE_API_URL=https://api.bichimmobiliare.it/api`
-   - Backend: cPanel env vars con `FRONTEND_URL=https://contratti.bichimmobiliare.it`
+#### **Setup Iniziale (una tantum)**
 
-2. ✅ Build production:
+**1. Crea `.env.production` manualmente nel file manager cPanel:**
 
-   ```bash
-   npm run build
-   ```
+- Accedi a **cPanel** → **File Manager**
+- Naviga nella cartella `rental_contract_management/frontend`
+- Crea file `.env.production`
+- Contenuto: `VITE_API_URL=https://api.bichimmobiliare.it/`
+- Salva e chiudi
 
-3. ✅ Verifica build:
-   - Controlla che `dist/` contenga `index.html`, `assets/`, e `.htaccess`
-   - Testa localmente con `npm run preview`
+**Nota:** Questo file:
 
-**Deploy:**
+- ✅ Rimane su cPanel (non viene sovrascritto da Git perché è in `.gitignore`)
+- ✅ Vite lo legge durante `npm run build`
+- ✅ Non è committato su Git (sicurezza)
 
-4. ✅ Upload frontend:
+**2. Crea file `deploy.sh` all'interno della cartella del frontend con il seguente contenuto:**
 
-   - Carica tutto il contenuto di `dist/` nella directory del sottodominio `contratti.bichimmobiliare.it`
-   - Assicurati che `.htaccess` sia presente
+```bash
+cat > deploy.sh << 'EOF'
+#!/bin/bash
 
-5. ✅ Verifica CORS backend:
+echo "======================================"
+echo "🚀 Deploy Frontend - Bich Immobiliare"
+echo "======================================"
+echo ""
 
-   - Controlla che `FRONTEND_URL` sia configurato correttamente su cPanel
+echo "🔄 Step 1/4: Pulling latest changes from Git..."
+git pull origin main
+if [ $? -ne 0 ]; then
+  echo "❌ Error: Git pull failed"
+  exit 1
+fi
+echo "✅ Git pull completed"
+echo ""
 
-6. ✅ Test manuale:
-   - Visita `https://contratti.bichimmobiliare.it`
-   - Testa login
-   - Naviga tra le pagine
-   - Ricarica una pagina interna (es. `/owners`) per verificare `.htaccess`
-   - Controlla console browser per errori CORS
+echo "📦 Step 2/4: Installing dependencies..."
+npm install
+if [ $? -ne 0 ]; then
+  echo "❌ Error: npm install failed"
+  exit 1
+fi
+echo "✅ Dependencies installed"
+echo ""
 
-**Post-deploy:**
+echo "🏗️  Step 3/4: Building production bundle..."
+npm run build
+if [ $? -ne 0 ]; then
+  echo "❌ Error: Build failed"
+  exit 1
+fi
+echo "✅ Build completed"
+echo ""
 
-7. ✅ Monitora errori:
-   - Controlla log backend per errori CORS
-   - Verifica che le chiamate API funzionino correttamente
+echo "📋 Step 4/4: Copying .htaccess to dist..."
+if [ -f .htaccess ]; then
+  cp .htaccess dist/.htaccess
+  echo "✅ .htaccess copied"
+else
+  echo "⚠️  Warning: .htaccess not found, skipping"
+fi
+echo ""
+
+echo "======================================"
+echo "✅ Deploy completed successfully!"
+echo "======================================"
+echo ""
+echo "🌐 Visit: https://contratti.bichimmobiliare.it"
+echo ""
+EOF
+```
+
+**3. Rendi eseguibile lo script:**
+
+```bash
+chmod +x deploy.sh
+```
+
+**4. Verifica che `.gitignore` sia corretto:**
+
+```bash
+cat .gitignore
+```
+
+Deve contenere:
+
+```
+node_modules/
+dist/
+.env
+.env.dev
+.env.production
+.env.local
+```
+
+**5. Committa `deploy.sh` su Git (in locale):**
+
+```bash
+# In locale
+git add deploy.sh
+git commit -m "Add deploy script"
+git push origin main
+```
+
+**6. Recap:**
+
+1. File Manager cPanel: Crei .env.production dentro frontend/.
+2. Locale:
+   - Crei deploy.sh in frontend/.
+   - git add ., git commit, git push.
+3. Terminale cPanel:
+   - dirigiti nella cartella frontend con `cd /home/ljxvcewj/rental_contract_management/frontend`
+   - rendi eseguibile lo script con `chmod +x deploy.sh` (Solo la prima volta assoluta)
+   - esegui lo script con `./deploy.sh` per eseguire il deploy
+
+---
+
+#### **Deploy Quotidiano**
+
+**Workflow completo:**
+
+**1. In locale - Sviluppa e committa:**
+
+```bash
+# Sviluppa in locale con npm run dev
+# ...
+
+# Quando sei pronto per il deploy
+git add .
+git commit -m "Update frontend"
+git push origin main
+```
+
+**2. Su cPanel - Esegui deploy:**
+
+```bash
+# Connettiti via Terminal cPanel
+Usa il comando "cd /home/ljxvcewj/rental_contract_management/frontend" per accedere alla directory del frontend
+
+# Esegui deploy
+./deploy.sh
+```
+
+**Output atteso:**
+
+```
+======================================
+🚀 Deploy Frontend - Bich Immobiliare
+======================================
+
+🔄 Step 1/4: Pulling latest changes from Git...
+✅ Git pull completed
+
+📦 Step 2/4: Installing dependencies...
+✅ Dependencies installed
+
+🏗️  Step 3/4: Building production bundle...
+✅ Build completed
+
+📋 Step 4/4: Copying .htaccess to dist...
+✅ .htaccess copied
+
+======================================
+✅ Deploy completed successfully!
+======================================
+
+🌐 Visit: https://contratti.bichimmobiliare.it
+```
+
+---
+
+#### **Checklist Verifica Post-Deploy**
+
+Dopo ogni deploy, verifica:
+
+1. ✅ **Visita** `https://contratti.bichimmobiliare.it`
+2. ✅ **Testa login** con credenziali valide
+3. ✅ **Naviga** tra le pagine (Dashboard, Proprietari, Contratti)
+4. ✅ **Ricarica** una pagina interna (es. `/owners`) per verificare `.htaccess`
+5. ✅ **Apri DevTools** → Console → Verifica nessun errore CORS
+6. ✅ **Testa API call** (es. login, fetch contratti)
+
+---
+
+#### **Troubleshooting**
+
+**Problema: `git pull` fallisce**
+
+```bash
+# Verifica stato Git
+git status
+
+# Se ci sono conflitti, resetta (ATTENZIONE: perde modifiche locali su server)
+git reset --hard origin/main
+git pull origin main
+```
+
+**Problema: `npm install` fallisce**
+
+```bash
+# Pulisci cache npm
+npm cache clean --force
+rm -rf node_modules package-lock.json
+npm install
+```
+
+**Problema: `npm run build` fallisce**
+
+```bash
+# Verifica che .env.production esista
+cat .env.production
+
+# Se manca, ricrealo
+echo "VITE_API_URL=https://api.bichimmobiliare.it/" > .env.production
+```
+
+**Problema: `.htaccess` non funziona (404 su refresh)**
+
+```bash
+# Verifica che .htaccess sia in dist/
+ls -la dist/.htaccess
+
+# Se manca, copialo manualmente
+cp .htaccess dist/.htaccess
+```
+
+---
+
+#### **Note di Sicurezza**
+
+**✅ Sicuro:**
+
+- `.env.production` è fuori dalla document root pubblica
+- Non è accessibile via HTTP
+- Solo tu (via SSH) puoi leggerlo
+
+**⚠️ Attenzione:**
+
+- `VITE_API_URL` finisce nel bundle JavaScript pubblico (è normale)
+- **NON** mettere chiavi segrete in `.env.production` frontend
+- Le chiavi segrete vanno solo nel backend (env vars cPanel Node.js)
+
+---
+
+#### **Alternative: Build Locale + Upload Manuale**
+
+Se preferisci **non** fare il build su cPanel:
+
+**1. Build in locale:**
+
+```bash
+npm run build
+cp .htaccess dist/.htaccess
+```
+
+**2. Upload `dist/` via FTP/File Manager cPanel**
+
+**Pro:** Non serve SSH  
+**Contro:** Meno automatico, upload manuale ogni volta
 
 ---
 
