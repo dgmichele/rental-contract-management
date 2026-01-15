@@ -110,6 +110,8 @@ frontend/
 │   ├── App.tsx
 │   ├── main.tsx
 │   └── index.css
+├── index.html               # Entry point HTML (generato da Vite)
+├── .htaccess                # Rewrite rules per SPA routing su cPanel
 ├── .env.dev
 ├── .env.production
 ├── .gitignore
@@ -1292,7 +1294,171 @@ VITE_FRONTEND_URL=https://contratti.bichimmobiliare.it
 
 ---
 
-## 19. Ordine Sviluppo Consigliato
+## 19. Deploy & Configurazione Produzione
+
+### 19.1. CORS (Cross-Origin Resource Sharing)
+
+**Problema:** Frontend (`contratti.bichimmobiliare.it`) e backend (`api.bichimmobiliare.it`) sono su sottodomini diversi, quindi il browser li considera origini separate e blocca le richieste per sicurezza.
+
+**Soluzione:** Il backend è già configurato correttamente con il middleware `cors`:
+
+```typescript
+// backend/server.ts (già implementato)
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL, // https://contratti.bichimmobiliare.it
+    credentials: true,
+  })
+);
+```
+
+**Variabili d'ambiente backend (cPanel):**
+
+Assicurati che su cPanel siano configurate:
+
+- `FRONTEND_URL=https://contratti.bichimmobiliare.it`
+
+**Verifica:** Dopo il deploy, testa una chiamata API dal frontend. Se ricevi errori CORS, controlla:
+
+1. Che `FRONTEND_URL` sia corretto nel backend
+2. Che non ci siano trailing slash (`/`) alla fine degli URL
+3. Che `credentials: true` sia presente se usi cookie/auth
+
+---
+
+### 19.2. Routing SPA (.htaccess)
+
+**Problema:** React gestisce il routing lato client. Se un utente ricarica la pagina su `contratti.bichimmobiliare.it/owners`, cPanel cerca una cartella fisica `/owners` e restituisce 404.
+
+**Soluzione:** Creare un file `.htaccess` nella root del frontend (dopo il build) che reindirizzi tutte le richieste a `index.html`.
+
+**File `.htaccess`:**
+
+```apache
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Se il file o la directory esistono, servili direttamente
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+
+  # Altrimenti, reindirizza tutto a index.html
+  RewriteRule ^ index.html [L]
+</IfModule>
+```
+
+**Dove posizionarlo:**
+
+- Durante sviluppo: `frontend/.htaccess` (verrà copiato in `dist/` durante il build)
+- Dopo build: `frontend/dist/.htaccess`
+
+**Configurazione Vite per copiare .htaccess:**
+
+```typescript
+// vite.config.ts
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+
+export default defineConfig({
+  plugins: [react()],
+  publicDir: "public", // Vite copia automaticamente tutto da public/ a dist/
+});
+```
+
+**Alternativa:** Copia manualmente `.htaccess` in `dist/` dopo ogni build:
+
+```bash
+npm run build
+cp .htaccess dist/.htaccess
+```
+
+---
+
+### 19.3. index.html
+
+**File generato automaticamente da Vite** nella root del progetto frontend.
+
+**Contenuto standard:**
+
+```html
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestione Contratti - Bichi Immobiliare</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Merriweather:wght@900&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+```
+
+**Note:**
+
+- Vite sostituisce automaticamente `/src/main.tsx` con il bundle JS durante il build
+- Il file `index.html` è l'entry point dell'applicazione
+- Deve trovarsi nella root del progetto frontend (non in `src/`)
+
+---
+
+### 19.4. Checklist Deploy cPanel
+
+**Pre-deploy:**
+
+1. ✅ Verifica variabili d'ambiente:
+
+   - Frontend: `.env.production` con `VITE_API_URL=https://api.bichimmobiliare.it/api`
+   - Backend: cPanel env vars con `FRONTEND_URL=https://contratti.bichimmobiliare.it`
+
+2. ✅ Build production:
+
+   ```bash
+   npm run build
+   ```
+
+3. ✅ Verifica build:
+   - Controlla che `dist/` contenga `index.html`, `assets/`, e `.htaccess`
+   - Testa localmente con `npm run preview`
+
+**Deploy:**
+
+4. ✅ Upload frontend:
+
+   - Carica tutto il contenuto di `dist/` nella directory del sottodominio `contratti.bichimmobiliare.it`
+   - Assicurati che `.htaccess` sia presente
+
+5. ✅ Verifica CORS backend:
+
+   - Controlla che `FRONTEND_URL` sia configurato correttamente su cPanel
+
+6. ✅ Test manuale:
+   - Visita `https://contratti.bichimmobiliare.it`
+   - Testa login
+   - Naviga tra le pagine
+   - Ricarica una pagina interna (es. `/owners`) per verificare `.htaccess`
+   - Controlla console browser per errori CORS
+
+**Post-deploy:**
+
+7. ✅ Monitora errori:
+   - Controlla log backend per errori CORS
+   - Verifica che le chiamate API funzionino correttamente
+
+---
+
+## 20. Ordine Sviluppo Consigliato
 
 ### Fase 1: Setup & Auth (2-3 giorni)
 
@@ -1554,38 +1720,43 @@ npm run build
 
 **Verifica:** No errori TypeScript, build success
 
-#### 8.3 Deploy Netsons
+#### 8.3 Deploy cPanel
 
-**Checklist:**
+**Segui la checklist completa nella sezione 19.4 "Deploy & Configurazione Produzione"**
 
-- ✅ Upload `dist/` folder
-- ✅ Configura `.env.production`
-- ✅ Test manuale su production URL
-- ✅ Verifica CORS backend
+**Checklist rapida:**
+
+- ✅ Crea `.htaccess` nella root del frontend (vedi sezione 19.2)
+- ✅ Build production: `npm run build`
+- ✅ Copia `.htaccess` in `dist/` se non automatico
+- ✅ Upload contenuto `dist/` su `contratti.bichimmobiliare.it`
+- ✅ Verifica `FRONTEND_URL` nel backend cPanel (sezione 19.1)
+- ✅ Test manuale: login, navigazione, refresh pagina interna
+- ✅ Controlla console browser per errori CORS
 
 ---
 
-## 18. Best Practices
+## 21. Best Practices
 
-### 18.1. Performance
+### 21.1. Performance
 
 - **Code splitting:** Lazy load routes con `React.lazy()`
 - **Memoization:** `useMemo` per calcoli pesanti, `React.memo` per componenti
 - **Debounce:** Search input con debounce (300ms)
 
-### 18.2. Accessibilità
+### 21.2. Accessibilità
 
 - **ARIA labels:** Tutti i buttons/inputs
 - **Keyboard navigation:** Tab order corretto
 - **Focus states:** Visibili su tutti gli elementi interattivi
 
-### 18.3. Security
+### 21.3. Security
 
 - **XSS:** Mai usare `dangerouslySetInnerHTML`
 - **Tokens:** Mai loggare tokens in console (production)
 - **Validazione:** Sempre validare input client-side + server-side
 
-### 18.4. Code Quality
+### 21.4. Code Quality
 
 - **TypeScript strict:** Nessun `any`
 - **Naming:** Consistente, descrittivo
@@ -1594,27 +1765,27 @@ npm run build
 
 ---
 
-## 19. Troubleshooting Comune
+## 22. Troubleshooting Comune
 
-### 19.1. CORS Errors
+### 22.1. CORS Errors
 
 **Soluzione:** Verifica backend CORS config include frontend URL
 
-### 19.2. 401 Unauthorized Loop
+### 22.2. 401 Unauthorized Loop
 
 **Soluzione:** Verifica refresh token logic in axios interceptor
 
-### 19.3. React Query Cache Stale
+### 22.3. React Query Cache Stale
 
 **Soluzione:** Usa `invalidateQueries` dopo mutations
 
-### 19.4. Tailwind Classes Non Applicate
+### 22.4. Tailwind Classes Non Applicate
 
 **Soluzione:** Verifica `content` in `tailwind.config.js` include tutti i file
 
 ---
 
-## 20. Funzionalità Future
+## 23. Funzionalità Future
 
 **Da tenere a mente per futura implementazione:**
 
