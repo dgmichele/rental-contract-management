@@ -24,11 +24,11 @@ echo "✅ Git pull completed"
 echo ""
 
 echo "📦 Step 2/4: Installing dependencies..."
-# Forziamo l'ambiente a development per assicurarci che tsc e vite vengano installati
-export NODE_ENV=development
+# Rimuoviamo la cartella node_modules per essere sicuri di rigenerare i binari corretti
+rm -rf node_modules package-lock.json
 
-# Installazione pulita e forzata
-npm install --include=dev --prefer-offline --no-audit
+# Installazione standard (ora che typescript e vite sono in 'dependencies')
+npm install
 
 if [ $? -ne 0 ]; then
     echo "❌ Error: npm install failed"
@@ -37,8 +37,8 @@ fi
 echo "✅ Dependencies installed"
 
 echo "🏗️  Step 3/4: Building production bundle..."
-# Usiamo il percorso diretto al binario locale per evitare ambiguità con npx
-./node_modules/.bin/tsc -b && ./node_modules/.bin/vite build
+# Usiamo 'npm run build' che cercherà automaticamente i binari locali
+npm run build
 
 if [ $? -ne 0 ]; then
     echo "❌ Error: Build failed"
