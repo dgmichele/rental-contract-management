@@ -1,0 +1,49 @@
+#!/bin/bash
+
+echo "======================================"
+echo "🚀 Deploy Frontend - Bich Immobiliare"
+echo "======================================"
+echo ""
+
+echo "🔄 Step 1/4: Pulling latest changes from Git..."
+git pull origin main
+if [ $? -ne 0 ]; then
+  echo "❌ Error: Git pull failed"
+  exit 1
+fi
+echo "✅ Git pull completed"
+echo ""
+
+echo "📦 Step 2/4: Installing dependencies..."
+npm install
+if [ $? -ne 0 ]; then
+  echo "❌ Error: npm install failed"
+  exit 1
+fi
+echo "✅ Dependencies installed"
+echo ""
+
+echo "🏗️  Step 3/4: Building production bundle..."
+npm run build
+if [ $? -ne 0 ]; then
+  echo "❌ Error: Build failed"
+  exit 1
+fi
+echo "✅ Build completed"
+echo ""
+
+echo "📋 Step 4/4: Copying .htaccess to dist..."
+if [ -f .htaccess ]; then
+  cp .htaccess dist/.htaccess
+  echo "✅ .htaccess copied"
+else
+  echo "⚠️  Warning: .htaccess not found, skipping"
+fi
+echo ""
+
+echo "======================================"
+echo "✅ Deploy completed successfully!"
+echo "======================================"
+echo ""
+echo "🌐 Visit: https://contratti.bichimmobiliare.it"
+echo ""
