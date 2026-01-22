@@ -1,11 +1,12 @@
 #!/bin/bash -l
 
-# Add potential cPanel Node.js paths (adjust version if needed)
-export PATH=/opt/cpanel/ea-nodejs22/bin:/opt/cpanel/ea-nodejs20/bin:/opt/cpanel/ea-nodejs18/bin:/opt/cpanel/ea-nodejs16/bin:$PATH
+# Activate cPanel Node.js virtual environment
+source /home/ljxvcewj/nodevenv/rental_contract_management/backend/24/bin/activate
 
-# Force load user environment variables to ensure npm is found
-export PATH=$PATH:/usr/local/bin
-[ -f ~/.bashrc ] && source ~/.bashrc
+echo "======================================"
+echo "🚀 Deploy Frontend - Bich Immobiliare"
+echo "======================================"
+echo ""
 [ -f ~/.bash_profile ] && source ~/.bash_profile
 
 echo "======================================"
