@@ -24,22 +24,22 @@ echo "✅ Git pull completed"
 echo ""
 
 echo "📦 Step 2/4: Installing dependencies..."
-npm install
+# Forziamo l'installazione di tutte le dipendenze (incluse devDependencies)
+npm install --include=dev
 if [ $? -ne 0 ]; then
-  echo "❌ Error: npm install failed"
-  exit 1
+    echo "❌ Error: npm install failed"
+    exit 1
 fi
 echo "✅ Dependencies installed"
-echo ""
 
 echo "🏗️  Step 3/4: Building production bundle..."
+# Eseguiamo la build
 npm run build
 if [ $? -ne 0 ]; then
-  echo "❌ Error: Build failed"
-  exit 1
+    echo "❌ Error: Build failed"
+    exit 1
 fi
 echo "✅ Build completed"
-echo ""
 
 echo "📋 Step 4/4: Copying .htaccess to dist..."
 if [ -f .htaccess ]; then
