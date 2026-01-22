@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -l
 
 # Force load user environment variables to ensure npm is found
 export PATH=$PATH:/usr/local/bin
