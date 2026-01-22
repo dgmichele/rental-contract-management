@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Force load user environment variables to ensure npm is found
+export PATH=$PATH:/usr/local/bin
+[ -f ~/.bashrc ] && source ~/.bashrc
+[ -f ~/.bash_profile ] && source ~/.bash_profile
+
 echo "======================================"
 echo "🚀 Deploy Frontend - Bich Immobiliare"
 echo "======================================"
