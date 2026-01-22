@@ -1,5 +1,8 @@
 #!/bin/bash -l
 
+# Add potential cPanel Node.js paths (adjust version if needed)
+export PATH=/opt/cpanel/ea-nodejs22/bin:/opt/cpanel/ea-nodejs20/bin:/opt/cpanel/ea-nodejs18/bin:/opt/cpanel/ea-nodejs16/bin:$PATH
+
 # Force load user environment variables to ensure npm is found
 export PATH=$PATH:/usr/local/bin
 [ -f ~/.bashrc ] && source ~/.bashrc
