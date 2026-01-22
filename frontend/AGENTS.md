@@ -515,7 +515,6 @@ const createOwnerMutation = useCreateOwner({
 **Componenti:**
 
 1. **Sezione "Aggiorna dati":**
-
    - Form: Nome, Cognome, Email
    - Button "Salva" (disabilitato di default, attivo se modifica rilevata)
 
@@ -806,7 +805,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 ```
 
@@ -876,7 +875,7 @@ export const useCreateContract = () => {
     },
     onError: (error: AxiosError<ApiError>) => {
       toast.error(
-        error.response?.data?.message || "Errore nella creazione del contratto"
+        error.response?.data?.message || "Errore nella creazione del contratto",
       );
     },
   });
@@ -931,9 +930,8 @@ export interface ApiError {
 }
 
 // Esempio uso con Axios
-const { data } = await api.get<PaginatedApiResponse<Contract>>(
-  "/api/contracts"
-);
+const { data } =
+  await api.get<PaginatedApiResponse<Contract>>("/api/contracts");
 // data.data → Contract[]
 // data.pagination → { page, limit, total, totalPages }
 ```
@@ -1054,7 +1052,7 @@ export const formatDateInput = (date: string | Date): string => {
 export const isDateInMonth = (
   date: string,
   month: number,
-  year: number
+  year: number,
 ): boolean => {
   const d = dayjs(date);
   return d.month() === month - 1 && d.year() === year;
@@ -1365,7 +1363,7 @@ app.use(
   cors({
     origin: process.env.FRONTEND_URL, // https://contratti.bichimmobiliare.it
     credentials: true,
-  })
+  }),
 );
 ```
 
@@ -1436,7 +1434,7 @@ cp .htaccess dist/.htaccess
 
 **File generato automaticamente da Vite** nella root del progetto frontend.
 
-**Contenuto standard:**
+**Contenuto standard (esempio):**
 
 ```html
 <!DOCTYPE html>
@@ -1468,273 +1466,10 @@ cp .htaccess dist/.htaccess
 - Il file `index.html` è l'entry point dell'applicazione
 - Deve trovarsi nella root del progetto frontend (non in `src/`)
 
----
+### 19.4. Deploy in produzione con Git Version Control su cPanel
 
-### 19.4. Deploy con Git Version Control su cPanel
-
-**⚠️ IMPORTANTE:** Questo metodo è consigliato se usi Git per deployare su cPanel. Il build avviene **sul server cPanel** dopo ogni push.
-
----
-
-#### **Setup Iniziale (una tantum)**
-
-**1. Crea `.env.production` manualmente nel file manager cPanel:**
-
-- Accedi a **cPanel** → **File Manager**
-- Naviga nella cartella `rental_contract_management/frontend`
-- Crea file `.env.production`
-- Contenuto: `VITE_API_URL=https://api.bichimmobiliare.it/`
-- Salva e chiudi
-
-**Nota:** Questo file:
-
-- ✅ Rimane su cPanel (non viene sovrascritto da Git perché è in `.gitignore`)
-- ✅ Vite lo legge durante `npm run build`
-- ✅ Non è committato su Git (sicurezza)
-
-**2. Crea file `deploy.sh` all'interno della cartella del frontend con il seguente contenuto:**
-
-```bash
-cat > deploy.sh << 'EOF'
-#!/bin/bash
-
-echo "======================================"
-echo "🚀 Deploy Frontend - Bich Immobiliare"
-echo "======================================"
-echo ""
-
-echo "🔄 Step 1/4: Pulling latest changes from Git..."
-git pull origin main
-if [ $? -ne 0 ]; then
-  echo "❌ Error: Git pull failed"
-  exit 1
-fi
-echo "✅ Git pull completed"
-echo ""
-
-echo "📦 Step 2/4: Installing dependencies..."
-npm install
-if [ $? -ne 0 ]; then
-  echo "❌ Error: npm install failed"
-  exit 1
-fi
-echo "✅ Dependencies installed"
-echo ""
-
-echo "🏗️  Step 3/4: Building production bundle..."
-npm run build
-if [ $? -ne 0 ]; then
-  echo "❌ Error: Build failed"
-  exit 1
-fi
-echo "✅ Build completed"
-echo ""
-
-echo "📋 Step 4/4: Copying .htaccess to dist..."
-if [ -f .htaccess ]; then
-  cp .htaccess dist/.htaccess
-  echo "✅ .htaccess copied"
-else
-  echo "⚠️  Warning: .htaccess not found, skipping"
-fi
-echo ""
-
-echo "======================================"
-echo "✅ Deploy completed successfully!"
-echo "======================================"
-echo ""
-echo "🌐 Visit: https://contratti.bichimmobiliare.it"
-echo ""
-EOF
-```
-
-**3. Rendi eseguibile lo script:**
-
-```bash
-chmod +x deploy.sh
-```
-
-**4. Verifica che `.gitignore` sia corretto:**
-
-```bash
-cat .gitignore
-```
-
-Deve contenere:
-
-```
-node_modules/
-dist/
-.env
-.env.dev
-.env.production
-.env.local
-```
-
-**5. Committa `deploy.sh` su Git (in locale):**
-
-```bash
-# In locale
-git add deploy.sh
-git commit -m "Add deploy script"
-git push origin main
-```
-
-**6. Recap:**
-
-1. File Manager cPanel: Crei .env.production dentro frontend/.
-2. Locale:
-   - Crei deploy.sh in frontend/.
-   - git add ., git commit, git push.
-3. Terminale cPanel:
-   - dirigiti nella cartella frontend con `cd /home/ljxvcewj/rental_contract_management/frontend`
-   - rendi eseguibile lo script con `chmod +x deploy.sh` (Solo la prima volta assoluta)
-   - esegui lo script con `./deploy.sh` per eseguire il deploy
-
----
-
-#### **Deploy Quotidiano**
-
-**Workflow completo:**
-
-**1. In locale - Sviluppa e committa:**
-
-```bash
-# Sviluppa in locale con npm run dev
-# ...
-
-# Quando sei pronto per il deploy
-git add .
-git commit -m "Update frontend"
-git push origin main
-```
-
-**2. Su cPanel - Esegui deploy:**
-
-```bash
-# Connettiti via Terminal cPanel
-Usa il comando "cd /home/ljxvcewj/rental_contract_management/frontend" per accedere alla directory del frontend
-
-# Esegui deploy
-./deploy.sh
-```
-
-**Output atteso:**
-
-```
-======================================
-🚀 Deploy Frontend - Bich Immobiliare
-======================================
-
-🔄 Step 1/4: Pulling latest changes from Git...
-✅ Git pull completed
-
-📦 Step 2/4: Installing dependencies...
-✅ Dependencies installed
-
-🏗️  Step 3/4: Building production bundle...
-✅ Build completed
-
-📋 Step 4/4: Copying .htaccess to dist...
-✅ .htaccess copied
-
-======================================
-✅ Deploy completed successfully!
-======================================
-
-🌐 Visit: https://contratti.bichimmobiliare.it
-```
-
----
-
-#### **Checklist Verifica Post-Deploy**
-
-Dopo ogni deploy, verifica:
-
-1. ✅ **Visita** `https://contratti.bichimmobiliare.it`
-2. ✅ **Testa login** con credenziali valide
-3. ✅ **Naviga** tra le pagine (Dashboard, Proprietari, Contratti)
-4. ✅ **Ricarica** una pagina interna (es. `/owners`) per verificare `.htaccess`
-5. ✅ **Apri DevTools** → Console → Verifica nessun errore CORS
-6. ✅ **Testa API call** (es. login, fetch contratti)
-
----
-
-#### **Troubleshooting**
-
-**Problema: `git pull` fallisce**
-
-```bash
-# Verifica stato Git
-git status
-
-# Se ci sono conflitti, resetta (ATTENZIONE: perde modifiche locali su server)
-git reset --hard origin/main
-git pull origin main
-```
-
-**Problema: `npm install` fallisce**
-
-```bash
-# Pulisci cache npm
-npm cache clean --force
-rm -rf node_modules package-lock.json
-npm install
-```
-
-**Problema: `npm run build` fallisce**
-
-```bash
-# Verifica che .env.production esista
-cat .env.production
-
-# Se manca, ricrealo
-echo "VITE_API_URL=https://api.bichimmobiliare.it/" > .env.production
-```
-
-**Problema: `.htaccess` non funziona (404 su refresh)**
-
-```bash
-# Verifica che .htaccess sia in dist/
-ls -la dist/.htaccess
-
-# Se manca, copialo manualmente
-cp .htaccess dist/.htaccess
-```
-
----
-
-#### **Note di Sicurezza**
-
-**✅ Sicuro:**
-
-- `.env.production` è fuori dalla document root pubblica
-- Non è accessibile via HTTP
-- Solo tu (via SSH) puoi leggerlo
-
-**⚠️ Attenzione:**
-
-- `VITE_API_URL` finisce nel bundle JavaScript pubblico (è normale)
-- **NON** mettere chiavi segrete in `.env.production` frontend
-- Le chiavi segrete vanno solo nel backend (env vars cPanel Node.js)
-
----
-
-#### **Alternative: Build Locale + Upload Manuale**
-
-Se preferisci **non** fare il build su cPanel:
-
-**1. Build in locale:**
-
-```bash
-npm run build
-cp .htaccess dist/.htaccess
-```
-
-**2. Upload `dist/` via FTP/File Manager cPanel**
-
-**Pro:** Non serve SSH  
-**Contro:** Meno automatico, upload manuale ogni volta
+Semplicemente, dopo aver fatto le modifiche al codice sorgente necessarie all'avanzamento del progetto, si fa la build in locale con `npm run build` e si pusha su Git. In produzione, Git version control si occupa di fare il deploy sul file manager di cPanel, tramite Update from remote.
+Per permettere tutto questo, la cartella `dist` deve essere esclusa dal `.gitignore`. Questo è necessario perché altrimenti cPanel (tramite terminale) non permette di fare il deploy, in quanto non riesce ad installare tutte le dipendenze per via di un eccesso di RAM usata dall'hosting condiviso in questione.
 
 ---
 
