@@ -24,8 +24,12 @@ echo "✅ Git pull completed"
 echo ""
 
 echo "📦 Step 2/4: Installing dependencies..."
-# Forziamo l'installazione di tutte le dipendenze (incluse devDependencies)
-npm install --include=dev
+# Forziamo l'ambiente a development per assicurarci che tsc e vite vengano installati
+export NODE_ENV=development
+
+# Installazione pulita e forzata
+npm install --include=dev --prefer-offline --no-audit
+
 if [ $? -ne 0 ]; then
     echo "❌ Error: npm install failed"
     exit 1
@@ -33,8 +37,9 @@ fi
 echo "✅ Dependencies installed"
 
 echo "🏗️  Step 3/4: Building production bundle..."
-# Eseguiamo la build
-npm run build
+# Usiamo il percorso diretto al binario locale per evitare ambiguità con npx
+./node_modules/.bin/tsc -b && ./node_modules/.bin/vite build
+
 if [ $? -ne 0 ]; then
     echo "❌ Error: Build failed"
     exit 1
