@@ -7,10 +7,16 @@ import { Request, Response, NextFunction } from "express";
  * @param windowMs finestra temporale in ms
  * @param message messaggio JSON in caso di superamento limite
  */
-const createLimiter = (max: number, windowMs: number, message: string): RateLimitRequestHandler => {
+const createLimiter = (
+  max: number,
+  windowMs: number,
+  message: string,
+  skipSuccessfulRequests: boolean = false
+): RateLimitRequestHandler => {
   // Se siamo in ambiente di test, non applichiamo il rate limiting
   if (process.env.NODE_ENV === 'test') {
-    const noop: RateLimitRequestHandler = ((req: Request, res: Response, next: NextFunction) => next()) as RateLimitRequestHandler;
+    const noop: RateLimitRequestHandler = ((req: Request, res: Response, next: NextFunction) =>
+      next()) as RateLimitRequestHandler;
     // assegniamo le proprietà richieste dal tipo RateLimitRequestHandler
     (noop as any).resetKey = (key: string) => {};
     (noop as any).getKey = (key: string) => undefined;
@@ -20,8 +26,9 @@ const createLimiter = (max: number, windowMs: number, message: string): RateLimi
   return rateLimit({
     windowMs,
     max,
+    skipSuccessfulRequests,
     standardHeaders: true, // X-RateLimit-* headers
-    legacyHeaders: false,  // disabilita vecchi headers
+    legacyHeaders: false, // disabilita vecchi headers
     handler: (req: Request, res: Response, next: NextFunction) => {
       res.status(429).json({
         success: false,
@@ -32,12 +39,14 @@ const createLimiter = (max: number, windowMs: number, message: string): RateLimi
 };
 
 /**
- * Limiter per login: 5 richieste ogni 15 minuti
+ * Limiter per login: 5 richieste ogni 15 minuti.
+ * Usiamo skipSuccessfulRequests: true così che solo i login falliti vengano conteggiati.
  */
 export const loginLimiter: RateLimitRequestHandler = createLimiter(
   5,
   15 * 60 * 1000,
-  "Hai superato il numero massimo di tentativi di login. Riprova tra 15 minuti."
+  'Hai superato il numero massimo di tentativi di login. Riprova tra 15 minuti.',
+  true
 );
 
 /**
