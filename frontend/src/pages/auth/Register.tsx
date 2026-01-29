@@ -3,7 +3,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { FiMail, FiLock, FiUser, FiUserPlus } from 'react-icons/fi';
+import { FiUser, FiUserPlus, FiMail, FiLock } from 'react-icons/fi';
+import Button from '../../components/ui/Button';
+import Card from '../../components/ui/Card';
+import Input from '../../components/ui/Input';
 import logo from '../../assets/images/logo-orizzontale.png';
 
 /**
@@ -83,211 +86,74 @@ export default function Register() {
         </div>
 
         {/* Card Form */}
-        <div className="bg-bg-card border border-border rounded-2xl shadow-sm p-8">
+        <Card className="shadow-sm p-8">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               {/* Nome */}
-              <div>
-                <label
-                  htmlFor="name"
-                  className="block text-sm font-semibold text-text-title mb-2"
-                >
-                  Nome
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FiUser className="text-text-subtle" size={20} />
-                  </div>
-                  <input
-                    id="name"
-                    type="text"
-                    autoComplete="given-name"
-                    {...register('name')}
-                    className={`
-                      w-full pl-10 pr-4 py-3 
-                      border rounded-lg 
-                      bg-white
-                      text-text-body
-                      placeholder:text-text-subtle
-                      focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
-                      transition-smooth
-                      ${errors.name ? 'border-red-500' : 'border-border'}
-                    `}
-                    placeholder="Mario"
-                  />
-                </div>
-                {errors.name && (
-                  <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
-                )}
-              </div>
+              <Input
+                label="Nome"
+                type="text"
+                placeholder="Mario"
+                name="name"
+                register={register}
+                error={errors.name?.message}
+                startIcon={<FiUser size={20} />}
+              />
 
               {/* Cognome */}
-              <div>
-                <label
-                  htmlFor="surname"
-                  className="block text-sm font-semibold text-text-title mb-2"
-                >
-                  Cognome
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FiUser className="text-text-subtle" size={20} />
-                  </div>
-                  <input
-                    id="surname"
-                    type="text"
-                    autoComplete="family-name"
-                    {...register('surname')}
-                    className={`
-                      w-full pl-10 pr-4 py-3 
-                      border rounded-lg 
-                      bg-white
-                      text-text-body
-                      placeholder:text-text-subtle
-                      focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
-                      transition-smooth
-                      ${errors.surname ? 'border-red-500' : 'border-border'}
-                    `}
-                    placeholder="Rossi"
-                  />
-                </div>
-                {errors.surname && (
-                  <p className="mt-1 text-sm text-red-600">{errors.surname.message}</p>
-                )}
-              </div>
+              <Input
+                label="Cognome"
+                type="text"
+                placeholder="Rossi"
+                name="surname"
+                register={register}
+                error={errors.surname?.message}
+                startIcon={<FiUser size={20} />}
+              />
             </div>
 
             {/* Email */}
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-semibold text-text-title mb-2"
-              >
-                Email
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FiMail className="text-text-subtle" size={20} />
-                </div>
-                <input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  {...register('email')}
-                  className={`
-                    w-full pl-10 pr-4 py-3 
-                    border rounded-lg 
-                    bg-white
-                    text-text-body
-                    placeholder:text-text-subtle
-                    focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
-                    transition-smooth
-                    ${errors.email ? 'border-red-500' : 'border-border'}
-                  `}
-                  placeholder="mario.rossi@example.com"
-                />
-              </div>
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-              )}
-            </div>
+            <Input
+              label="Email"
+              type="email"
+              placeholder="mario.rossi@example.com"
+              name="email"
+              register={register}
+              error={errors.email?.message}
+              startIcon={<FiMail size={20} />}
+            />
 
             {/* Password */}
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-semibold text-text-title mb-2"
-              >
-                Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FiLock className="text-text-subtle" size={20} />
-                </div>
-                <input
-                  id="password"
-                  type="password"
-                  autoComplete="new-password"
-                  {...register('password')}
-                  className={`
-                    w-full pl-10 pr-4 py-3 
-                    border rounded-lg 
-                    bg-white
-                    text-text-body
-                    placeholder:text-text-subtle
-                    focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
-                    transition-smooth
-                    ${errors.password ? 'border-red-500' : 'border-border'}
-                  `}
-                  placeholder="••••••••"
-                />
-              </div>
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
-              )}
-            </div>
+            <Input
+              label="Password"
+              type="password"
+              placeholder="••••••••"
+              name="password"
+              register={register}
+              error={errors.password?.message}
+              startIcon={<FiLock size={20} />}
+            />
 
             {/* Confirm Password */}
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-sm font-semibold text-text-title mb-2"
-              >
-                Conferma Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FiLock className="text-text-subtle" size={20} />
-                </div>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  autoComplete="new-password"
-                  {...register('confirmPassword')}
-                  className={`
-                    w-full pl-10 pr-4 py-3 
-                    border rounded-lg 
-                    bg-white
-                    text-text-body
-                    placeholder:text-text-subtle
-                    focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
-                    transition-smooth
-                    ${errors.confirmPassword ? 'border-red-500' : 'border-border'}
-                  `}
-                  placeholder="••••••••"
-                />
-              </div>
-              {errors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
-              )}
-            </div>
+            <Input
+              label="Conferma Password"
+              type="password"
+              placeholder="••••••••"
+              name="confirmPassword"
+              register={register}
+              error={errors.confirmPassword?.message}
+              startIcon={<FiLock size={20} />}
+            />
 
             {/* Submit Button */}
-            <button
+            <Button
               type="submit"
-              disabled={isRegistering}
-              className="
-                w-full py-3 px-4
-                bg-primary hover:bg-primary-hover
-                text-white font-semibold
-                rounded-lg
-                flex items-center justify-center gap-2
-                transition-smooth
-                disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer
-              "
+              variant="primary"
+              isLoading={isRegistering}
+              className="w-full"
             >
-              {isRegistering ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Registrazione in corso...
-                </>
-              ) : (
-                <>
-                  Registrati
-                  <FiUserPlus size={20} />
-                </>
-              )}
-            </button>
+              Registrati <FiUserPlus size={20} />
+            </Button>
           </form>
 
           {/* Login Link */}
@@ -302,7 +168,7 @@ export default function Register() {
               </Link>
             </p>
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );

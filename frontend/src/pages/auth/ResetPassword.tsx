@@ -4,6 +4,9 @@ import { z } from 'zod';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { FiLock, FiCheck } from 'react-icons/fi';
+import Button from '../../components/ui/Button';
+import Card from '../../components/ui/Card';
+import Input from '../../components/ui/Input';
 
 /**
  * VALIDATION SCHEMA - RESET PASSWORD
@@ -93,77 +96,29 @@ export default function ResetPassword() {
         </div>
 
         {/* Card Form */}
-        <div className="bg-bg-card border border-border rounded-2xl shadow-sm p-8">
+        <Card className="shadow-sm p-8">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* New Password */}
-            <div>
-              <label
-                htmlFor="newPassword"
-                className="block text-sm font-semibold text-text-title mb-2"
-              >
-                Nuova password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FiLock className="text-text-subtle" size={20} />
-                </div>
-                <input
-                  id="newPassword"
-                  type="password"
-                  autoComplete="new-password"
-                  {...register('newPassword')}
-                  className={`
-                    w-full pl-10 pr-4 py-3 
-                    border rounded-lg 
-                    bg-white
-                    text-text-body
-                    placeholder:text-text-subtle
-                    focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
-                    transition-smooth
-                    ${errors.newPassword ? 'border-red-500' : 'border-border'}
-                  `}
-                  placeholder="••••••••"
-                />
-              </div>
-              {errors.newPassword && (
-                <p className="mt-1 text-sm text-red-600">{errors.newPassword.message}</p>
-              )}
-            </div>
+            <Input
+              label="Nuova password"
+              type="password"
+              placeholder="••••••••"
+              name="newPassword"
+              register={register}
+              error={errors.newPassword?.message}
+              startIcon={<FiLock size={20} />}
+            />
 
             {/* Confirm Password */}
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-sm font-semibold text-text-title mb-2"
-              >
-                Conferma nuova password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FiLock className="text-text-subtle" size={20} />
-                </div>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  autoComplete="new-password"
-                  {...register('confirmPassword')}
-                  className={`
-                    w-full pl-10 pr-4 py-3 
-                    border rounded-lg 
-                    bg-white
-                    text-text-body
-                    placeholder:text-text-subtle
-                    focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
-                    transition-smooth
-                    ${errors.confirmPassword ? 'border-red-500' : 'border-border'}
-                  `}
-                  placeholder="••••••••"
-                />
-              </div>
-              {errors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
-              )}
-            </div>
+            <Input
+              label="Conferma nuova password"
+              type="password"
+              placeholder="••••••••"
+              name="confirmPassword"
+              register={register}
+              error={errors.confirmPassword?.message}
+              startIcon={<FiLock size={20} />}
+            />
 
             {/* Password Requirements */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -191,33 +146,16 @@ export default function ResetPassword() {
             </div>
 
             {/* Submit Button */}
-            <button
+            <Button
               type="submit"
-              disabled={isResettingPassword}
-              className="
-                w-full py-3 px-4
-                bg-primary hover:bg-primary-hover
-                text-white font-semibold
-                rounded-lg
-                flex items-center justify-center gap-2
-                transition-smooth
-                disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer
-              "
+              variant="primary"
+              isLoading={isResettingPassword}
+              className="w-full"
             >
-              {isResettingPassword ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Reimpostazione in corso...
-                </>
-              ) : (
-                <>
-                  Reimposta password
-                  <FiCheck size={20} />
-                </>
-              )}
-            </button>
+              {isResettingPassword ? 'Reimpostazione in corso...' : <>Reimposta password <FiCheck size={20} /></>}
+            </Button>
           </form>
-        </div>
+        </Card>
       </div>
     </div>
   );

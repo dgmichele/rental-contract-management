@@ -1,4 +1,5 @@
 import { useAuthStore } from '../../store/authStore';
+import Card from '../../components/ui/Card';
 
 /**
  * PAGE - DASHBOARD (Placeholder)
@@ -14,7 +15,7 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-heading font-bold text-text-title">
-            Benvenuto, {user?.name} {user?.surname}! 👋
+            Ciao {user?.name}! 😊
           </h1>
           <p className="text-text-body mt-2">
             Gestionale Contratti - Bich Immobiliare
@@ -22,7 +23,7 @@ export default function Dashboard() {
         </div>
 
         <div className="grid gap-6">
-          <div className="bg-bg-card border border-border rounded-2xl p-8">
+          <Card className="p-8">
             <h2 className="text-xl font-semibold text-text-title mb-4">
               Dashboard Placeholder
             </h2>
@@ -54,7 +55,7 @@ export default function Dashboard() {
                 🚧 <strong>Work in Progress:</strong> Questa è una pagina placeholder. La dashboard completa con statistiche, contratti in scadenza e grafici verrà implementata nella Fase 3 dell'ordine di sviluppo.
               </p>
             </div>
-          </div>
+          </Card>
         </div>
       </main>
     </div>

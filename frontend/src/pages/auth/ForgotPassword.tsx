@@ -4,6 +4,9 @@ import { z } from 'zod';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { FiMail, FiArrowLeft } from 'react-icons/fi';
+import Button from '../../components/ui/Button';
+import Card from '../../components/ui/Card';
+import Input from '../../components/ui/Input';
 
 /**
  * VALIDATION SCHEMA - FORGOT PASSWORD
@@ -50,68 +53,28 @@ export default function ForgotPassword() {
         </div>
 
         {/* Card Form */}
-        <div className="bg-bg-card border border-border rounded-2xl shadow-sm p-8">
+        <Card className="shadow-sm p-8">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Email */}
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-semibold text-text-title mb-2"
-              >
-                Email
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FiMail className="text-text-subtle" size={20} />
-                </div>
-                <input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  {...register('email')}
-                  className={`
-                    w-full pl-10 pr-4 py-3 
-                    border rounded-lg 
-                    bg-white
-                    text-text-body
-                    placeholder:text-text-subtle
-                    focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
-                    transition-smooth
-                    ${errors.email ? 'border-red-500' : 'border-border'}
-                  `}
-                  placeholder="mario.rossi@example.com"
-                />
-              </div>
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-              )}
-            </div>
+            <Input
+              label="Email"
+              type="email"
+              placeholder="mario.rossi@example.com"
+              name="email"
+              register={register}
+              error={errors.email?.message}
+              startIcon={<FiMail size={20} />}
+            />
 
             {/* Submit Button */}
-            <button
+            <Button
               type="submit"
-              disabled={isSendingResetEmail}
-              className="
-                w-full py-3 px-4
-                bg-primary hover:bg-primary-hover
-                text-white font-semibold
-                rounded-lg
-                flex items-center justify-center gap-2
-                transition-smooth
-                disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer
-              "
+              variant="primary"
+              isLoading={isSendingResetEmail}
+              className="w-full"
             >
-              {isSendingResetEmail ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Invio in corso...
-                </>
-              ) : (
-                <>
-                  Invia link di reset
-                </>
-              )}
-            </button>
+              {isSendingResetEmail ? 'Invio in corso...' : 'Invia link di reset'}
+            </Button>
           </form>
 
           {/* Back to Login */}
@@ -124,7 +87,7 @@ export default function ForgotPassword() {
               Torna al Login
             </Link>
           </div>
-        </div>
+        </Card>
 
         {/* Info Box */}
         <div className="mt-6 bg-bg-card border border-secondary rounded-lg p-4 shadow-sm">
