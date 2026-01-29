@@ -4,3 +4,4 @@ coverage
 dist
 logs/*
 !logs/README.md
+AGENTS.md
