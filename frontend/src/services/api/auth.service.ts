@@ -30,7 +30,7 @@ class AuthService {
    * REGISTER
    * Registra un nuovo utente.
    * 
-   * @param userData - Nome, email, password
+   * @param userData - Nome, cognome, email, password
    * @returns User + tokens
    */
   async register(userData: RegisterRequest): Promise<AuthResponse> {

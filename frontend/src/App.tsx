@@ -14,6 +14,7 @@ import Dashboard from './pages/dashboard/Dashboard';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
+import Layout from './components/layout/Layout';
 
 /**
  * APP - ROUTING PRINCIPALE
@@ -31,9 +32,9 @@ function App() {
   // Gestione responsive della posizione del Toaster
   useEffect(() => {
     const handleResize = () => {
-      // < 1024px (lg) -> bottom-center
-      // >= 1024px -> top-right
-      if (window.innerWidth < 1024) {
+      // < 1280px (xl) -> bottom-center
+      // >= 1280px -> top-right
+      if (window.innerWidth < 1280) {
         setToastPosition('bottom-center');
       } else {
         setToastPosition('top-right');
@@ -69,23 +70,18 @@ function App() {
         <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* ============= PROTECTED ROUTES ============= */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-
-      {/* TODO: Altre route protette da implementare nelle fasi successive */}
-      {/* 
-      <Route path="/owners" element={<ProtectedRoute><OwnersList /></ProtectedRoute>} />
-      <Route path="/owners/:id" element={<ProtectedRoute><OwnerDetail /></ProtectedRoute>} />
-      <Route path="/contracts" element={<ProtectedRoute><ContractsList /></ProtectedRoute>} />
-      <Route path="/contracts/:id" element={<ProtectedRoute><ContractDetail /></ProtectedRoute>} />
-      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-      */}
+        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          
+          {/* TODO: Altre route protette da implementare nelle fasi successive */}
+          {/* 
+          <Route path="/owners" element={<OwnersList />} />
+          <Route path="/owners/:id" element={<OwnerDetail />} />
+          <Route path="/contracts" element={<ContractsList />} />
+          <Route path="/contracts/:id" element={<ContractDetail />} />
+          <Route path="/settings" element={<Settings />} />
+          */}
+        </Route>
       
         {/* 404 - Catch All */}
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -94,6 +90,12 @@ function App() {
       {/* TOASTER GLOBALE */}
       <Toaster
         position={toastPosition}
+        containerStyle={{
+          // Evita sovrapposizione con Header Sticky su Desktop
+          top: toastPosition === 'top-right' ? 80 : 20,
+          // Evita sovrapposizione con Bottom Nav Sticky su Mobile/Tablet
+          bottom: toastPosition === 'bottom-center' ? 80 : 20,
+        }}
         toastOptions={{
           duration: 4000,
           style: {

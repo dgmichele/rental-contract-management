@@ -12,6 +12,7 @@ export interface User {
   id: number;
   email: string;
   name: string;
+  surname: string;
   createdAt: string; // ISO 8601 date string
 }
 
