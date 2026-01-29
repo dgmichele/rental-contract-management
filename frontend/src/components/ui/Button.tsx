@@ -34,7 +34,7 @@ export default function Button({
       disabled={disabled || isLoading}
       className={clsx(
         // Stili base: padding, arrotondamento, font, transizioni, centratura
-        'px-4 py-2 rounded font-semibold transition-colors duration-300 flex items-center justify-center gap-2 cursor-pointer',
+        'px-4 py-3 rounded font-semibold transition-colors duration-300 flex items-center justify-center gap-2 cursor-pointer',
         {
           // Stile Primary: sfondo pieno brand color
           'bg-primary hover:bg-primary-hover text-bg-card': variant === 'primary',
