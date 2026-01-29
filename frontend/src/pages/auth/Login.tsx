@@ -20,7 +20,6 @@ const loginSchema = z.object({
   password: z
     .string()
     .min(1, 'Password obbligatoria')
-    .min(8, 'La password deve contenere almeno 8 caratteri'),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -30,18 +29,28 @@ type LoginFormData = z.infer<typeof loginSchema>;
  * Form di login con validazione Zod + React Hook Form.
  */
 export default function Login() {
-  const { login, isLoggingIn } = useAuth();
+  const { loginAsync, isLoggingIn } = useAuth();
 
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = (data: LoginFormData) => {
-    login(data);
+  const onSubmit = async (data: LoginFormData) => {
+    try {
+      await loginAsync(data);
+    } catch (error: any) {
+      const message = error.response?.data?.message;
+      if (message === 'Email non trovata') {
+        setError('email', { type: 'manual', message: 'Email non trovata' });
+      } else if (message === 'Password errata') {
+        setError('password', { type: 'manual', message: 'Password errata' });
+      }
+    }
   };
 
   return (

@@ -25,18 +25,26 @@ type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
  * Form per richiedere reset password via email.
  */
 export default function ForgotPassword() {
-  const { forgotPassword, isSendingResetEmail } = useAuth();
+  const { forgotPasswordAsync, isSendingResetEmail } = useAuth();
 
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors },
   } = useForm<ForgotPasswordFormData>({
     resolver: zodResolver(forgotPasswordSchema),
   });
 
-  const onSubmit = (data: ForgotPasswordFormData) => {
-    forgotPassword(data);
+  const onSubmit = async (data: ForgotPasswordFormData) => {
+    try {
+      await forgotPasswordAsync(data);
+    } catch (error: any) {
+      const message = error.response?.data?.message;
+      if (message === 'Email non registrata') {
+        setError('email', { type: 'manual', message: 'Email non registrata' });
+      }
+    }
   };
 
   return (

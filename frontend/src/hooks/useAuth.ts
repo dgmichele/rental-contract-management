@@ -28,22 +28,19 @@ export const useAuth = () => {
   const loginMutation = useMutation({
     mutationFn: (credentials: LoginRequest) => authService.login(credentials),
     onSuccess: (response) => {
-      // Salva user + tokens nello store
       setAuth(response.data.user, {
         accessToken: response.data.accessToken,
         refreshToken: response.data.refreshToken,
       });
-
-      // Toast di successo
       toast.success(`Benvenuto, ${response.data.user.name}! 🎉`);
-
-      // Redirect a dashboard
       navigate('/dashboard');
     },
     onError: (error: any) => {
-      // Toast di errore
       const message = error.response?.data?.message || 'Errore durante il login';
-      toast.error(message);
+      // I toast non vengono mostrati per errori specifici dei campi, gestiti manualmente nel form
+      if (message !== 'Email non trovata' && message !== 'Password errata') {
+        toast.error(message);
+      }
     },
   });
 
@@ -51,22 +48,20 @@ export const useAuth = () => {
   const registerMutation = useMutation({
     mutationFn: (userData: RegisterRequest) => authService.register(userData),
     onSuccess: (response) => {
-      // Salva user + tokens nello store
       setAuth(response.data.user, {
         accessToken: response.data.accessToken,
         refreshToken: response.data.refreshToken,
       });
-
-      // Toast di successo
       toast.success(`Account creato con successo! Benvenuto, ${response.data.user.name}! 🎉`);
-
-      // Redirect a dashboard
       navigate('/dashboard');
     },
     onError: (error: any) => {
-      // Toast di errore
       const message = error.response?.data?.message || 'Errore durante la registrazione';
-      toast.error(message);
+      // Supponiamo che la registrazione possa avere errori di campo (es. email duplicata)
+      // Se il backend restituisce "Email già registrata", lo gestiamo nel form
+      if (message !== 'Email già registrata') {
+        toast.error(message);
+      }
     },
   });
 
@@ -79,20 +74,13 @@ export const useAuth = () => {
       }
     },
     onSuccess: () => {
-      // Pulisci store
       clearAuth();
-
-      // Toast di successo
       toast.success('Logout effettuato con successo');
-
-      // Redirect a login
       navigate('/login');
     },
     onError: (error: any) => {
-      // Anche in caso di errore, effettua logout locale
       clearAuth();
       navigate('/login');
-
       const message = error.response?.data?.message || 'Errore durante il logout';
       toast.error(message);
     },
@@ -106,7 +94,9 @@ export const useAuth = () => {
     },
     onError: (error: any) => {
       const message = error.response?.data?.message || 'Errore durante l\'invio dell\'email';
-      toast.error(message);
+      if (message !== 'Email non registrata') {
+        toast.error(message);
+      }
     },
   });
 
@@ -115,8 +105,6 @@ export const useAuth = () => {
     mutationFn: (resetData: ResetPasswordRequest) => authService.resetPassword(resetData),
     onSuccess: (response) => {
       toast.success(response.message || 'Password reimpostata con successo!');
-      
-      // Redirect a login dopo 1.5 secondi
       setTimeout(() => {
         navigate('/login');
       }, 1500);
@@ -131,11 +119,13 @@ export const useAuth = () => {
   return {
     // Login
     login: loginMutation.mutate,
+    loginAsync: loginMutation.mutateAsync,
     isLoggingIn: loginMutation.isPending,
     loginError: loginMutation.error,
 
     // Register
     register: registerMutation.mutate,
+    registerAsync: registerMutation.mutateAsync,
     isRegistering: registerMutation.isPending,
     registerError: registerMutation.error,
 
@@ -145,10 +135,12 @@ export const useAuth = () => {
 
     // Forgot Password
     forgotPassword: forgotPasswordMutation.mutate,
+    forgotPasswordAsync: forgotPasswordMutation.mutateAsync,
     isSendingResetEmail: forgotPasswordMutation.isPending,
 
     // Reset Password
     resetPassword: resetPasswordMutation.mutate,
+    resetPasswordAsync: resetPasswordMutation.mutateAsync,
     isResettingPassword: resetPasswordMutation.isPending,
   };
 };

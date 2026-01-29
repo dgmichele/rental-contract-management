@@ -50,20 +50,29 @@ type RegisterFormData = z.infer<typeof registerSchema>;
  * Form di registrazione con validazione Zod + React Hook Form.
  */
 export default function Register() {
-  const { register: registerUser, isRegistering } = useAuth();
+  const { registerAsync: registerUser, isRegistering } = useAuth();
 
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
   });
 
-  const onSubmit = (data: RegisterFormData) => {
+  const onSubmit = async (data: RegisterFormData) => {
     // Rimuovi confirmPassword prima di inviare al backend
     const { confirmPassword, ...registerData } = data;
-    registerUser(registerData);
+    
+    try {
+      await registerUser(registerData);
+    } catch (error: any) {
+      const message = error.response?.data?.message;
+      if (message === 'Email già registrata') {
+        setError('email', { type: 'manual', message: 'Email già in uso' });
+      }
+    }
   };
 
   return (

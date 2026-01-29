@@ -47,7 +47,12 @@ api.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
     // Verifica se è un errore 401 e NON abbiamo già ritentato
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // ESCLUDI anche la rotta di login, altrimenti un login fallito innesca un refresh loop
+    if (
+      error.response?.status === 401 && 
+      !originalRequest._retry && 
+      !originalRequest.url?.includes('/auth/login')
+    ) {
       originalRequest._retry = true;
 
       try {

@@ -125,7 +125,7 @@ export const login = async (data: LoginBody): Promise<{
 
     if (!user) {
       console.log('[AUTH_SERVICE] Utente non trovato:', data.email);
-      throw new AppError('Credenziali non valide', 401);
+      throw new AppError('Email non trovata', 404);
     }
 
     // Verifica password
@@ -133,7 +133,7 @@ export const login = async (data: LoginBody): Promise<{
 
     if (!isPasswordValid) {
       console.log('[AUTH_SERVICE] Password errata per utente:', user.id);
-      throw new AppError('Credenziali non valide', 401);
+      throw new AppError('Password errata', 401);
     }
 
     console.log('[AUTH_SERVICE] Login valido per utente:', user.id);
