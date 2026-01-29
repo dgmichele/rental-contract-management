@@ -1,6 +1,7 @@
 import { Fragment, useState } from 'react';
 import { Menu, Transition } from '@headlessui/react';
-import { FiUser, FiLogOut, FiMail, FiSettings } from 'react-icons/fi';
+import { FiLogOut, FiMail, FiSettings } from 'react-icons/fi';
+import { FaUserTie } from "react-icons/fa";
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import logoDesktop from '../../assets/images/logo-desktop.png';
@@ -64,8 +65,15 @@ const Header = () => {
 
           {/* User Dropdown */}
           <Menu as="div" className="relative">
-            <Menu.Button className="flex items-center justify-center w-10 h-10 rounded-full bg-secondary hover:bg-primary-hover transition-colors duration-300 text-bg-card focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 cursor-pointer">
-              <FiUser className="w-5 h-5" />
+            <Menu.Button className="flex items-center justify-center w-10 h-10 rounded-full focus:outline-none cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 transition-all duration-300">
+              {user?.name && user?.surname ? (
+                <div className="w-full h-full rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shadow-md">
+                  {user.name.charAt(0).toUpperCase()}
+                  {user.surname.charAt(0).toUpperCase()}
+                </div>
+              ) : (
+                <FaUserTie className="w-7 h-7 text-secondary hover:text-primary-hover transition-colors duration-300" />
+              )}
             </Menu.Button>
 
             <Transition
