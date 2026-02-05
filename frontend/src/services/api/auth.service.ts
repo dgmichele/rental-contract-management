@@ -22,7 +22,7 @@ class AuthService {
    * @returns User + tokens
    */
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    const { data } = await api.post<AuthResponse>('/api/auth/login', credentials);
+    const { data } = await api.post<AuthResponse>('/auth/login', credentials);
     return data;
   }
 
@@ -34,7 +34,7 @@ class AuthService {
    * @returns User + tokens
    */
   async register(userData: RegisterRequest): Promise<AuthResponse> {
-    const { data } = await api.post<AuthResponse>('/api/auth/register', userData);
+    const { data } = await api.post<AuthResponse>('/auth/register', userData);
     return data;
   }
 
@@ -45,7 +45,7 @@ class AuthService {
    * @param refreshToken - Token da invalidare
    */
   async logout(refreshToken: string): Promise<GenericAuthResponse> {
-    const { data } = await api.post<GenericAuthResponse>('/api/auth/logout', {
+    const { data } = await api.post<GenericAuthResponse>('/auth/logout', {
       refreshToken,
     });
     return data;
@@ -59,7 +59,7 @@ class AuthService {
    * @returns Nuovo access token
    */
   async refreshToken(refreshToken: string): Promise<RefreshTokenResponse> {
-    const { data } = await api.post<RefreshTokenResponse>('/api/auth/refresh', {
+    const { data } = await api.post<RefreshTokenResponse>('/auth/refresh', {
       refreshToken,
     });
     return data;
@@ -73,7 +73,7 @@ class AuthService {
    */
   async forgotPassword(email: ForgotPasswordRequest): Promise<GenericAuthResponse> {
     const { data } = await api.post<GenericAuthResponse>(
-      '/api/auth/forgot-password',
+      '/auth/forgot-password',
       email
     );
     return data;
@@ -87,7 +87,7 @@ class AuthService {
    */
   async resetPassword(resetData: ResetPasswordRequest): Promise<GenericAuthResponse> {
     const { data } = await api.post<GenericAuthResponse>(
-      '/api/auth/reset-password',
+      '/auth/reset-password',
       resetData
     );
     return data;
