@@ -2,7 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import dayjs from 'dayjs';
-import { FaEye, FaHome, FaCalendarDay, FaMoneyBillWave, FaUser } from 'react-icons/fa';
+import { FaEye, FaHome, FaCalendarDay, FaMoneyBillWave, FaUser, FaEdit, FaTrash } from 'react-icons/fa';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import type { ContractWithRelations } from '../../types/shared';
@@ -12,6 +12,9 @@ interface ContractCardProps {
   expiryType?: 'contract' | 'annuity';
   expiryDate?: string; // ISO string expected
   annuityYear?: number;
+  displayMode?: 'owner' | 'tenant'; // 'owner' shows owner as title, 'tenant' shows tenant as title
+  onEdit?: () => void;
+  onDelete?: () => void;
   className?: string;
 }
 
@@ -20,6 +23,9 @@ export const ContractCard = ({
   expiryType, 
   expiryDate, 
   annuityYear, 
+  displayMode = 'owner',
+  onEdit,
+  onDelete,
   className 
 }: ContractCardProps) => {
   const navigate = useNavigate();
@@ -31,9 +37,19 @@ export const ContractCard = ({
   // "Gestisci rinnovo" -> If cedolare secca OR natural expiration
   // "Gestisci annualità" -> If NOT cedolare secca AND intermediate annuity
   const isRenewal = isCedolareSecca || isNaturalExpiration;
-  const buttonLabel = isRenewal ? 'Gestisci rinnovo' : 'Gestisci annualità';
+  
+  // Base button label logic: if expiryType is provided, we use manage labels, 
+  // otherwise (like in detail pages) we use "Visualizza contratto"
+  let buttonLabel = isRenewal ? 'Gestisci rinnovo' : 'Gestisci annualità';
+  if (!expiryType) {
+    buttonLabel = 'Visualizza contratto';
+  }
   
   const handleManage = () => {
+    if (!expiryType) {
+      handleView();
+      return;
+    }
     // Navigate to single contract page in specific mode
     const mode = isRenewal ? 'renewal' : 'annuity';
     navigate(`/contracts/${contract.id}?mode=${mode}`);
@@ -43,7 +59,9 @@ export const ContractCard = ({
     navigate(`/contracts/${contract.id}?mode=view`);
   };
 
-  const formattedDate = expiryDate ? dayjs(expiryDate).format('DD/MM/YYYY') : 'N/A';
+  const formattedDate = expiryDate 
+    ? dayjs(expiryDate).format('DD/MM/YYYY') 
+    : dayjs(contract.end_date).format('DD/MM/YYYY');
 
   return (
     <Card className={clsx("flex flex-col relative h-full transition-transform hover:-translate-y-1 shadow-sm hover:shadow-lg", className)}>
@@ -54,14 +72,34 @@ export const ContractCard = ({
         </div>
       )}
 
-      {/* Eye Icon Top Right Actions */}
-      <button 
-        onClick={handleView}
-        className="absolute top-3 right-3 text-text-subtle hover:text-primary transition-colors p-2 rounded-full hover:bg-bg-card z-20 cursor-pointer"
-        title="Visualizza dettagli"
-      >
-        <FaEye size={18} />
-      </button>
+      {/* Action Icons Top Right */}
+      <div className="absolute top-3 right-3 flex items-center gap-1 z-20">
+        <button 
+          onClick={handleView}
+          className="text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-bg-card cursor-pointer"
+          title="Visualizza dettagli"
+        >
+          <FaEye size={18} />
+        </button>
+        {onEdit && (
+          <button 
+            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            className="text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-bg-card cursor-pointer"
+            title="Modifica"
+          >
+            <FaEdit size={18} className="text-secondary" />
+          </button>
+        )}
+        {onDelete && (
+          <button 
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="text-secondary hover:text-error transition-colors p-2 rounded-full hover:bg-bg-card cursor-pointer"
+            title="Elimina"
+          >
+            <FaTrash size={18} />
+          </button>
+        )}
+      </div>
 
       {/* Header Info */}
       <div className={clsx("mb-3", isCedolareSecca ? "mt-6" : "mt-2")}>
@@ -69,13 +107,21 @@ export const ContractCard = ({
             <div className="mt-1 bg-primary/10 p-2 rounded-full text-primary shrink-0">
                <FaUser size={16} />
             </div>
-            <div className="overflow-hidden">
-                <h3 className="text-lg font-bold text-text-title leading-tight truncate" title={`${contract.owner.name} ${contract.owner.surname}`}>
-                    {contract.owner.name} {contract.owner.surname}
-                </h3>
-                <p className="text-sm text-text-body truncate" title={`Inquilino: ${contract.tenant.name} ${contract.tenant.surname}`}>
-                    Inquilino: {contract.tenant.name} {contract.tenant.surname}
-                </p>
+            <div className="overflow-hidden pr-20"> {/* Margin for icons */}
+                {displayMode === 'owner' ? (
+                  <>
+                    <h3 className="text-lg font-bold text-text-title leading-tight truncate" title={`${contract.owner.name} ${contract.owner.surname}`}>
+                        {contract.owner.name} {contract.owner.surname}
+                    </h3>
+                    <p className="text-sm text-text-body truncate" title={`Inquilino: ${contract.tenant.name} ${contract.tenant.surname}`}>
+                        Inquilino: {contract.tenant.name} {contract.tenant.surname}
+                    </p>
+                  </>
+                ) : (
+                  <h3 className="text-lg font-bold text-text-title leading-tight truncate" title={`${contract.tenant.name} ${contract.tenant.surname}`}>
+                      {contract.tenant.name} {contract.tenant.surname}
+                  </h3>
+                )}
             </div>
         </div>
       </div>

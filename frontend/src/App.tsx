@@ -11,6 +11,8 @@ import ResetPassword from './pages/auth/ResetPassword';
 
 // Protected Pages
 import Dashboard from './pages/dashboard/Dashboard';
+import OwnersListPage from './pages/owners/OwnersListPage';
+import OwnerDetailPage from './pages/owners/OwnerDetailPage';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -72,11 +74,11 @@ function App() {
         {/* ============= PROTECTED ROUTES ============= */}
         <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/owners" element={<OwnersListPage />} />
+          <Route path="/owners/:id" element={<OwnerDetailPage />} />
           
           {/* TODO: Altre route protette da implementare nelle fasi successive */}
           {/* 
-          <Route path="/owners" element={<OwnersList />} />
-          <Route path="/owners/:id" element={<OwnerDetail />} />
           <Route path="/contracts" element={<ContractsList />} />
           <Route path="/contracts/:id" element={<ContractDetail />} />
           <Route path="/settings" element={<Settings />} />

@@ -54,10 +54,6 @@ const MobileNav = () => {
                       isActive ? 'scale-110' : 'scale-100'
                     }`} 
                   />
-                  {/* Indicatore attivo - pallino sotto l'icona */}
-                  {isActive && (
-                    <div className="w-1.5 h-1.5 bg-primary rounded-full mt-1 animate-pulse" />
-                  )}
                 </>
               )}
             </NavLink>

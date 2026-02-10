@@ -18,6 +18,7 @@ export type OwnerFormData = z.infer<typeof ownerSchema>;
 interface OwnerFormProps {
   initialData?: Partial<OwnerFormData>;
   onSubmit: (data: OwnerFormData) => void;
+  onDelete?: () => void;
   isLoading?: boolean;
   submitLabel?: string;
 }
@@ -34,6 +35,7 @@ interface OwnerFormProps {
 export default function OwnerForm({
   initialData,
   onSubmit,
+  onDelete,
   isLoading,
   submitLabel = 'Salva',
 }: OwnerFormProps) {
@@ -100,8 +102,8 @@ export default function OwnerForm({
         disabled={isLoading}
       />
 
-      {/* Submit Button */}
-      <div className="pt-4">
+      {/* Action Buttons */}
+      <div className="pt-4 flex flex-col gap-3">
         <Button
           type="submit"
           variant="primary"
@@ -111,6 +113,18 @@ export default function OwnerForm({
         >
           {submitLabel}
         </Button>
+
+        {onDelete && (
+          <Button
+            type="button"
+            variant="secondary"
+            className="w-full text-error hover:text-error/80 border-none"
+            onClick={onDelete}
+            disabled={isLoading}
+          >
+            Elimina Proprietario
+          </Button>
+        )}
       </div>
     </form>
   );

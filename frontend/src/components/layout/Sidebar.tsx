@@ -49,17 +49,15 @@ const Sidebar = () => {
               className={({ isActive }) =>
                 `flex items-center px-4 py-3 rounded-lg font-body text-sm font-semibold transition-all duration-300 ${
                   isActive
-                    ? 'bg-primary text-bg-card shadow-md'
+                    ? 'bg-bg-main'
                     : 'text-text-body hover:bg-bg-main hover:text-primary'
                 }`
               }
             >
-              {({ isActive }) => (
                 <>
-                  <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-bg-card' : 'text-secondary'}`} />
+                  <Icon className={"w-5 h-5 mr-3 hover:text-primary"} />
                   {link.label}
                 </>
-              )}
             </NavLink>
           );
         })}
@@ -69,7 +67,7 @@ const Sidebar = () => {
       <div className="px-4 py-6 border-t border-border">
         <Menu as="div" className="relative">
           <Menu.Button className="flex items-center w-full px-4 py-3 rounded-lg font-body text-sm font-semibold text-text-body hover:bg-bg-main hover:text-primary transition-all duration-300 cursor-pointer">
-            <FiSettings className="w-5 h-5 mr-3 text-secondary" />
+            <FiSettings className="w-5 h-5 mr-3" />
             Impostazioni
           </Menu.Button>
 
