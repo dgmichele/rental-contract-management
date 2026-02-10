@@ -1,9 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Merriweather:wght@900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Merriweather:wght@900&display=swap");
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
 /* ============= BASE STYLES ============= */
-
 
 /* ============= BASE STYLES ============= */
 @layer base {
@@ -13,50 +12,60 @@
     padding: 0;
     box-sizing: border-box;
   }
-  
+
   /* Body - Font di default e background */
   body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    font-family:
+      "Inter",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      "Roboto",
+      sans-serif;
     font-weight: 400;
-    color: theme('colors.text-body');
-    background-color: theme('colors.bg-main');
+    color: theme("colors.text-body");
+    background-color: theme("colors.bg-main");
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  
+
   /* Titoli h1, h2 - Merriweather 900 */
-  h1, h2 {
-    font-family: 'Merriweather', Georgia, serif;
+  h1,
+  h2 {
+    font-family: "Merriweather", Georgia, serif;
     font-weight: 900;
-    color: theme('colors.text-title');
+    color: theme("colors.text-title");
   }
-  
+
   /* Titoli h3, h4, h5, h6 - Inter 700 */
-  h3, h4, h5, h6 {
-    font-family: 'Inter', sans-serif;
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "Inter", sans-serif;
     font-weight: 700;
-    color: theme('colors.text-title');
+    color: theme("colors.text-title");
   }
-  
+
   /* Paragrafi - Inter 400 */
   p {
-    font-family: 'Inter', sans-serif;
+    font-family: "Inter", sans-serif;
     font-weight: 400;
-    color: theme('colors.text-body');
+    color: theme("colors.text-body");
     line-height: 1.6;
   }
-  
+
   /* Link - Inter 700 */
   a {
-    font-family: 'Inter', sans-serif;
+    font-family: "Inter", sans-serif;
     font-weight: 700;
-    color: theme('colors.link');
+    color: theme("colors.link");
     text-decoration: none;
     transition: color 0.3s ease;
   }
-  
+
   a:hover {
-    color: theme('colors.primary-hover');
+    color: theme("colors.primary-hover");
   }
 }
 
@@ -66,12 +75,12 @@
   .transition-smooth {
     transition: all 0.3s ease;
   }
-  
+
   /* Nascondi scrollbar (per card scrollabili orizzontali) */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
-  
+
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;

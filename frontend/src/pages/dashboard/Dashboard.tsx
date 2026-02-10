@@ -59,7 +59,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen pb-24"> {/* Added substantial bottom padding */}
+    <div className="min-h-screen pb-24 px-4 sm:px-6 lg:px-8 pt-8"> {/* Added horizontal and top padding */}
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-heading font-bold text-text-title">
@@ -71,12 +71,8 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Section */}
-      {/* 
-        Requirement: 5 cards in a row, scrollable on screens <= 1280px. 
-        On screens > 1280px (xl), it becomes a grid.
-      */}
       <section className="mb-12">
-        <div className="flex gap-4 overflow-x-auto xl:grid xl:grid-cols-5 xl:overflow-visible pb-4 scrollbar-hide">
+        <div className="flex gap-4 overflow-x-auto -mx-4 sm:-mx-6 lg:-mx-8 xl:mx-0 px-4 sm:px-6 lg:px-8 xl:px-0 xl:grid xl:grid-cols-5 xl:overflow-visible pb-4 no-scrollbar">
           <StatsCard
             label="Totale contratti"
             value={stats?.totalContracts || 0}
@@ -131,7 +127,7 @@ export default function Dashboard() {
                   Tablet: 2 cols (md)
                   Desktop: 4 cols (lg -> xl?? User said "desktop: 3 righe e 4 colonne". Usually lg is desktop. Let's use lg:grid-cols-4)
                 */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
                     {expiringCurrentQuery.data?.data.map((item) => (
                         <ContractCard
                             key={`${item.contract.id}-${item.expiryType}-${item.expiryDate}`} // Unique key composition
@@ -171,7 +167,7 @@ export default function Dashboard() {
              <p className="text-text-muted">✅ Nessuna scadenza prevista per il prossimo mese.</p>
         ) : (
             <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
                     {expiringNextQuery.data?.data.map((item) => (
                          <ContractCard
                             key={`${item.contract.id}-${item.expiryType}-${item.expiryDate}`} 

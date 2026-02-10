@@ -74,7 +74,7 @@ export const ContractCard = ({
                     {contract.owner.name} {contract.owner.surname}
                 </h3>
                 <p className="text-sm text-text-body truncate" title={`Inquilino: ${contract.tenant.name} ${contract.tenant.surname}`}>
-                    Inq: {contract.tenant.name} {contract.tenant.surname}
+                    Inquilino: {contract.tenant.name} {contract.tenant.surname}
                 </p>
             </div>
         </div>
