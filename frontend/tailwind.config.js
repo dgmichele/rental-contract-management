@@ -24,6 +24,11 @@ export default {
         
         // Link
         'link': '#b41c3c',              // Link (stesso del primary)
+        
+        // Stati funzionali
+        'error': '#dc2626',             // Rosso errore
+        'warning': '#d97706',           // Arancio warning
+        'success': '#16a34a',           // Verde successo
       },
       
       // ============= TIPOGRAFIA =============

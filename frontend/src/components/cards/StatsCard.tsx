@@ -1,4 +1,4 @@
-import React from 'react';
+
 import Card from '../ui/Card'; 
 import clsx from 'clsx';
 
@@ -10,18 +10,17 @@ interface StatsCardProps {
   className?: string;
 }
 
-export const StatsCard: React.FC<StatsCardProps> = ({ 
+export const StatsCard = ({ 
   label, 
   value, 
-  icon, 
-  description, 
+  icon,  
   className 
-}) => {
+}: StatsCardProps) => {
   return (
     <Card className={clsx("flex flex-col justify-between h-full min-w-[240px] shadow-sm hover:shadow-md transition-shadow duration-200", className)}>
         {/* Header with Label and Icon */}
         <div className="flex justify-between items-start mb-2">
-            <h3 className="text-sm font-medium text-text-secondary truncate pr-2" title={label}>
+            <h3 className="text-sm font-medium text-text-body truncate pr-2" title={label}>
               {label}
             </h3>
             {icon && (
@@ -33,15 +32,10 @@ export const StatsCard: React.FC<StatsCardProps> = ({
         
         {/* Main Value */}
         <div className="mt-2">
-          <span className="text-3xl font-bold text-text-primary truncate block" title={String(value)}>
+          <span className="text-3xl font-bold text-text-title truncate block" title={String(value)}>
               {value}
           </span>
         </div>
-        
-        {/* Optional description/trend */}
-        {description && (
-           <p className="text-xs text-text-muted mt-2 font-medium">{description}</p>
-        )}
     </Card>
   );
 };

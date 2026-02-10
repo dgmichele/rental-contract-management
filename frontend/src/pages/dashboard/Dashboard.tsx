@@ -1,63 +1,200 @@
-import { useAuthStore } from '../../store/authStore';
-import Card from '../../components/ui/Card';
 
-/**
- * PAGE - DASHBOARD (Placeholder)
- * Pagina temporanea per testare il routing protetto e il nuovo layout.
- * Verrà sostituita con la dashboard completa nella Fase 3.
- */
+import { useState } from 'react';
+import { useAuthStore } from '../../store/authStore';
+import { useStats, useExpiringContracts } from '../../hooks/useDashboard';
+import { StatsCard } from '../../components/cards/StatsCard';
+import { ContractCard } from '../../components/cards/ContractCard';
+import Pagination from '../../components/ui/Pagination';
+import Spinner from '../../components/ui/Spinner';
+import { 
+  FaFileContract, 
+  FaUserTie, 
+  FaCalendarDay, 
+  FaCalendarWeek, 
+  FaMoneyBillWave 
+} from 'react-icons/fa';
+
+
 export default function Dashboard() {
   const user = useAuthStore((state) => state.user);
 
+  // Pagination States
+  const [pageCurrent, setPageCurrent] = useState(1);
+  const [pageNext, setPageNext] = useState(1);
+
+  // Queries
+  const statsQuery = useStats();
+  
+  const expiringCurrentQuery = useExpiringContracts({
+    period: 'current',
+    page: pageCurrent,
+    limit: 12,
+  });
+
+  const expiringNextQuery = useExpiringContracts({
+    period: 'next',
+    page: pageNext,
+    limit: 12,
+  });
+
+  // Derived Data
+  const stats = statsQuery.data;
+  
+  // Handlers
+  const handlePageChangeCurrent = (page: number) => {
+    setPageCurrent(page);
+    // Scroll to section potentially?
+  };
+
+  const handlePageChangeNext = (page: number) => {
+    setPageNext(page);
+  };
+
+  if (statsQuery.isLoading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+         <Spinner className="h-12 w-12" />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen">
-      {/* Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-heading font-bold text-text-title">
-            Ciao {user?.name}! 😊
-          </h1>
-          <p className="text-text-body mt-2">
-            Gestionale Contratti - Bich Immobiliare
-          </p>
+    <div className="min-h-screen pb-24"> {/* Added substantial bottom padding */}
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-heading font-bold text-text-title">
+          Ciao {user?.name} 😊
+        </h1>
+        <p className="text-text-body mt-2">
+          Ecco una panoramica dei tuoi contratti.
+        </p>
+      </div>
+
+      {/* Stats Section */}
+      {/* 
+        Requirement: 5 cards in a row, scrollable on screens <= 1280px. 
+        On screens > 1280px (xl), it becomes a grid.
+      */}
+      <section className="mb-12">
+        <div className="flex gap-4 overflow-x-auto xl:grid xl:grid-cols-5 xl:overflow-visible pb-4 scrollbar-hide">
+          <StatsCard
+            label="Totale contratti"
+            value={stats?.totalContracts || 0}
+            icon={<FaFileContract />}
+            className="min-w-[260px] xl:min-w-0"
+          />
+          <StatsCard
+            label="Totale proprietari"
+            value={stats?.totalOwners || 0}
+            icon={<FaUserTie />}
+            className="min-w-[260px] xl:min-w-0"
+          />
+           <StatsCard
+            label="Scadenze mese corrente"
+            value={stats?.expiringContractsCurrentMonth || 0}
+            icon={<FaCalendarDay />}
+            className="min-w-[260px] xl:min-w-0"
+          />
+          <StatsCard
+            label="Scadenze mese successivo"
+            value={stats?.expiringContractsNextMonth || 0}
+            icon={<FaCalendarWeek />}
+            className="min-w-[260px] xl:min-w-0"
+          />
+          <StatsCard
+             label="Totale canoni mensili"
+             value={`€ ${stats?.totalMonthlyRent?.toLocaleString('it-IT', { minimumFractionDigits: 2 }) || '0,00'}`}
+             icon={<FaMoneyBillWave />}
+             className="min-w-[260px] xl:min-w-0"
+          />
         </div>
+      </section>
 
-        <div className="grid gap-6">
-          <Card className="p-8">
-            <h2 className="text-xl font-semibold text-text-title mb-4">
-              Dashboard Placeholder
-            </h2>
-            <p className="text-text-body mb-6">
-              Hai effettuato l'accesso con successo. Questa è una pagina protetta con il nuovo layout.
-            </p>
-            
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-900 font-semibold mb-2">
-                📋 Informazioni Account:
-              </p>
-              <ul className="text-sm text-blue-800 space-y-1">
-                <li><strong>Nome:</strong> {user?.name}</li>
-                <li><strong>Cognome:</strong> {user?.surname}</li>
-                <li><strong>Email:</strong> {user?.email}</li>
-                <li><strong>ID:</strong> {user?.id}</li>
-                <li><strong>Registrato il:</strong> {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('it-IT') : 'N/A'}</li>
-              </ul>
-            </div>
+      {/* Expiring Contracts - Current Month */}
+      <section className="mb-12">
+        <h2 className="text-xl font-heading font-bold text-text-title mb-6 flex items-center gap-2">
+          Scadenze mese corrente:
+          {expiringCurrentQuery.isFetching && <Spinner className="h-4 w-4" />}
+        </h2>
+        
+        {expiringCurrentQuery.isLoading ? (
+             <div className="flex justify-center py-10"><Spinner /></div>
+        ) : expiringCurrentQuery.isError ? (
+             <div className="text-error">Errore nel caricamento delle scadenze.</div>
+        ) : expiringCurrentQuery.data?.data.length === 0 ? (
+             <p className="text-text-muted">✅ Nessuna scadenza prevista per questo mese.</p>
+        ) : (
+            <>
+                {/* 
+                  Grid Layout: 
+                  Mobile: 1 col (default)
+                  Tablet: 2 cols (md)
+                  Desktop: 4 cols (lg -> xl?? User said "desktop: 3 righe e 4 colonne". Usually lg is desktop. Let's use lg:grid-cols-4)
+                */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {expiringCurrentQuery.data?.data.map((item) => (
+                        <ContractCard
+                            key={`${item.contract.id}-${item.expiryType}-${item.expiryDate}`} // Unique key composition
+                            contract={item.contract}
+                            expiryType={item.expiryType}
+                            expiryDate={item.expiryDate}
+                            annuityYear={item.annuityYear}
+                        />
+                    ))}
+                </div>
 
-            <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-sm text-green-900">
-                ✅ <strong>Layout Component Attivo!</strong> Header, Sidebar (desktop) e Bottom Nav (mobile) sono ora visibili e funzionanti.
-              </p>
-            </div>
+                {/* Pagination */}
+                {expiringCurrentQuery.data?.pagination && (
+                    <Pagination
+                        currentPage={expiringCurrentQuery.data.pagination.page}
+                        totalPages={expiringCurrentQuery.data.pagination.totalPages}
+                        onPageChange={handlePageChangeCurrent}
+                        className="mt-8"
+                    />
+                )}
+            </>
+        )}
+      </section>
 
-            <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-sm text-yellow-900">
-                🚧 <strong>Work in Progress:</strong> Questa è una pagina placeholder. La dashboard completa con statistiche, contratti in scadenza e grafici verrà implementata nella Fase 3 dell'ordine di sviluppo.
-              </p>
-            </div>
-          </Card>
-        </div>
-      </main>
+       {/* Expiring Contracts - Next Month */}
+       <section className="mb-8">
+        <h2 className="text-xl font-heading font-bold text-text-title mb-6 flex items-center gap-2">
+          Scadenze mese successivo:
+           {expiringNextQuery.isFetching && <Spinner className="h-4 w-4" />}
+        </h2>
+        
+        {expiringNextQuery.isLoading ? (
+             <div className="flex justify-center py-10"><Spinner /></div>
+        ) : expiringNextQuery.isError ? (
+             <div className="text-error">Errore nel caricamento delle scadenze.</div>
+        ) : expiringNextQuery.data?.data.length === 0 ? (
+             <p className="text-text-muted">✅ Nessuna scadenza prevista per il prossimo mese.</p>
+        ) : (
+            <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {expiringNextQuery.data?.data.map((item) => (
+                         <ContractCard
+                            key={`${item.contract.id}-${item.expiryType}-${item.expiryDate}`} 
+                            contract={item.contract}
+                            expiryType={item.expiryType}
+                            expiryDate={item.expiryDate}
+                            annuityYear={item.annuityYear}
+                        />
+                    ))}
+                </div>
+
+                {/* Pagination */}
+                {expiringNextQuery.data?.pagination && (
+                    <Pagination
+                        currentPage={expiringNextQuery.data.pagination.page}
+                        totalPages={expiringNextQuery.data.pagination.totalPages}
+                        onPageChange={handlePageChangeNext}
+                        className="mt-8"
+                    />
+                )}
+            </>
+        )}
+      </section>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import dayjs from 'dayjs';
@@ -15,13 +15,13 @@ interface ContractCardProps {
   className?: string;
 }
 
-export const ContractCard: React.FC<ContractCardProps> = ({ 
+export const ContractCard = ({ 
   contract, 
   expiryType, 
   expiryDate, 
   annuityYear, 
   className 
-}) => {
+}: ContractCardProps) => {
   const navigate = useNavigate();
 
   const isCedolareSecca = contract.cedolare_secca;
@@ -46,7 +46,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
   const formattedDate = expiryDate ? dayjs(expiryDate).format('DD/MM/YYYY') : 'N/A';
 
   return (
-    <Card className={clsx("flex flex-col relative h-full transition-transform hover:-translate-y-1 hover:shadow-lg", className)}>
+    <Card className={clsx("flex flex-col relative h-full transition-transform hover:-translate-y-1 shadow-sm hover:shadow-lg", className)}>
       {/* Cedolare Secca Banner */}
       {isCedolareSecca && (
         <div className="absolute top-0 left-0 bg-secondary/10 text-secondary border-b border-r border-secondary/20 text-[10px] font-bold px-3 py-1 rounded-br-lg rounded-tl-lg z-10 uppercase tracking-wider">
@@ -57,7 +57,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
       {/* Eye Icon Top Right Actions */}
       <button 
         onClick={handleView}
-        className="absolute top-3 right-3 text-text-muted hover:text-primary transition-colors p-2 rounded-full hover:bg-surface z-20"
+        className="absolute top-3 right-3 text-text-subtle hover:text-primary transition-colors p-2 rounded-full hover:bg-bg-card z-20 cursor-pointer"
         title="Visualizza dettagli"
       >
         <FaEye size={18} />
@@ -70,10 +70,10 @@ export const ContractCard: React.FC<ContractCardProps> = ({
                <FaUser size={16} />
             </div>
             <div className="overflow-hidden">
-                <h3 className="text-lg font-bold text-text-primary leading-tight truncate" title={`${contract.owner.name} ${contract.owner.surname}`}>
+                <h3 className="text-lg font-bold text-text-title leading-tight truncate" title={`${contract.owner.name} ${contract.owner.surname}`}>
                     {contract.owner.name} {contract.owner.surname}
                 </h3>
-                <p className="text-sm text-text-secondary truncate" title={`Inquilino: ${contract.tenant.name} ${contract.tenant.surname}`}>
+                <p className="text-sm text-text-body truncate" title={`Inquilino: ${contract.tenant.name} ${contract.tenant.surname}`}>
                     Inq: {contract.tenant.name} {contract.tenant.surname}
                 </p>
             </div>
@@ -81,36 +81,36 @@ export const ContractCard: React.FC<ContractCardProps> = ({
       </div>
 
       {/* Address */}
-      <div className="mb-4 flex items-start gap-2 text-sm text-text-secondary bg-muted-bg/50 p-2 rounded">
-        <FaHome className="mt-0.5 shrink-0 text-text-muted" />
+      <div className="mb-4 flex items-start gap-2 text-sm text-text-body bg-bg-main/50 p-2 rounded">
+        <FaHome className="mt-0.5 shrink-0 text-text-subtle" />
         <span className="line-clamp-2 leading-snug">{contract.address || 'Indirizzo non presente'}</span>
       </div>
 
       {/* Expiry Details */}
-      <div className="flex items-center gap-3 mb-4 p-3 bg-surface rounded-lg border border-border/50 shadow-sm">
+      <div className="flex items-center gap-3 mb-4 p-3 bg-bg-card rounded-lg border border-border/50 shadow-sm">
          <FaCalendarDay className={clsx("text-xl shrink-0", isNaturalExpiration ? "text-error" : "text-warning")} />
          <div className="flex flex-col overflow-hidden">
-            <span className="text-xs text-text-muted font-medium uppercase truncate w-full">
+            <span className="text-xs text-text-subtle font-medium uppercase truncate w-full">
                 {expiryType === 'annuity' ? `Scadenza Annualità ${annuityYear || ''}` : 'Scadenza Contratto'}
             </span>
-            <span className="font-bold text-text-primary">{formattedDate}</span>
+            <span className="font-bold text-text-title">{formattedDate}</span>
          </div>
       </div>
 
       {/* Financials Grid */}
       <div className={clsx("grid gap-3 mb-4 mt-auto", isCedolareSecca ? "grid-cols-1" : "grid-cols-2")}>
-         <div className="bg-surface/50 p-2 rounded flex flex-col justify-between">
-            <span className="text-xs text-text-muted block mb-1">Canone</span>
-            <div className="flex items-center gap-1 font-semibold text-text-primary text-sm">
+         <div className="bg-bg-card/50 p-2 rounded flex flex-col justify-between">
+            <span className="text-xs text-text-subtle block mb-1">Canone</span>
+            <div className="flex items-center gap-1 font-semibold text-text-title text-sm">
                 <FaMoneyBillWave className="text-success shrink-0" />
                 <span className="truncate">€ {contract.monthly_rent}</span>
             </div>
          </div>
          
          {!isCedolareSecca && (
-             <div className="bg-surface/50 p-2 rounded flex flex-col justify-between">
-                <span className="text-xs text-text-muted block mb-1 truncate" title="Ultima Annualità Pagata">Ultima Pagata</span>
-                <span className="font-semibold text-text-primary text-sm truncate">
+             <div className="bg-bg-card/50 p-2 rounded flex flex-col justify-between">
+                <span className="text-xs text-text-subtle block mb-1 truncate" title="Ultima Annualità Pagata">Ultima annualità pagata</span>
+                <span className="font-semibold text-text-title text-sm truncate">
                     {contract.last_annuity_paid ? `Anno ${contract.last_annuity_paid}` : '-'}
                 </span>
              </div>
