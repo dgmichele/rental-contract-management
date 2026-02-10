@@ -6,6 +6,8 @@ import { StatsCard } from '../../components/cards/StatsCard';
 import { ContractCard } from '../../components/cards/ContractCard';
 import Pagination from '../../components/ui/Pagination';
 import Spinner from '../../components/ui/Spinner';
+import { StatsCardSkeleton } from '../../components/cards/StatsCardSkeleton';
+import { ContractCardSkeleton } from '../../components/cards/ContractCardSkeleton';
 import { 
   FaFileContract, 
   FaUserTie, 
@@ -50,13 +52,7 @@ export default function Dashboard() {
     setPageNext(page);
   };
 
-  if (statsQuery.isLoading) {
-    return (
-      <div className="flex justify-center items-center py-20">
-         <Spinner className="h-12 w-12" />
-      </div>
-    );
-  }
+
 
   return (
     <div className="min-h-screen pb-24 px-4 sm:px-6 lg:px-8 pt-8"> {/* Added horizontal and top padding */}
@@ -73,36 +69,46 @@ export default function Dashboard() {
       {/* Stats Section */}
       <section className="mb-12">
         <div className="flex gap-4 overflow-x-auto -mx-4 sm:-mx-6 lg:-mx-8 xl:mx-0 px-4 sm:px-6 lg:px-8 xl:px-0 xl:grid xl:grid-cols-5 xl:overflow-visible pb-4 no-scrollbar">
-          <StatsCard
-            label="Totale contratti"
-            value={stats?.totalContracts || 0}
-            icon={<FaFileContract />}
-            className="min-w-[260px] xl:min-w-0"
-          />
-          <StatsCard
-            label="Totale proprietari"
-            value={stats?.totalOwners || 0}
-            icon={<FaUserTie />}
-            className="min-w-[260px] xl:min-w-0"
-          />
-           <StatsCard
-            label="Scadenze mese corrente"
-            value={stats?.expiringContractsCurrentMonth || 0}
-            icon={<FaCalendarDay />}
-            className="min-w-[260px] xl:min-w-0"
-          />
-          <StatsCard
-            label="Scadenze mese successivo"
-            value={stats?.expiringContractsNextMonth || 0}
-            icon={<FaCalendarWeek />}
-            className="min-w-[260px] xl:min-w-0"
-          />
-          <StatsCard
-             label="Totale canoni mensili"
-             value={`€ ${stats?.totalMonthlyRent?.toLocaleString('it-IT', { minimumFractionDigits: 2 }) || '0,00'}`}
-             icon={<FaMoneyBillWave />}
-             className="min-w-[260px] xl:min-w-0"
-          />
+          {statsQuery.isLoading ? (
+            <>
+              {[...Array(5)].map((_, i) => (
+                <StatsCardSkeleton key={i} />
+              ))}
+            </>
+          ) : (
+            <>
+              <StatsCard
+                label="Totale contratti"
+                value={stats?.totalContracts || 0}
+                icon={<FaFileContract />}
+                className="min-w-[260px] xl:min-w-0"
+              />
+              <StatsCard
+                label="Totale proprietari"
+                value={stats?.totalOwners || 0}
+                icon={<FaUserTie />}
+                className="min-w-[260px] xl:min-w-0"
+              />
+              <StatsCard
+                label="Scadenze mese corrente"
+                value={stats?.expiringContractsCurrentMonth || 0}
+                icon={<FaCalendarDay />}
+                className="min-w-[260px] xl:min-w-0"
+              />
+              <StatsCard
+                label="Scadenze mese successivo"
+                value={stats?.expiringContractsNextMonth || 0}
+                icon={<FaCalendarWeek />}
+                className="min-w-[260px] xl:min-w-0"
+              />
+              <StatsCard
+                label="Totale canoni mensili"
+                value={`€ ${stats?.totalMonthlyRent?.toLocaleString('it-IT', { minimumFractionDigits: 2 }) || '0,00'}`}
+                icon={<FaMoneyBillWave />}
+                className="min-w-[260px] xl:min-w-0"
+              />
+            </>
+          )}
         </div>
       </section>
 
@@ -114,7 +120,9 @@ export default function Dashboard() {
         </h2>
         
         {expiringCurrentQuery.isLoading ? (
-             <div className="flex justify-center py-10"><Spinner /></div>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
+                 {[...Array(4)].map((_, i) => <ContractCardSkeleton key={i} />)}
+             </div>
         ) : expiringCurrentQuery.isError ? (
              <div className="text-error">Errore nel caricamento delle scadenze.</div>
         ) : expiringCurrentQuery.data?.data.length === 0 ? (
@@ -160,7 +168,9 @@ export default function Dashboard() {
         </h2>
         
         {expiringNextQuery.isLoading ? (
-             <div className="flex justify-center py-10"><Spinner /></div>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
+                 {[...Array(4)].map((_, i) => <ContractCardSkeleton key={i} />)}
+             </div>
         ) : expiringNextQuery.isError ? (
              <div className="text-error">Errore nel caricamento delle scadenze.</div>
         ) : expiringNextQuery.data?.data.length === 0 ? (
