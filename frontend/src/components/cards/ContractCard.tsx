@@ -1,0 +1,132 @@
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import clsx from 'clsx';
+import dayjs from 'dayjs';
+import { FaEye, FaHome, FaCalendarDay, FaMoneyBillWave, FaUser } from 'react-icons/fa';
+import Card from '../ui/Card';
+import Button from '../ui/Button';
+import type { ContractWithRelations } from '../../types/shared';
+
+interface ContractCardProps {
+  contract: ContractWithRelations;
+  expiryType?: 'contract' | 'annuity';
+  expiryDate?: string; // ISO string expected
+  annuityYear?: number;
+  className?: string;
+}
+
+export const ContractCard: React.FC<ContractCardProps> = ({ 
+  contract, 
+  expiryType, 
+  expiryDate, 
+  annuityYear, 
+  className 
+}) => {
+  const navigate = useNavigate();
+
+  const isCedolareSecca = contract.cedolare_secca;
+  const isNaturalExpiration = expiryType === 'contract'; 
+  
+  // Logic:
+  // "Gestisci rinnovo" -> If cedolare secca OR natural expiration
+  // "Gestisci annualità" -> If NOT cedolare secca AND intermediate annuity
+  const isRenewal = isCedolareSecca || isNaturalExpiration;
+  const buttonLabel = isRenewal ? 'Gestisci rinnovo' : 'Gestisci annualità';
+  
+  const handleManage = () => {
+    // Navigate to single contract page in specific mode
+    const mode = isRenewal ? 'renewal' : 'annuity';
+    navigate(`/contracts/${contract.id}?mode=${mode}`);
+  };
+
+  const handleView = () => {
+    navigate(`/contracts/${contract.id}?mode=view`);
+  };
+
+  const formattedDate = expiryDate ? dayjs(expiryDate).format('DD/MM/YYYY') : 'N/A';
+
+  return (
+    <Card className={clsx("flex flex-col relative h-full transition-transform hover:-translate-y-1 hover:shadow-lg", className)}>
+      {/* Cedolare Secca Banner */}
+      {isCedolareSecca && (
+        <div className="absolute top-0 left-0 bg-secondary/10 text-secondary border-b border-r border-secondary/20 text-[10px] font-bold px-3 py-1 rounded-br-lg rounded-tl-lg z-10 uppercase tracking-wider">
+          Cedolare Secca
+        </div>
+      )}
+
+      {/* Eye Icon Top Right Actions */}
+      <button 
+        onClick={handleView}
+        className="absolute top-3 right-3 text-text-muted hover:text-primary transition-colors p-2 rounded-full hover:bg-surface z-20"
+        title="Visualizza dettagli"
+      >
+        <FaEye size={18} />
+      </button>
+
+      {/* Header Info */}
+      <div className={clsx("mb-3", isCedolareSecca ? "mt-6" : "mt-2")}>
+        <div className="flex items-start gap-3">
+            <div className="mt-1 bg-primary/10 p-2 rounded-full text-primary shrink-0">
+               <FaUser size={16} />
+            </div>
+            <div className="overflow-hidden">
+                <h3 className="text-lg font-bold text-text-primary leading-tight truncate" title={`${contract.owner.name} ${contract.owner.surname}`}>
+                    {contract.owner.name} {contract.owner.surname}
+                </h3>
+                <p className="text-sm text-text-secondary truncate" title={`Inquilino: ${contract.tenant.name} ${contract.tenant.surname}`}>
+                    Inq: {contract.tenant.name} {contract.tenant.surname}
+                </p>
+            </div>
+        </div>
+      </div>
+
+      {/* Address */}
+      <div className="mb-4 flex items-start gap-2 text-sm text-text-secondary bg-muted-bg/50 p-2 rounded">
+        <FaHome className="mt-0.5 shrink-0 text-text-muted" />
+        <span className="line-clamp-2 leading-snug">{contract.address || 'Indirizzo non presente'}</span>
+      </div>
+
+      {/* Expiry Details */}
+      <div className="flex items-center gap-3 mb-4 p-3 bg-surface rounded-lg border border-border/50 shadow-sm">
+         <FaCalendarDay className={clsx("text-xl shrink-0", isNaturalExpiration ? "text-error" : "text-warning")} />
+         <div className="flex flex-col overflow-hidden">
+            <span className="text-xs text-text-muted font-medium uppercase truncate w-full">
+                {expiryType === 'annuity' ? `Scadenza Annualità ${annuityYear || ''}` : 'Scadenza Contratto'}
+            </span>
+            <span className="font-bold text-text-primary">{formattedDate}</span>
+         </div>
+      </div>
+
+      {/* Financials Grid */}
+      <div className={clsx("grid gap-3 mb-4 mt-auto", isCedolareSecca ? "grid-cols-1" : "grid-cols-2")}>
+         <div className="bg-surface/50 p-2 rounded flex flex-col justify-between">
+            <span className="text-xs text-text-muted block mb-1">Canone</span>
+            <div className="flex items-center gap-1 font-semibold text-text-primary text-sm">
+                <FaMoneyBillWave className="text-success shrink-0" />
+                <span className="truncate">€ {contract.monthly_rent}</span>
+            </div>
+         </div>
+         
+         {!isCedolareSecca && (
+             <div className="bg-surface/50 p-2 rounded flex flex-col justify-between">
+                <span className="text-xs text-text-muted block mb-1 truncate" title="Ultima Annualità Pagata">Ultima Pagata</span>
+                <span className="font-semibold text-text-primary text-sm truncate">
+                    {contract.last_annuity_paid ? `Anno ${contract.last_annuity_paid}` : '-'}
+                </span>
+             </div>
+         )}
+      </div>
+
+      {/* Action Button */}
+      <div className="pt-2">
+        <Button 
+            variant="primary" 
+            className="w-full text-sm py-2 shadow-sm"
+            onClick={handleManage}
+        >
+            {buttonLabel}
+        </Button>
+      </div>
+    </Card>
+  );
+};
