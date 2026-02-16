@@ -48,7 +48,7 @@ const Header = () => {
       <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo - Responsive */}
-          <div className="shrink-0 cursor-pointer" onClick={() => navigate('/')}>
+          <div className="shrink-0 cursor-pointer" onClick={() => navigate('/dashboard')}>
             {/* Desktop logo */}
             <img
               src={logoDesktop}
@@ -65,9 +65,9 @@ const Header = () => {
 
           {/* User Dropdown */}
           <Menu as="div" className="relative">
-            <Menu.Button className="flex items-center justify-center w-10 h-10 rounded-full focus:outline-none cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 transition-all duration-300">
+            <Menu.Button className="flex items-center justify-center w-10 h-10 rounded-full focus:outline-none cursor-pointer transition-all duration-300">
               {user?.name && user?.surname ? (
-                <div className="w-full h-full rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shadow-md">
+                <div className="w-full h-full rounded-full bg-secondary hover:bg-primary transition-colors duration-300 flex items-center justify-center text-white font-bold text-sm shadow-md">
                   {user.name.charAt(0).toUpperCase()}
                   {user.surname.charAt(0).toUpperCase()}
                 </div>

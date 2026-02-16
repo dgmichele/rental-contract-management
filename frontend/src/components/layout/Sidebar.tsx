@@ -14,7 +14,7 @@ const Sidebar = () => {
   // Link di navigazione principali
   const navLinks = [
     {
-      to: '/',
+      to: '/dashboard',
       icon: FiHome,
       label: 'Dashboard',
     },
@@ -45,7 +45,7 @@ const Sidebar = () => {
             <NavLink
               key={link.to}
               to={link.to}
-              end={link.to === '/'}
+              end={link.to === '/dashboard'}
               className={({ isActive }) =>
                 `flex items-center px-4 py-3 rounded-lg font-body text-sm font-semibold transition-all duration-300 ${
                   isActive

@@ -118,9 +118,14 @@ export const ContractCard = ({
                     </p>
                   </>
                 ) : (
-                  <h3 className="text-lg font-bold text-text-title leading-tight truncate" title={`${contract.tenant.name} ${contract.tenant.surname}`}>
-                      {contract.tenant.name} {contract.tenant.surname}
-                  </h3>
+                  <>
+                    <h3 className="text-lg font-bold text-text-title leading-tight truncate" title={`${contract.tenant.name} ${contract.tenant.surname}`}>
+                        {contract.tenant.name} {contract.tenant.surname}
+                    </h3>
+                    <p className="text-xs text-text-subtle uppercase font-semibold tracking-wider">
+                      Inquilino
+                    </p>
+                  </>
                 )}
             </div>
         </div>

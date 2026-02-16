@@ -12,7 +12,7 @@ const MobileNav = () => {
   // Link di navigazione principali
   const navLinks = [
     {
-      to: '/',
+      to: '/dashboard',
       icon: FiHome,
       label: 'Dashboard',
     },
@@ -37,7 +37,7 @@ const MobileNav = () => {
             <NavLink
               key={link.to}
               to={link.to}
-              end={link.to === '/'}
+              end={link.to === '/dashboard'}
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center w-full h-full transition-all duration-300 ${
                   isActive
