@@ -1,12 +1,15 @@
-import knex from '../config/db';
-import { NewOwner, UpdateOwner, Owner, Contract } from '../types/database';
-import AppError from '../utils/AppError';
-import { Knex } from 'knex';
+import knex from "../config/db";
+import { NewOwner, UpdateOwner, Owner, Contract } from "../types/database";
+import AppError from "../utils/AppError";
+import { Knex } from "knex";
 
-export const createOwner = async (user_id: number, ownerData: NewOwner): Promise<Owner> => {
-  const [owner] = await knex<Owner>('owners')
+export const createOwner = async (
+  user_id: number,
+  ownerData: NewOwner,
+): Promise<Owner> => {
+  const [owner] = await knex<Owner>("owners")
     .insert({ ...ownerData, user_id })
-    .returning('*');
+    .returning("*");
   return owner;
 };
 
@@ -14,50 +17,68 @@ export const getOwners = async (
   user_id: number,
   page: number,
   limit: number,
-  search?: string
+  search?: string,
 ): Promise<{ data: Owner[]; total: number }> => {
-  const query = knex<Owner>('owners').where({ user_id });
+  const query = knex<Owner>("owners").where({ user_id });
 
   if (search) {
     query.andWhere(function () {
-      this.where('name', 'ilike', `%${search}%`).orWhere('surname', 'ilike', `%${search}%`);
+      this.where("name", "ilike", `%${search}%`).orWhere(
+        "surname",
+        "ilike",
+        `%${search}%`,
+      );
     });
   }
 
-  const [{ count }] = await query.clone().count<{ count: string }[]>('* as count');
+  const [{ count }] = await query
+    .clone()
+    .count<{ count: string }[]>("* as count");
   const total = parseInt(count, 10);
 
   const data = await query
     .clone()
     .offset((page - 1) * limit)
     .limit(limit)
-    .orderBy('created_at', 'desc');
+    .orderBy("created_at", "desc");
 
   return { data, total };
 };
 
-export const getOwnerById = async (user_id: number, owner_id: number): Promise<Owner> => {
-  const owner = await knex<Owner>('owners').where({ id: owner_id, user_id }).first();
-  if (!owner) throw new AppError('Owner non trovato o accesso negato', 404);
+export const getOwnerById = async (
+  user_id: number,
+  owner_id: number,
+): Promise<Owner> => {
+  const owner = await knex<Owner>("owners")
+    .where({ id: owner_id, user_id })
+    .first();
+  if (!owner) throw new AppError("Owner non trovato o accesso negato", 404);
   return owner;
 };
 
-export const updateOwner = async (user_id: number, owner_id: number, payload: UpdateOwner): Promise<Owner> => {
+export const updateOwner = async (
+  user_id: number,
+  owner_id: number,
+  payload: UpdateOwner,
+): Promise<Owner> => {
   const owner = await getOwnerById(user_id, owner_id); // verifica ownership
-  const [updatedOwner] = await knex<Owner>('owners')
+  const [updatedOwner] = await knex<Owner>("owners")
     .where({ id: owner_id })
     .update(payload)
-    .returning('*');
+    .returning("*");
   return updatedOwner;
 };
 
-export const deleteOwner = async (user_id: number, owner_id: number): Promise<void> => {
+export const deleteOwner = async (
+  user_id: number,
+  owner_id: number,
+): Promise<void> => {
   const owner = await getOwnerById(user_id, owner_id); // verifica ownership
   await knex.transaction(async (trx: Knex.Transaction) => {
     // Delete contracts associati
-    await trx<Contract>('contracts').where({ owner_id }).del();
+    await trx<Contract>("contracts").where({ owner_id }).del();
     // Delete owner
-    await trx<Owner>('owners').where({ id: owner_id }).del();
+    await trx<Owner>("owners").where({ id: owner_id }).del();
   });
 };
 
@@ -65,39 +86,72 @@ export const getOwnerContracts = async (
   user_id: number,
   owner_id: number,
   page: number,
-  limit: number
-): Promise<{ data: Contract[]; total: number }> => {
+  limit: number,
+): Promise<{ data: any[]; total: number }> => {
   const owner = await getOwnerById(user_id, owner_id); // verifica ownership
 
-  const [{ count }] = await knex<Contract>('contracts')
+  const [{ count }] = await knex<Contract>("contracts")
     .where({ owner_id: owner.id })
-    .count<{ count: string }[]>('* as count');
+    .count<{ count: string }[]>("* as count");
 
   const total = parseInt(count, 10);
 
-  const data = await knex<Contract>('contracts')
-    .where({ owner_id: owner.id })
+  const data = await knex<Contract>("contracts")
+    .join("tenants", "contracts.tenant_id", "tenants.id")
+    .join("owners", "contracts.owner_id", "owners.id")
+    .where({ "contracts.owner_id": owner.id })
+    .select(
+      "contracts.*",
+      "tenants.name as tenant_name",
+      "tenants.surname as tenant_surname",
+      "tenants.email as tenant_email",
+      "tenants.phone as tenant_phone",
+      "owners.name as owner_name",
+      "owners.surname as owner_surname",
+      "owners.email as owner_email",
+      "owners.phone as owner_phone",
+    )
     .offset((page - 1) * limit)
     .limit(limit)
-    .orderBy('start_date', 'desc');
+    .orderBy("contracts.start_date", "desc");
 
-  return { data, total };
+  // Formattazione per matchare il tipo ContractWithRelations del frontend
+  const formattedData = data.map((row: any) => ({
+    ...row,
+    monthly_rent: parseFloat(row.monthly_rent),
+    owner: {
+      id: row.owner_id,
+      name: row.owner_name,
+      surname: row.owner_surname,
+      email: row.owner_email,
+      phone: row.owner_phone,
+    },
+    tenant: {
+      id: row.tenant_id,
+      name: row.tenant_name,
+      surname: row.tenant_surname,
+      email: row.tenant_email,
+      phone: row.tenant_phone,
+    },
+  }));
+
+  return { data: formattedData, total };
 };
 
 export const getOwnerStats = async (
   user_id: number,
-  owner_id: number
+  owner_id: number,
 ): Promise<{ total_contracts: number; total_monthly_rent: number }> => {
-  const result = await knex<Contract>('contracts')
-    .join('owners', 'contracts.owner_id', 'owners.id')
-    .where('contracts.owner_id', owner_id)
-    .andWhere('owners.user_id', user_id)
-    .sum({ total_rent: 'monthly_rent' })
-    .count({ count: 'contracts.id' })
+  const result = await knex<Contract>("contracts")
+    .join("owners", "contracts.owner_id", "owners.id")
+    .where("contracts.owner_id", owner_id)
+    .andWhere("owners.user_id", user_id)
+    .sum({ total_rent: "monthly_rent" })
+    .count({ count: "contracts.id" })
     .first();
 
   return {
-    total_contracts: parseInt((result?.count as string) || '0', 10),
-    total_monthly_rent: parseFloat((result?.total_rent as string) || '0'),
+    total_contracts: parseInt((result?.count as string) || "0", 10),
+    total_monthly_rent: parseFloat((result?.total_rent as string) || "0"),
   };
 };
