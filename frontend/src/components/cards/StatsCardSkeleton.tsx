@@ -5,7 +5,7 @@ import Skeleton from '../ui/Skeleton';
 
 export const StatsCardSkeleton: React.FC = () => {
     return (
-        <Card className="flex flex-col justify-between h-full min-w-[240px] p-4 shadow-sm">
+        <Card className="flex flex-col justify-between h-full min-w-[260px] lg:min-w-0 p-4 shadow-sm">
             {/* Header / Label and Icon */}
             <div className="flex justify-between items-start mb-4">
                 <Skeleton className="h-4 w-32 rounded" />

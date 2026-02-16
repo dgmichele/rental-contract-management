@@ -17,7 +17,7 @@ export const StatsCard = ({
   className 
 }: StatsCardProps) => {
   return (
-    <Card className={clsx("flex flex-col justify-between h-full min-w-[240px] shadow-sm hover:shadow-md transition-shadow duration-200", className)}>
+    <Card className={clsx("flex flex-col justify-between h-full min-w-[240px] lg:min-w-0 shadow-sm hover:shadow-md transition-shadow duration-200", className)}>
         {/* Header with Label and Icon */}
         <div className="flex justify-between items-start mb-2">
             <h3 className="text-sm font-medium text-text-body truncate pr-2" title={label}>

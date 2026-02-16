@@ -10,8 +10,9 @@ import Pagination from '../../components/ui/Pagination';
 import Button from '../../components/ui/Button';
 import EditOwnerModal from '../../components/modals/EditOwnerModal';
 import DeleteModal from '../../components/modals/DeleteModal';
-import Spinner from '../../components/ui/Spinner';
 import type { ContractWithRelations } from '../../types/shared';
+import Skeleton from '../../components/ui/Skeleton';
+import { StatsCardSkeleton } from '../../components/cards/StatsCardSkeleton';
 
 const OwnerDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -27,15 +28,8 @@ const OwnerDetailPage: React.FC = () => {
   const { data: contractsData, isLoading: isContractsLoading } = useOwnerContracts(ownerId, page, 12);
   const deleteContractMutation = useDeleteContract();
 
-  if (isOwnerLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Spinner className="h-12 w-12 border-4" />
-      </div>
-    );
-  }
 
-  if (ownerError || !ownerData?.success) {
+  if (!isOwnerLoading && (ownerError || !ownerData?.success)) {
     return (
       <div className="text-center py-12">
         <p className="text-error font-semibold text-xl">Proprietario non trovato</p>
@@ -46,7 +40,7 @@ const OwnerDetailPage: React.FC = () => {
     );
   }
 
-  const owner = ownerData.data;
+  const owner = ownerData?.data;
 
   const handleDeleteContract = (contract: ContractWithRelations) => {
     setSelectedContract(contract);
@@ -76,39 +70,56 @@ const OwnerDetailPage: React.FC = () => {
 
       {/* Header with Title and Edit */}
       <div className="flex items-center gap-6 flex-wrap">
-        <h1 className="text-3xl font-heading text-text-title">
-          {owner.name} {owner.surname}
+        <h1 className="text-3xl font-heading text-text-title min-w-[200px]">
+          {isOwnerLoading ? (
+            <Skeleton className="h-9 w-64" />
+          ) : (
+            `${owner?.name} ${owner?.surname}`
+          )}
         </h1>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsEditModalOpen(true)}
-            className="text-secondary hover:text-primary transition-all transform hover:scale-110 active:scale-95 flex items-center justify-center p-1"
-            title="Modifica proprietario"
-          >
-            <FaEdit size={24} />
-          </button>
-          <button
-            onClick={() => navigate('/contracts/new', { state: { ownerId: owner.id } })}
-            className="text-secondary hover:text-primary transition-all transform hover:scale-110 active:scale-95 flex items-center justify-center p-1"
-            title="Aggiungi contratto"
-          >
-            <FaPlusCircle size={24} />
-          </button>
+          {!isOwnerLoading && (
+            <>
+              <button
+                onClick={() => setIsEditModalOpen(true)}
+                className="text-secondary hover:text-primary transition-all transform hover:scale-110 active:scale-95 flex items-center justify-center p-1"
+                title="Modifica proprietario"
+              >
+                <FaEdit size={24} />
+              </button>
+              <button
+                onClick={() => navigate('/contracts/new', { state: { ownerId: owner?.id } })}
+                className="text-secondary hover:text-primary transition-all transform hover:scale-110 active:scale-95 flex items-center justify-center p-1"
+                title="Aggiungi contratto"
+              >
+                <FaPlusCircle size={24} />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       {/* Stats Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <StatsCard
-          label="Contratti attivi"
-          value={owner.stats.total_contracts}
-          icon={<FaFileContract />}
-        />
-        <StatsCard
-          label="Canone mensile totale"
-          value={`${owner.stats.total_monthly_rent.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}`}
-          icon={<FaEuroSign />}
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+        {isOwnerLoading ? (
+          <>
+            <StatsCardSkeleton />
+            <StatsCardSkeleton />
+          </>
+        ) : owner && (
+          <>
+            <StatsCard
+              label="Contratti attivi"
+              value={owner.stats.total_contracts}
+              icon={<FaFileContract />}
+            />
+            <StatsCard
+              label="Canone mensile totale"
+              value={`${owner.stats.total_monthly_rent.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}`}
+              icon={<FaEuroSign />}
+            />
+          </>
+        )}
       </div>
 
       {/* Contracts Grid */}
@@ -129,7 +140,7 @@ const OwnerDetailPage: React.FC = () => {
             <Button 
                 variant="primary" 
                 className="mt-4"
-                onClick={() => navigate('/contracts/new', { state: { ownerId: owner.id } })}
+                onClick={() => navigate('/contracts/new', { state: { ownerId: owner?.id } })}
             >
                 Aggiungi il primo contratto
             </Button>
@@ -158,12 +169,14 @@ const OwnerDetailPage: React.FC = () => {
       </div>
 
       {/* Modals */}
-      <EditOwnerModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        owner={owner}
-        showDelete
-      />
+      {owner && (
+        <EditOwnerModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          owner={owner}
+          showDelete
+        />
+      )}
 
       <DeleteModal
         isOpen={isDeleteContractModalOpen}
