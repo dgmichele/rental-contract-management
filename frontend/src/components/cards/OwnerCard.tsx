@@ -50,21 +50,21 @@ export default function OwnerCard({
       <div className="absolute top-1.5 right-1.5 flex items-center gap-1 z-20">
         <button
           onClick={(e) => { e.stopPropagation(); onView(); }}
-          className="text-secondary hover:text-primary-hover transition-colors duration-300 p-2 rounded-full hover:bg-bg-main cursor-pointer"
+          className="text-secondary hover:text-primary transition-colors duration-300 p-2 rounded-full hover:bg-bg-main cursor-pointer"
           title="Visualizza dettagli"
         >
           <FaEye size={16} />
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onEdit(); }}
-          className="text-secondary hover:text-primary-hover transition-colors duration-300 p-2 rounded-full hover:bg-bg-main cursor-pointer"
+          className="text-secondary hover:text-primary transition-colors duration-300 p-2 rounded-full hover:bg-bg-main cursor-pointer"
           title="Modifica"
         >
           <FaEdit size={16} />
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="text-secondary hover:text-error transition-colors duration-300 p-2 rounded-full hover:bg-bg-main cursor-pointer"
+          className="text-secondary hover:text-primary transition-colors duration-300 p-2 rounded-full hover:bg-bg-main cursor-pointer"
           title="Elimina"
         >
           <FaTrash size={16} />

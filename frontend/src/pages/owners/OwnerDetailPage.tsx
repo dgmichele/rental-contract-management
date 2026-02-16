@@ -68,7 +68,7 @@ const OwnerDetailPage: React.FC = () => {
         </button>
       </div>
 
-      {/* Header with Title and Edit */}
+      {/* Header with Title and Edit and Add Contract */}
       <div className="flex items-center gap-6 flex-wrap">
         <h1 className="text-3xl font-heading text-text-title">
           {isOwnerLoading ? (
@@ -82,14 +82,14 @@ const OwnerDetailPage: React.FC = () => {
             <>
               <button
                 onClick={() => setIsEditModalOpen(true)}
-                className="text-secondary hover:text-primary transition-all transform hover:scale-110 active:scale-95 flex items-center justify-center p-1 cursor-pointer" 
+                className="text-secondary hover:text-primary transition-all active:scale-95 flex items-center justify-center p-1 cursor-pointer" 
                 title="Modifica proprietario"
               >
                 <FaEdit size={24} />
               </button>
               <button
                 onClick={() => navigate('/contracts/new', { state: { ownerId: owner?.id } })}
-                className="text-secondary hover:text-primary transition-all transform hover:scale-110 active:scale-95 flex items-center justify-center p-1 cursor-pointer"
+                className="text-secondary hover:text-primary transition-all active:scale-95 flex items-center justify-center p-1 cursor-pointer"
                 title="Aggiungi contratto"
               >
                 <FaPlusCircle size={24} />

@@ -93,7 +93,7 @@ export const ContractCard = ({
         {onDelete && (
           <button 
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="text-secondary hover:text-error transition-colors p-2 rounded-full hover:bg-bg-card cursor-pointer"
+            className="text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-bg-card cursor-pointer"
             title="Elimina"
           >
             <FaTrash size={18} />
