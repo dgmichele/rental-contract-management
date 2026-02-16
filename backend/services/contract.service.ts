@@ -185,12 +185,16 @@ export const getContracts = async (
     }
 
     if (filters?.search) {
-      // Cerca per nome/cognome owner O tenant
+      // Cerca per nome/cognome owner O tenant (singolarmente o combinati)
       query.andWhere(function () {
         this.where('owners.name', 'ilike', `%${filters.search}%`)
           .orWhere('owners.surname', 'ilike', `%${filters.search}%`)
+          .orWhere(db.raw("owners.name || ' ' || owners.surname"), 'ilike', `%${filters.search}%`)
+          .orWhere(db.raw("owners.surname || ' ' || owners.name"), 'ilike', `%${filters.search}%`)
           .orWhere('tenants.name', 'ilike', `%${filters.search}%`)
-          .orWhere('tenants.surname', 'ilike', `%${filters.search}%`);
+          .orWhere('tenants.surname', 'ilike', `%${filters.search}%`)
+          .orWhere(db.raw("tenants.name || ' ' || tenants.surname"), 'ilike', `%${filters.search}%`)
+          .orWhere(db.raw("tenants.surname || ' ' || tenants.name"), 'ilike', `%${filters.search}%`);
       });
       console.log('[CONTRACT_SERVICE] Filtro search:', filters.search);
     }

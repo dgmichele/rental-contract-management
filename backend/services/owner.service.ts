@@ -23,11 +23,10 @@ export const getOwners = async (
 
   if (search) {
     query.andWhere(function () {
-      this.where("name", "ilike", `%${search}%`).orWhere(
-        "surname",
-        "ilike",
-        `%${search}%`,
-      );
+      this.where("name", "ilike", `%${search}%`)
+        .orWhere("surname", "ilike", `%${search}%`)
+        .orWhere(knex.raw("name || ' ' || surname"), "ilike", `%${search}%`)
+        .orWhere(knex.raw("surname || ' ' || name"), "ilike", `%${search}%`);
     });
   }
 
