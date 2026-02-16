@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaEdit, FaFileContract, FaEuroSign } from 'react-icons/fa';
+import { FaArrowLeft, FaEdit, FaFileContract, FaEuroSign, FaPlusCircle } from 'react-icons/fa';
 import { useOwner, useOwnerContracts } from '../../hooks/useOwners';
 import { useDeleteContract } from '../../hooks/useContracts';
 import { StatsCard } from '../../components/cards/StatsCard';
@@ -75,17 +75,26 @@ const OwnerDetailPage: React.FC = () => {
       </div>
 
       {/* Header with Title and Edit */}
-      <div className="flex items-center gap-4 flex-wrap">
+      <div className="flex items-center gap-6 flex-wrap">
         <h1 className="text-3xl font-heading text-text-title">
           {owner.name} {owner.surname}
         </h1>
-        <button
-          onClick={() => setIsEditModalOpen(true)}
-          className="p-2.5 bg-bg-card border border-border rounded-full text-secondary hover:text-primary hover:border-primary transition-all shadow-sm"
-          title="Modifica proprietario"
-        >
-          <FaEdit size={18} />
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsEditModalOpen(true)}
+            className="text-secondary hover:text-primary transition-all transform hover:scale-110 active:scale-95 flex items-center justify-center p-1"
+            title="Modifica proprietario"
+          >
+            <FaEdit size={24} />
+          </button>
+          <button
+            onClick={() => navigate('/contracts/new', { state: { ownerId: owner.id } })}
+            className="text-secondary hover:text-primary transition-all transform hover:scale-110 active:scale-95 flex items-center justify-center p-1"
+            title="Aggiungi contratto"
+          >
+            <FaPlusCircle size={24} />
+          </button>
+        </div>
       </div>
 
       {/* Stats Section */}
