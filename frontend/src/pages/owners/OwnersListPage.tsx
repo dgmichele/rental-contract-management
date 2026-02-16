@@ -98,9 +98,6 @@ const OwnersListPage: React.FC = () => {
       ) : error ? (
         <div className="text-center py-12">
           <p className="text-error font-semibold">Si è verificato un errore durante il caricamento dei proprietari.</p>
-          <Button variant="secondary" onClick={() => window.location.reload()} className="mt-4">
-            Riprova
-          </Button>
         </div>
       ) : data?.data.length === 0 ? (
         <div className="text-center py-12 bg-bg-card rounded-xl border border-border">

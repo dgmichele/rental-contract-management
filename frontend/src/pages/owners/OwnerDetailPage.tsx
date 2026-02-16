@@ -31,9 +31,9 @@ const OwnerDetailPage: React.FC = () => {
 
   if (!isOwnerLoading && (ownerError || !ownerData?.success)) {
     return (
-      <div className="text-center py-12">
-        <p className="text-error font-semibold text-xl">Proprietario non trovato</p>
-        <Button variant="primary" onClick={() => navigate('/owners')} className="mt-4">
+      <div className="flex flex-col items-center text-center py-12">
+        <p className="text-text-body font-semibold text-xl">Proprietario non trovato 😰</p>
+        <Button variant="primary" onClick={() => navigate('/owners')} className="mt-8">
           Torna alla lista
         </Button>
       </div>
@@ -61,7 +61,7 @@ const OwnerDetailPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <button 
           onClick={() => navigate('/owners')}
-          className="flex items-center gap-2 text-secondary hover:text-primary transition-colors font-semibold group"
+          className="flex items-center gap-2 text-secondary hover:text-primary transition-colors font-semibold cursor-pointer"
         >
           <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" />
           Torna ai proprietari
@@ -70,26 +70,26 @@ const OwnerDetailPage: React.FC = () => {
 
       {/* Header with Title and Edit */}
       <div className="flex items-center gap-6 flex-wrap">
-        <h1 className="text-3xl font-heading text-text-title min-w-[200px]">
+        <h1 className="text-3xl font-heading text-text-title">
           {isOwnerLoading ? (
             <Skeleton className="h-9 w-64" />
           ) : (
             `${owner?.name} ${owner?.surname}`
           )}
         </h1>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1">
           {!isOwnerLoading && (
             <>
               <button
                 onClick={() => setIsEditModalOpen(true)}
-                className="text-secondary hover:text-primary transition-all transform hover:scale-110 active:scale-95 flex items-center justify-center p-1"
+                className="text-secondary hover:text-primary transition-all transform hover:scale-110 active:scale-95 flex items-center justify-center p-1 cursor-pointer" 
                 title="Modifica proprietario"
               >
                 <FaEdit size={24} />
               </button>
               <button
                 onClick={() => navigate('/contracts/new', { state: { ownerId: owner?.id } })}
-                className="text-secondary hover:text-primary transition-all transform hover:scale-110 active:scale-95 flex items-center justify-center p-1"
+                className="text-secondary hover:text-primary transition-all transform hover:scale-110 active:scale-95 flex items-center justify-center p-1 cursor-pointer"
                 title="Aggiungi contratto"
               >
                 <FaPlusCircle size={24} />
@@ -135,11 +135,11 @@ const OwnerDetailPage: React.FC = () => {
             ))}
           </div>
         ) : contractsData?.data.length === 0 ? (
-          <div className="bg-bg-card p-12 rounded-xl border border-border text-center">
+          <div className="bg-bg-card p-12 rounded-xl border border-border flex flex-col items-center text-center">
             <p className="text-text-subtle text-lg">Nessun contratto associato a questo proprietario.</p>
             <Button 
                 variant="primary" 
-                className="mt-4"
+                className="mt-8"
                 onClick={() => navigate('/contracts/new', { state: { ownerId: owner?.id } })}
             >
                 Aggiungi il primo contratto

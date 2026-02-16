@@ -30,7 +30,7 @@ export default function AddOwnerModal({ isOpen, onClose }: AddOwnerModalProps) {
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      title="Aggiungi Proprietario"
+      title="Aggiungi proprietario"
       size="md"
     >
       <div className="py-2">
