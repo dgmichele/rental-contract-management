@@ -55,7 +55,7 @@ export default function EditOwnerModal({
       <BaseModal
         isOpen={isOpen}
         onClose={onClose}
-        title="Modifica Proprietario"
+        title="Modifica proprietario"
         size="md"
       >
         <div className="py-2">
@@ -73,7 +73,7 @@ export default function EditOwnerModal({
             onSubmit={handleUpdateOwner}
             onDelete={showDelete ? () => setIsDeleting(true) : undefined}
             isLoading={isPending}
-            submitLabel="Conferma Modifiche"
+            submitLabel="Conferma modifiche"
           />
         </div>
       </BaseModal>
@@ -83,7 +83,7 @@ export default function EditOwnerModal({
           isOpen={isDeleting}
           onClose={() => setIsDeleting(false)}
           onConfirm={handleDelete}
-          title="Elimina Proprietario"
+          title="Elimina proprietario"
           message={`Sei sicuro di voler eliminare ${owner.name} ${owner.surname}? Tutti i contratti associati verranno eliminati permanentemente.`}
           isLoading={isDeletePending}
         />

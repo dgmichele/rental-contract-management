@@ -58,7 +58,7 @@ export default function DeleteModal({
             variant="primary"
             onClick={onConfirm}
             isLoading={isLoading}
-            className="flex-1 bg-red-600 hover:bg-red-700 order-1 sm:order-2"
+            className="flex-1 bg-button-primary hover:bg-button-primary-hover order-1 sm:order-2"
           >
             Elimina
           </Button>

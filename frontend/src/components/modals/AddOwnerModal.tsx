@@ -35,13 +35,13 @@ export default function AddOwnerModal({ isOpen, onClose }: AddOwnerModalProps) {
     >
       <div className="py-2">
         <p className="text-sm text-text-subtle mb-6">
-          Inserisci i dati del nuovo proprietario. Riceverai notifiche relative ai suoi contratti.
+          Inserisci i dati per creare un nuovo proprietario.
         </p>
         
         <OwnerForm
           onSubmit={handleCreateOwner}
           isLoading={isPending}
-          submitLabel="Crea Proprietario"
+          submitLabel="Crea proprietario"
         />
       </div>
     </BaseModal>

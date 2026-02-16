@@ -73,7 +73,7 @@ export const ContractCard = ({
       )}
 
       {/* Action Icons Top Right */}
-      <div className="absolute top-3 right-3 flex items-center gap-1 z-20">
+      <div className="absolute top-1.5 right-1.5 flex items-center gap-1 z-20">
         <button 
           onClick={handleView}
           className="text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-bg-card cursor-pointer"
@@ -102,12 +102,12 @@ export const ContractCard = ({
       </div>
 
       {/* Header Info */}
-      <div className={clsx("mb-3", isCedolareSecca ? "mt-6" : "mt-2")}>
+      <div className={clsx("mb-3", isCedolareSecca ? "mt-9" : "mt-6")}>
         <div className="flex items-start gap-3">
             <div className="mt-1 bg-primary/10 p-2 rounded-full text-primary shrink-0">
                <FaUser size={16} />
             </div>
-            <div className="overflow-hidden pr-20"> {/* Margin for icons */}
+            <div className="overflow-hidden"> {/* Increased top margin above handles icon clearance */}
                 {displayMode === 'owner' ? (
                   <>
                     <h3 className="text-lg font-bold text-text-title leading-tight truncate" title={`${contract.owner.name} ${contract.owner.surname}`}>

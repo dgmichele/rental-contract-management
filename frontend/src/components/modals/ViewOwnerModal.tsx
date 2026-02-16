@@ -25,7 +25,7 @@ export default function ViewOwnerModal({
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      title="Dettagli Proprietario"
+      title="Dettagli proprietario"
       size="md"
     >
       <div className="space-y-6">

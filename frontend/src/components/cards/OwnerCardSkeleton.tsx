@@ -9,14 +9,14 @@ export default function OwnerCardSkeleton() {
   return (
     <Card className="flex flex-col relative h-full shadow-sm">
       {/* Action Icons Placeholder */}
-      <div className="absolute top-3 right-3 flex gap-2">
+      <div className="absolute top-1.5 right-1.5 flex gap-2">
         <Skeleton className="h-8 w-8 rounded-full" />
         <Skeleton className="h-8 w-8 rounded-full" />
         <Skeleton className="h-8 w-8 rounded-full" />
       </div>
 
       {/* Header Placeholder */}
-      <div className="mb-4 mt-2">
+      <div className="mb-4 mt-6">
         <div className="flex items-center gap-3">
           <Skeleton className="h-12 w-12 rounded-full shrink-0" />
           <div className="w-full">

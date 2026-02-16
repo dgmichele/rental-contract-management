@@ -71,12 +71,12 @@ export default function BaseModal({
               >
                 {/* Header del Modal */}
                 <div className="bg-bg-main px-4 py-4 sm:px-6 border-b border-border sticky top-0 z-10 shadow-sm flex items-center justify-between">
-                  <DialogTitle as="h3" className="text-lg font-bold leading-6 text-text-title font-heading uppercase">
+                  <DialogTitle as="h3" className="text-lg font-bold leading-6 text-text-title font-heading">
                     {title}
                   </DialogTitle>
                   <button
                     type="button"
-                    className="text-text-subtle hover:text-primary transition-colors p-2 rounded-full hover:bg-bg-card"
+                    className="text-text-subtle hover:text-primary transition-colors p-2 rounded-full hover:bg-bg-card cursor-pointer"
                     onClick={onClose}
                   >
                     <FaTimes size={20} />
