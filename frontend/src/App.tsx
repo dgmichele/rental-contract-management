@@ -13,6 +13,8 @@ import ResetPassword from './pages/auth/ResetPassword';
 import Dashboard from './pages/dashboard/Dashboard';
 import OwnersListPage from './pages/owners/OwnersListPage';
 import OwnerDetailPage from './pages/owners/OwnerDetailPage';
+import ContractsListPage from './pages/contracts/ContractsListPage';
+import ContractDetailPage from './pages/contracts/ContractDetailPage';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -77,10 +79,11 @@ function App() {
           <Route path="/owners" element={<OwnersListPage />} />
           <Route path="/owners/:id" element={<OwnerDetailPage />} />
           
-          {/* TODO: Altre route protette da implementare nelle fasi successive */}
+          <Route path="/contracts" element={<ContractsListPage />} />
+          <Route path="/contracts/new" element={<ContractDetailPage />} />
+          <Route path="/contracts/:id" element={<ContractDetailPage />} />
+          
           {/* 
-          <Route path="/contracts" element={<ContractsList />} />
-          <Route path="/contracts/:id" element={<ContractDetail />} />
           <Route path="/settings" element={<Settings />} />
           */}
         </Route>
