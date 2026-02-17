@@ -199,8 +199,9 @@ export const getContracts = async (
       console.log('[CONTRACT_SERVICE] Filtro search:', filters.search);
     }
 
-    if (filters?.expiryMonth && filters?.expiryYear) {
-      // Filtra per mese/anno di scadenza (end_date)
+    // Filter logic
+    if (filters?.expiryYear && filters?.expiryMonth) {
+      // Both year and month provided
       const startOfMonth = dayjs()
         .year(filters.expiryYear)
         .month(filters.expiryMonth - 1)
@@ -214,7 +215,19 @@ export const getContracts = async (
         .format('YYYY-MM-DD');
 
       query.andWhereBetween('contracts.end_date', [startOfMonth, endOfMonth]);
-      console.log('[CONTRACT_SERVICE] Filtro expiry:', filters.expiryMonth, filters.expiryYear);
+    } else if (filters?.expiryYear) {
+      // Only year provided
+      const startOfYear = dayjs().year(filters.expiryYear).startOf('year').format('YYYY-MM-DD');
+      const endOfYear = dayjs().year(filters.expiryYear).endOf('year').format('YYYY-MM-DD');
+      
+      query.andWhereBetween('contracts.end_date', [startOfYear, endOfYear]);
+    } else if (filters?.expiryMonth) {
+      // Only month provided (any year)
+      query.whereRaw('EXTRACT(MONTH FROM contracts.end_date) = ?', [filters.expiryMonth]);
+    }
+
+    if (filters?.expiryMonth || filters?.expiryYear) {
+       console.log('[CONTRACT_SERVICE] Filtro expiry:', filters.expiryMonth, filters.expiryYear);
     }
 
     // Count totale (senza paginazione)
@@ -240,6 +253,7 @@ export const getContracts = async (
       canone_concordato: row.canone_concordato,
       monthly_rent: parseFloat(row.monthly_rent), // Decimal to number
       last_annuity_paid: row.last_annuity_paid,
+      address: row.address, // Added address
       created_at: row.created_at,
       updated_at: row.updated_at,
       owner: {
@@ -338,6 +352,7 @@ export const getContractById = async (
       canone_concordato: contract.canone_concordato,
       monthly_rent: parseFloat(contract.monthly_rent as any),
       last_annuity_paid: contract.last_annuity_paid,
+      address: contract.address, // Added address
       created_at: contract.created_at,
       updated_at: contract.updated_at,
       owner: {
