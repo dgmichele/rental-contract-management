@@ -19,6 +19,7 @@ import ContractDetailPage from './pages/contracts/ContractDetailPage';
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/layout/Layout';
+import ScrollToTop from './components/ScrollToTop';
 
 /**
  * APP - ROUTING PRINCIPALE
@@ -54,6 +55,7 @@ function App() {
 
   return (
     <>
+      <ScrollToTop />
       <Routes>
         {/* Root Redirect - Intelligente basato su autenticazione */}
         <Route
