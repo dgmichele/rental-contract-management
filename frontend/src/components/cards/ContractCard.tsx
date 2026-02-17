@@ -73,30 +73,33 @@ export const ContractCard = ({
       )}
 
       {/* Action Icons Top Right */}
-      <div className="absolute top-1.5 right-1.5 flex items-center gap-1 z-20">
+      <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 z-20 mb-4">
         <button 
           onClick={handleView}
-          className="text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-bg-card cursor-pointer"
+          className="text-secondary hover:text-primary transition-all duration-300 p-2 rounded-full hover:bg-bg-main/30 cursor-pointer active:scale-95"
           title="Visualizza dettagli"
+          aria-label="Visualizza dettagli contratto"
         >
-          <FaEye size={18} />
+          <FaEye size={16} />
         </button>
         {onEdit && (
           <button 
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
-            className="text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-bg-card cursor-pointer"
+            className="text-secondary hover:text-primary transition-all duration-300 p-2 rounded-full hover:bg-bg-main/30 cursor-pointer active:scale-95"
             title="Modifica"
+            aria-label="Modifica contratto"
           >
-            <FaEdit size={18} className="text-secondary" />
+            <FaEdit size={16} />
           </button>
         )}
         {onDelete && (
           <button 
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-bg-card cursor-pointer"
+            className="text-secondary hover:text-primary transition-all duration-300 p-2 rounded-full hover:bg-bg-main/30 cursor-pointer active:scale-95"
             title="Elimina"
+            aria-label="Elimina contratto"
           >
-            <FaTrash size={18} />
+            <FaTrash size={16} />
           </button>
         )}
       </div>
