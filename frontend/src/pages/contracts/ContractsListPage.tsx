@@ -70,7 +70,7 @@ const ContractsListPage = () => {
         <h1 className="text-2xl sm:text-3xl font-heading text-text-title">Tutti i contratti</h1>
         <Button 
           variant="primary" 
-          onClick={() => navigate('/contracts/new')}
+          onClick={() => navigate('/contracts/new', { state: { returnUrl: window.location.pathname } })}
           className="px-3 sm:px-4 py-2 text-sm shrink-0"
         >
           <FaPlus />
@@ -96,7 +96,7 @@ const ContractsListPage = () => {
         <button
           onClick={() => setIsFiltersModalOpen(true)}
           className={clsx(
-            "flex items-center justify-center px-4 py-2.5 rounded-lg border transition-all duration-300",
+            "flex items-center justify-center px-4 py-2.5 rounded-lg border transition-all duration-300 cursor-pointer shadow-sm",
             hasActiveFilters 
               ? "bg-secondary text-white border-secondary hover:bg-primary" 
               : "bg-bg-card border-border text-text-body hover:border-secondary hover:text-secondary"
@@ -133,7 +133,7 @@ const ContractsListPage = () => {
                 key={contract.id}
                 contract={contract}
                 displayMode="owner" // Nella lista generale mostriamo proprietario come titolo principale (default)
-                onEdit={() => navigate(`/contracts/${contract.id}?mode=edit`)}
+                onEdit={() => navigate(`/contracts/${contract.id}?mode=edit`, { state: { returnUrl: window.location.pathname } })}
                 onDelete={() => handleDelete(contract)}
               />
             ))}

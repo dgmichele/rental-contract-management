@@ -110,9 +110,13 @@ export const useCreateContract = () => {
   return useMutation({
     mutationFn: (data: CreateContractRequest) => contractsService.createContract(data),
     onSuccess: (response) => {
-      // Invalida cache lista contratti e dashboard
+      // Invalida cache lista contratti, dashboard e proprietari
       queryClient.invalidateQueries({ queryKey: contractKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['expiring-contracts'] });
+      queryClient.invalidateQueries({ queryKey: ['owners'] });
+      queryClient.invalidateQueries({ queryKey: ['owner'] });
+      queryClient.invalidateQueries({ queryKey: ['owner-contracts'] });
       
       toast.success(response.message || 'Contratto creato con successo');
     },
@@ -144,10 +148,14 @@ export const useUpdateContract = () => {
     mutationFn: ({ id, data }: { id: number; data: UpdateContractRequest }) =>
       contractsService.updateContract(id, data),
     onSuccess: (response, variables) => {
-      // Invalida cache contratto specifico, lista e dashboard
+      // Invalida cache contratto specifico, lista, dashboard e proprietari
       queryClient.invalidateQueries({ queryKey: contractKeys.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: contractKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['expiring-contracts'] });
+      queryClient.invalidateQueries({ queryKey: ['owners'] });
+      queryClient.invalidateQueries({ queryKey: ['owner'] });
+      queryClient.invalidateQueries({ queryKey: ['owner-contracts'] });
       
       toast.success(response.message || 'Contratto aggiornato con successo');
     },
@@ -190,11 +198,15 @@ export const useRenewContract = () => {
     mutationFn: ({ id, data }: { id: number; data: RenewContractRequest }) =>
       contractsService.renewContract(id, data),
     onSuccess: (response, variables) => {
-      // Invalida cache contratto specifico, lista e dashboard
+      // Invalida cache contratto specifico, lista, dashboard e proprietari
       queryClient.invalidateQueries({ queryKey: contractKeys.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: contractKeys.annuities(variables.id) });
       queryClient.invalidateQueries({ queryKey: contractKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['expiring-contracts'] });
+      queryClient.invalidateQueries({ queryKey: ['owners'] });
+      queryClient.invalidateQueries({ queryKey: ['owner'] });
+      queryClient.invalidateQueries({ queryKey: ['owner-contracts'] });
       
       toast.success(response.message || 'Contratto rinnovato con successo');
     },
@@ -227,11 +239,15 @@ export const useUpdateContractAnnuity = () => {
     mutationFn: ({ id, data }: { id: number; data: UpdateAnnuityRequest }) =>
       contractsService.updateContractAnnuity(id, data),
     onSuccess: (response, variables) => {
-      // Invalida cache contratto specifico, annuities, lista e dashboard
+      // Invalida cache contratto specifico, annuities, lista, dashboard e proprietari
       queryClient.invalidateQueries({ queryKey: contractKeys.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: contractKeys.annuities(variables.id) });
       queryClient.invalidateQueries({ queryKey: contractKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['expiring-contracts'] });
+      queryClient.invalidateQueries({ queryKey: ['owners'] });
+      queryClient.invalidateQueries({ queryKey: ['owner'] });
+      queryClient.invalidateQueries({ queryKey: ['owner-contracts'] });
       
       toast.success(response.message || 'Annualità aggiornata con successo');
     },
@@ -256,10 +272,14 @@ export const useDeleteContract = () => {
   return useMutation({
     mutationFn: (id: number) => contractsService.deleteContract(id),
     onSuccess: (_, deletedId) => {
-      // Invalida cache contratto specifico, lista e dashboard
+      // Invalida cache contratto specifico, lista, dashboard e proprietari
       queryClient.invalidateQueries({ queryKey: contractKeys.detail(deletedId) });
       queryClient.invalidateQueries({ queryKey: contractKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['expiring-contracts'] });
+      queryClient.invalidateQueries({ queryKey: ['owners'] });
+      queryClient.invalidateQueries({ queryKey: ['owner'] });
+      queryClient.invalidateQueries({ queryKey: ['owner-contracts'] });
       
       toast.success('Contratto eliminato con successo');
     },

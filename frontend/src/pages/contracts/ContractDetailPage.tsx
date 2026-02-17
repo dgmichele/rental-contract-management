@@ -31,8 +31,9 @@ const ContractDetailPage: React.FC = () => {
   const isNew = !id;
   const mode = isNew ? 'add' : (modeParam as 'view' | 'edit' | 'renew' | 'annuity' || 'view');
 
-  // Pre-selected owner from navigation state (e.g. from OwnerDetailPage)
+  // Pre-selected owner and return URL from navigation state (e.g. from OwnerDetailPage)
   const preselectedOwnerId = location.state?.ownerId;
+  const returnUrl = location.state?.returnUrl;
 
   // Hooks
   const { data: contractData, isLoading: isContractLoading, error: contractError } = useContract(Number(id), !isNew);
@@ -69,19 +70,24 @@ const ContractDetailPage: React.FC = () => {
       if (mode === 'add') {
         await createContractMutation.mutateAsync({
           ...data,
-          // Se last_annuity_paid è null/undefined, lo mandiamo come null o undefined
           last_annuity_paid: data.last_annuity_paid,
         });
-        navigate('/contracts');
+        
+        if (returnUrl) {
+          navigate(returnUrl);
+        } else {
+          navigate('/contracts');
+        }
       } else if (mode === 'edit' && contract) {
         await updateContractMutation.mutateAsync({
           id: contract.id,
           data: {
             ...data,
-            // Per l'update, mandiamo solo i campi modificati e gestiti dal form
           },
         });
-        navigate(`/contracts/${contract.id}`); // Torna a view mode
+        
+        // Reindirizza sempre alla vista dettaglio, preservando il returnUrl nello stato
+        navigate(`/contracts/${contract.id}?mode=view`, { state: { returnUrl } });
       }
     } catch (error) {
       console.error("Errore salvataggio contratto:", error);
@@ -93,7 +99,30 @@ const ContractDetailPage: React.FC = () => {
     if (contract) {
       await deleteContractMutation.mutateAsync(contract.id);
       setIsDeleteModalOpen(false);
+      
+      if (returnUrl) {
+        navigate(returnUrl);
+      } else {
+        navigate('/contracts');
+      }
+    }
+  };
+
+  const getBackLabel = () => {
+    if (returnUrl) {
+      if (returnUrl.includes('/owners/')) return 'Torna al proprietario';
+      return 'Torna indietro';
+    }
+    return mode === 'view' ? 'Torna ai contratti' : 'Annulla e torna indietro';
+  };
+
+  const handleBack = () => {
+    if (returnUrl) {
+      navigate(returnUrl);
+    } else if (mode === 'view') {
       navigate('/contracts');
+    } else {
+      navigate(-1);
     }
   };
 
@@ -128,7 +157,7 @@ const ContractDetailPage: React.FC = () => {
             <div className="flex gap-2">
               <Button 
                 variant="primary" 
-                onClick={() => navigate(`?mode=edit`)}
+                onClick={() => navigate(`?mode=edit`, { state: { returnUrl: location.state?.returnUrl } })}
                 className="flex items-center gap-2"
               >
                 <FaEdit /> Modifica
@@ -136,7 +165,7 @@ const ContractDetailPage: React.FC = () => {
               <Button 
                 variant="secondary" 
                 onClick={() => setIsDeleteModalOpen(true)}
-                className="flex items-center gap-2 text-error hover:text-error/80 hover:bg-red-50"
+                className="flex items-center gap-2 text-error hover:text-error/80"
               >
                 <FaTrash /> Elimina
               </Button>
@@ -162,15 +191,17 @@ const ContractDetailPage: React.FC = () => {
                 <span className="text-text-body font-medium col-span-2 md:col-span-1">{contract.owner.phone || '-'}</span>
               </div>
               
-              <div className="pt-4 mt-2">
-                <Button 
-                  variant="secondary" 
-                  className="w-full text-sm"
-                  onClick={() => navigate(`/owners/${contract.owner_id}`)}
-                >
-                  Vedi profilo proprietario
-                </Button>
-              </div>
+              {!returnUrl?.includes('/owners/') && (
+                <div className="pt-4 mt-2">
+                  <Button 
+                    variant="secondary" 
+                    className="w-full text-sm"
+                    onClick={() => navigate(`/owners/${contract.owner_id}`, { state: { returnUrl: window.location.pathname } })}
+                  >
+                    Vedi profilo proprietario
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -233,7 +264,7 @@ const ContractDetailPage: React.FC = () => {
               <span className="text-text-subtle text-sm block">Regime Fiscale</span>
               <div className="flex items-center gap-2">
                 {contract.cedolare_secca ? (
-                   <span className="flex items-center gap-1 text-secondary font-medium"><FaCheckCircle className="text-xs"/> Cedolare Secca</span>
+                   <span className="flex items-center gap-1 text-text-body font-medium"><FaCheckCircle className="text-xs text-text-subtle"/> Cedolare Secca</span>
                 ) : (
                    <span className="flex items-center gap-1 text-text-body"><FaTimesCircle className="text-xs text-text-subtle"/> Regime Ordinario</span>
                 )}
@@ -244,7 +275,7 @@ const ContractDetailPage: React.FC = () => {
               <span className="text-text-subtle text-sm block">Canone Concordato</span>
               <div className="flex items-center gap-2">
                  {contract.canone_concordato ? (
-                   <span className="flex items-center gap-1 text-green-600 font-medium"><FaCheckCircle className="text-xs"/> Sì</span>
+                   <span className="flex items-center gap-1 text-text-body font-medium"><FaCheckCircle className="text-xs text-text-subtle"/> Sì</span>
                 ) : (
                    <span className="flex items-center gap-1 text-text-body"><FaTimesCircle className="text-xs text-text-subtle"/> No</span>
                 )}
@@ -279,17 +310,11 @@ const ContractDetailPage: React.FC = () => {
     <div className="min-h-screen pb-24 px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
       {/* Back Button */}
       <button 
-        onClick={() => {
-            if (mode === 'view') {
-                navigate('/contracts');
-            } else {
-                navigate(-1);
-            }
-        }}
+        onClick={handleBack}
         className="flex items-center gap-2 text-secondary hover:text-primary transition-colors font-semibold cursor-pointer mb-4"
       >
         <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" />
-        {mode === 'view' ? 'Torna ai contratti' : 'Annulla e torna indietro'}
+        {getBackLabel()}
       </button>
 
       {/* Main Content */}

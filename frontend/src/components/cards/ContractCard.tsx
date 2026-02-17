@@ -16,6 +16,7 @@ interface ContractCardProps {
   onEdit?: () => void;
   onDelete?: () => void;
   className?: string;
+  returnUrl?: string;
 }
 
 export const ContractCard = ({ 
@@ -26,7 +27,8 @@ export const ContractCard = ({
   displayMode = 'owner',
   onEdit,
   onDelete,
-  className 
+  className,
+  returnUrl 
 }: ContractCardProps) => {
   const navigate = useNavigate();
 
@@ -52,11 +54,11 @@ export const ContractCard = ({
     }
     // Navigate to single contract page in specific mode
     const mode = isRenewal ? 'renewal' : 'annuity';
-    navigate(`/contracts/${contract.id}?mode=${mode}`);
+    navigate(`/contracts/${contract.id}?mode=${mode}`, { state: { returnUrl } });
   };
 
   const handleView = () => {
-    navigate(`/contracts/${contract.id}?mode=view`);
+    navigate(`/contracts/${contract.id}?mode=view`, { state: { returnUrl } });
   };
 
   const formattedDate = expiryDate 
