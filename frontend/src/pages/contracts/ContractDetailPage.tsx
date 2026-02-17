@@ -185,7 +185,7 @@ const ContractDetailPage: React.FC = () => {
                 <span className="text-text-body font-medium col-span-2 md:col-span-1">{contract.owner.name} {contract.owner.surname}</span>
                 
                 <span className="text-text-subtle text-sm">Email</span>
-                <span className="text-text-body font-medium col-span-2 md:col-span-1">{contract.owner.email || '-'}</span>
+                <span className="text-text-body font-medium col-span-2 md:col-span-1 break-all">{contract.owner.email || '-'}</span>
                 
                 <span className="text-text-subtle text-sm">Telefono</span>
                 <span className="text-text-body font-medium col-span-2 md:col-span-1">{contract.owner.phone || '-'}</span>
@@ -216,7 +216,7 @@ const ContractDetailPage: React.FC = () => {
                 <span className="text-text-body font-medium col-span-2 md:col-span-1">{contract.tenant.name} {contract.tenant.surname}</span>
                 
                 <span className="text-text-subtle text-sm">Email</span>
-                <span className="text-text-body font-medium col-span-2 md:col-span-1">{contract.tenant.email || '-'}</span>
+                <span className="text-text-body font-medium col-span-2 md:col-span-1 break-all">{contract.tenant.email || '-'}</span>
                 
                 <span className="text-text-subtle text-sm">Telefono</span>
                 <span className="text-text-body font-medium col-span-2 md:col-span-1">{contract.tenant.phone || '-'}</span>

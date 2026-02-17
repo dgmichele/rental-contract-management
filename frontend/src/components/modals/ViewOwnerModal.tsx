@@ -55,7 +55,7 @@ export default function ViewOwnerModal({
               <h4 className="text-xs font-bold text-text-subtle uppercase tracking-widest mb-0.5">
                 Email
               </h4>
-              <p className="text-sm font-medium text-text-body truncate">
+              <p className="text-sm font-medium text-text-body break-all">
                 {owner.email}
               </p>
             </div>

@@ -91,7 +91,7 @@ const Header = () => {
                   <p className="text-sm font-semibold text-text-title font-body">
                     {user?.name} {user?.surname}
                   </p>
-                  <p className="text-xs text-text-subtle font-body mt-1">
+                  <p className="text-xs text-text-subtle font-body mt-1 break-all">
                     {user?.email}
                   </p>
                 </div>
