@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { FaPlus, FaSearch } from 'react-icons/fa';
 import { useOwners, useDeleteOwner } from '../../hooks/useOwners';
 import OwnerCard from '../../components/cards/OwnerCard';
@@ -12,9 +13,27 @@ import ViewOwnerModal from '../../components/modals/ViewOwnerModal';
 import type { Owner } from '../../types/owner';
 
 const OwnersListPage: React.FC = () => {
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  const page = Number(searchParams.get('page')) || 1;
+  const setPage = (newPage: number) => {
+    setSearchParams(prev => {
+      prev.set('page', newPage.toString());
+      return prev;
+    }, { replace: true });
+  };
+
+  const search = searchParams.get('search') || '';
+  const setSearch = (newSearch: string) => {
+    setSearchParams(prev => {
+      if (newSearch) prev.set('search', newSearch);
+      else prev.delete('search');
+      prev.set('page', '1');
+      return prev;
+    }, { replace: true });
+  };
+
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
   
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -30,7 +49,6 @@ const OwnersListPage: React.FC = () => {
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(search);
-      setPage(1); // Reset to first page on search
     }, 400);
     return () => clearTimeout(handler);
   }, [search]);

@@ -31,9 +31,8 @@ const ContractDetailPage: React.FC = () => {
   const isNew = !id;
   const mode = isNew ? 'add' : (modeParam as 'view' | 'edit' | 'renew' | 'annuity' || 'view');
 
-  // Pre-selected owner and return URL from navigation state (e.g. from OwnerDetailPage)
+  // Pre-selected owner from navigation state (e.g. from OwnerDetailPage)
   const preselectedOwnerId = location.state?.ownerId;
-  const returnUrl = location.state?.returnUrl;
 
   // Hooks
   const { data: contractData, isLoading: isContractLoading, error: contractError } = useContract(Number(id), !isNew);
@@ -73,11 +72,7 @@ const ContractDetailPage: React.FC = () => {
           last_annuity_paid: data.last_annuity_paid,
         });
         
-        if (returnUrl) {
-          navigate(returnUrl);
-        } else {
-          navigate('/contracts');
-        }
+        navigate(-1);
       } else if (mode === 'edit' && contract) {
         await updateContractMutation.mutateAsync({
           id: contract.id,
@@ -86,8 +81,12 @@ const ContractDetailPage: React.FC = () => {
           },
         });
         
-        // Reindirizza sempre alla vista dettaglio, preservando il returnUrl nello stato
-        navigate(`/contracts/${contract.id}?mode=view`, { state: { returnUrl } });
+        // Reindirizza alla vista dettaglio sostituendo la voce corrente della cronologia
+        // per evitare loop al click del tasto "Torna indietro"
+        navigate(`/contracts/${contract.id}?mode=view`, { 
+          state: location.state,
+          replace: true 
+        });
       }
     } catch (error) {
       console.error("Errore salvataggio contratto:", error);
@@ -100,29 +99,26 @@ const ContractDetailPage: React.FC = () => {
       await deleteContractMutation.mutateAsync(contract.id);
       setIsDeleteModalOpen(false);
       
-      if (returnUrl) {
-        navigate(returnUrl);
-      } else {
-        navigate('/contracts');
-      }
+      navigate(-1);
     }
   };
 
   const getBackLabel = () => {
-    if (returnUrl) {
-      if (returnUrl.includes('/owners/')) return 'Torna al proprietario';
-      return 'Torna indietro';
-    }
-    return mode === 'view' ? 'Torna ai contratti' : 'Annulla e torna indietro';
+    return mode === 'view' ? 'Torna indietro' : 'Annulla e torna indietro';
   };
 
   const handleBack = () => {
-    if (returnUrl) {
-      navigate(returnUrl);
-    } else if (mode === 'view') {
-      navigate('/contracts');
-    } else {
+    if (mode === 'view') {
+      // Nella vista dettaglio, "Torna indietro" porta effettivamente alla pagina precedente (es. OwnersListPage)
       navigate(-1);
+    } else {
+      // Nelle altre modalità (edit, renew, ecc.), "Annulla" torna alla vista dettaglio dello stesso contratto
+      // Utilizziamo replace per non aggiungere un'altra voce inutile alla cronologia
+      if (isNew) {
+        navigate(-1);
+      } else {
+        navigate(`?mode=view`, { replace: true });
+      }
     }
   };
 
@@ -157,7 +153,7 @@ const ContractDetailPage: React.FC = () => {
             <div className="flex gap-2">
               <Button 
                 variant="primary" 
-                onClick={() => navigate(`?mode=edit`, { state: { returnUrl: location.state?.returnUrl } })}
+                onClick={() => navigate(`?mode=edit`, { state: location.state, replace: true })}
                 className="flex items-center gap-2"
               >
                 <FaEdit /> Modifica
@@ -191,17 +187,15 @@ const ContractDetailPage: React.FC = () => {
                 <span className="text-text-body font-medium col-span-2 md:col-span-1">{contract.owner.phone || '-'}</span>
               </div>
               
-              {!returnUrl?.includes('/owners/') && (
                 <div className="pt-4 mt-2">
                   <Button 
                     variant="secondary" 
                     className="w-full text-sm"
-                    onClick={() => navigate(`/owners/${contract.owner_id}`, { state: { returnUrl: window.location.pathname } })}
+                    onClick={() => navigate(`/owners/${contract.owner_id}`)}
                   >
                     Vedi profilo proprietario
                   </Button>
                 </div>
-              )}
             </div>
           </div>
 

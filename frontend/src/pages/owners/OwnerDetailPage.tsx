@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, type RefObject } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { FaArrowLeft, FaEdit, FaFileContract, FaEuroSign, FaPlusCircle } from 'react-icons/fa';
 import { useOwner, useOwnerContracts } from '../../hooks/useOwners';
 import { useDeleteContract } from '../../hooks/useContracts';
@@ -19,9 +19,16 @@ const OwnerDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const ownerId = Number(id);
   const location = useLocation();
-  const returnUrl = location.state?.returnUrl;
 
-  const [page, setPage] = useState(1);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = Number(searchParams.get('page')) || 1;
+  
+  const setPage = (newPage: number) => {
+    setSearchParams((prev: URLSearchParams) => {
+      prev.set('page', newPage.toString());
+      return prev;
+    }, { replace: true });
+  };
   // Ref per lo scroll smooth della paginazione verso la sezione contratti (solo mobile ≤ 600px)
   const contractsSectionRef = useRef<HTMLHeadingElement>(null);
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 600px)').matches);
@@ -67,17 +74,11 @@ const OwnerDetailPage: React.FC = () => {
   };
 
   const getBackLabel = () => {
-    if (!returnUrl) return 'Torna ai proprietari';
-    if (returnUrl.includes('/contracts/')) return 'Torna al contratto';
     return 'Torna indietro';
   };
 
   const handleBack = () => {
-    if (returnUrl) {
-      navigate(returnUrl);
-    } else {
-      navigate('/owners');
-    }
+    navigate(-1);
   };
 
   return (
@@ -113,7 +114,7 @@ const OwnerDetailPage: React.FC = () => {
                 <FaEdit size={24} />
               </button>
               <button
-                onClick={() => navigate('/contracts/new', { state: { ownerId: owner?.id, returnUrl: window.location.pathname } })}
+                onClick={() => navigate('/contracts/new', { state: { ownerId: owner?.id, returnUrl: window.location.pathname + window.location.search } })}
                 className="text-secondary hover:text-primary transition-all active:scale-95 flex items-center justify-center p-1 cursor-pointer"
                 title="Aggiungi contratto"
               >
@@ -165,7 +166,7 @@ const OwnerDetailPage: React.FC = () => {
             <Button 
                 variant="primary" 
                 className="mt-8"
-                onClick={() => navigate('/contracts/new', { state: { ownerId: owner?.id, returnUrl: window.location.pathname } })}
+                onClick={() => navigate('/contracts/new', { state: { ownerId: owner?.id, returnUrl: window.location.pathname + window.location.search } })}
             >
                 Aggiungi il primo contratto
             </Button>
@@ -178,8 +179,7 @@ const OwnerDetailPage: React.FC = () => {
                   key={contract.id} 
                   contract={contract as ContractWithRelations} 
                   displayMode="tenant"
-                  returnUrl={window.location.pathname}
-                  onEdit={() => navigate(`/contracts/${contract.id}?mode=edit`, { state: { returnUrl: window.location.pathname } })}
+                  onEdit={() => navigate(`/contracts/${contract.id}?mode=view`, { state: location.state })}
                   onDelete={() => handleDeleteContract(contract as ContractWithRelations)}
                 />
               ))}

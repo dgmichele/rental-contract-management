@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FaPlus, FaSearch, FaFilter } from 'react-icons/fa';
 import { useContracts, useDeleteContract } from '../../hooks/useContracts';
 import { ContractCard } from '../../components/cards/ContractCard';
@@ -13,10 +13,45 @@ import clsx from 'clsx'; // Per conditional classes
 
 const ContractsListPage = () => {
   const navigate = useNavigate();
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [filters, setFilters] = useState<{ expiryMonth?: number; expiryYear?: number }>({});
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  const page = Number(searchParams.get('page')) || 1;
+  const setPage = (newPage: number) => {
+    setSearchParams(prev => {
+      prev.set('page', newPage.toString());
+      return prev;
+    }, { replace: true });
+  };
+
+  const search = searchParams.get('search') || '';
+  const setSearch = (newSearch: string) => {
+    setSearchParams(prev => {
+      if (newSearch) prev.set('search', newSearch);
+      else prev.delete('search');
+      prev.set('page', '1');
+      return prev;
+    }, { replace: true });
+  };
+
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+
+  const filters = {
+    expiryMonth: searchParams.get('expiryMonth') ? Number(searchParams.get('expiryMonth')) : undefined,
+    expiryYear: searchParams.get('expiryYear') ? Number(searchParams.get('expiryYear')) : undefined,
+  };
+  
+  const setFilters = (newFilters: { expiryMonth?: number; expiryYear?: number }) => {
+    setSearchParams(prev => {
+      if (newFilters.expiryMonth !== undefined) prev.set('expiryMonth', newFilters.expiryMonth.toString());
+      else prev.delete('expiryMonth');
+      
+      if (newFilters.expiryYear !== undefined) prev.set('expiryYear', newFilters.expiryYear.toString());
+      else prev.delete('expiryYear');
+      
+      prev.set('page', '1');
+      return prev;
+    }, { replace: true });
+  };
   
   // Modals state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -36,7 +71,6 @@ const ContractsListPage = () => {
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(search);
-      setPage(1); // Reset to first page on search
     }, 400);
     return () => clearTimeout(handler);
   }, [search]);
@@ -56,7 +90,6 @@ const ContractsListPage = () => {
 
   const handleApplyFilters = (newFilters: { expiryMonth?: number; expiryYear?: number }) => {
     setFilters(newFilters);
-    setPage(1); // Reset to first page on filter change
     setIsFiltersModalOpen(false);
   };
 
@@ -70,7 +103,7 @@ const ContractsListPage = () => {
         <h1 className="text-2xl sm:text-3xl font-heading text-text-title">Tutti i contratti</h1>
         <Button 
           variant="primary" 
-          onClick={() => navigate('/contracts/new', { state: { returnUrl: window.location.pathname } })}
+          onClick={() => navigate('/contracts/new', { state: { returnUrl: window.location.pathname + window.location.search } })}
           className="px-3 sm:px-4 py-2 text-sm shrink-0"
         >
           <FaPlus />
@@ -133,7 +166,7 @@ const ContractsListPage = () => {
                 key={contract.id}
                 contract={contract}
                 displayMode="owner" // Nella lista generale mostriamo proprietario come titolo principale (default)
-                onEdit={() => navigate(`/contracts/${contract.id}?mode=edit`, { state: { returnUrl: window.location.pathname } })}
+                onEdit={() => navigate(`/contracts/${contract.id}?mode=edit`, { state: { returnUrl: window.location.pathname + window.location.search } })}
                 onDelete={() => handleDelete(contract)}
               />
             ))}
