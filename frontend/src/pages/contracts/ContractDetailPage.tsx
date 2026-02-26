@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
+import dayjs from 'dayjs';
 import { 
   FaArrowLeft, 
   FaEdit, 
@@ -333,8 +334,8 @@ const ContractDetailPage: React.FC = () => {
             mode={mode === 'add' ? 'create' : 'edit'}
             initialData={contract ? {
               ...contract,
-              start_date: contract.start_date ? new Date(contract.start_date).toISOString().split('T')[0] : '',
-              end_date: contract.end_date ? new Date(contract.end_date).toISOString().split('T')[0] : '',
+              start_date: contract.start_date ? dayjs(contract.start_date).format('YYYY-MM-DD') : '',
+              end_date: contract.end_date ? dayjs(contract.end_date).format('YYYY-MM-DD') : '',
               tenant_data: {
                 name: contract.tenant.name,
                 surname: contract.tenant.surname,

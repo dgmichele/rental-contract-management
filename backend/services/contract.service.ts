@@ -126,7 +126,12 @@ export const createContract = async (
         console.log('[CONTRACT_SERVICE] Contratto in cedolare_secca, nessuna annuity generata');
       }
 
-      return contract;
+      return {
+        ...contract,
+        start_date: dayjs(contract.start_date).format('YYYY-MM-DD'),
+        end_date: dayjs(contract.end_date).format('YYYY-MM-DD'),
+        monthly_rent: parseFloat(contract.monthly_rent as any),
+      };
     });
   } catch (error) {
     if (error instanceof AppError) throw error;
@@ -246,8 +251,8 @@ export const getContracts = async (
       id: row.id,
       owner_id: row.owner_id,
       tenant_id: row.tenant_id,
-      start_date: row.start_date,
-      end_date: row.end_date,
+      start_date: dayjs(row.start_date).format('YYYY-MM-DD'),
+      end_date: dayjs(row.end_date).format('YYYY-MM-DD'),
       cedolare_secca: row.cedolare_secca,
       typology: row.typology,
       canone_concordato: row.canone_concordato,
@@ -345,8 +350,8 @@ export const getContractById = async (
       id: contract.id,
       owner_id: contract.owner_id,
       tenant_id: contract.tenant_id,
-      start_date: contract.start_date,
-      end_date: contract.end_date,
+      start_date: dayjs(contract.start_date).format('YYYY-MM-DD'),
+      end_date: dayjs(contract.end_date).format('YYYY-MM-DD'),
       cedolare_secca: contract.cedolare_secca,
       typology: contract.typology,
       canone_concordato: contract.canone_concordato,
@@ -488,7 +493,12 @@ export const updateContract = async (
         console.log('[CONTRACT_SERVICE] ✅ Annuities ricalcolate');
       }
 
-      return updatedContract;
+      return {
+        ...updatedContract,
+        start_date: dayjs(updatedContract.start_date).format('YYYY-MM-DD'),
+        end_date: dayjs(updatedContract.end_date).format('YYYY-MM-DD'),
+        monthly_rent: parseFloat(updatedContract.monthly_rent as any),
+      };
     });
   } catch (error) {
     if (error instanceof AppError) throw error;
@@ -700,8 +710,8 @@ export const renewContract = async (
         id: contractDetails.id,
         owner_id: contractDetails.owner_id,
         tenant_id: contractDetails.tenant_id,
-        start_date: contractDetails.start_date,
-        end_date: contractDetails.end_date,
+        start_date: dayjs(contractDetails.start_date).format('YYYY-MM-DD'),
+        end_date: dayjs(contractDetails.end_date).format('YYYY-MM-DD'),
         cedolare_secca: contractDetails.cedolare_secca,
         typology: contractDetails.typology,
         canone_concordato: contractDetails.canone_concordato,
