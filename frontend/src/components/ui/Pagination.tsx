@@ -26,6 +26,15 @@ export default function Pagination({ currentPage, totalPages, onPageChange, clas
   // Se c'è solo una pagina, non mostrare la paginazione
   if (totalPages <= 1) return null;
 
+  /**
+   * Gestore click pagina
+   * Esegue il cambio pagina e riporta lo scroll all'inizio
+   */
+  const handlePageClick = (page: number) => {
+    onPageChange(page);
+    window.scrollTo(0, 0);
+  };
+
   const renderPageNumbers = () => {
     const pages = [];
     
@@ -33,11 +42,11 @@ export default function Pagination({ currentPage, totalPages, onPageChange, clas
     pages.push(
       <button
         key={1}
-        onClick={() => onPageChange(1)}
+        onClick={() => handlePageClick(1)}
         className={clsx(
-          'w-8 h-8 rounded flex items-center justify-center text-sm font-semibold transition-colors duration-300',
+          'w-8 h-8 rounded flex items-center justify-center text-sm font-semibold transition-colors duration-300 cursor-pointer',
           currentPage === 1
-            ? 'bg-primary text-white'
+            ? 'bg-secondary text-white'
             : 'text-text-body hover:bg-border'
         )}
       >
@@ -71,11 +80,11 @@ export default function Pagination({ currentPage, totalPages, onPageChange, clas
         pages.push(
             <button
               key={i}
-              onClick={() => onPageChange(i)}
+              onClick={() => handlePageClick(i)}
               className={clsx(
-                'w-8 h-8 rounded flex items-center justify-center text-sm font-semibold transition-colors duration-300',
+                'w-8 h-8 rounded flex items-center justify-center text-sm font-semibold transition-colors duration-300 cursor-pointer',
                 currentPage === i
-                  ? 'bg-primary text-white'
+                  ? 'bg-secondary text-white'
                   : 'text-text-body hover:bg-border'
               )}
             >
@@ -98,11 +107,11 @@ export default function Pagination({ currentPage, totalPages, onPageChange, clas
       pages.push(
         <button
           key={totalPages}
-          onClick={() => onPageChange(totalPages)}
+          onClick={() => handlePageClick(totalPages)}
           className={clsx(
-            'w-8 h-8 rounded flex items-center justify-center text-sm font-semibold transition-colors duration-300',
+            'w-8 h-8 rounded flex items-center justify-center text-sm font-semibold transition-colors duration-300 cursor-pointer',
             currentPage === totalPages
-              ? 'bg-primary text-white'
+              ? 'bg-secondary text-white'
               : 'text-text-body hover:bg-border'
           )}
         >
@@ -115,12 +124,12 @@ export default function Pagination({ currentPage, totalPages, onPageChange, clas
   };
 
   return (
-    <div className={clsx('flex items-center justify-center gap-2 mt-6', className)}>
+    <div className={clsx('flex items-center justify-center gap-2 mt-10', className)}>
       {/* Pulsante Precedente */}
       <button
-        onClick={() => onPageChange(currentPage - 1)}
+        onClick={() => handlePageClick(currentPage - 1)}
         disabled={currentPage === 1}
-        className="p-2 text-primary hover:text-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="p-2 text-secondary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
         aria-label="Previous page"
       >
         <FaChevronLeft />
@@ -133,9 +142,9 @@ export default function Pagination({ currentPage, totalPages, onPageChange, clas
 
       {/* Pulsante Successivo */}
       <button
-        onClick={() => onPageChange(currentPage + 1)}
+        onClick={() => handlePageClick(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="p-2 text-primary hover:text-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="p-2 text-secondary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
         aria-label="Next page"
       >
         <FaChevronRight />
@@ -143,3 +152,5 @@ export default function Pagination({ currentPage, totalPages, onPageChange, clas
     </div>
   );
 }
+
+
