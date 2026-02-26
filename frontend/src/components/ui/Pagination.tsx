@@ -1,3 +1,4 @@
+import { type RefObject } from 'react';
 import clsx from 'clsx';
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
@@ -9,6 +10,12 @@ interface PaginationProps {
   // Callback chiamata al cambio pagina
   onPageChange: (page: number) => void;
   className?: string;
+  /**
+   * Se fornito, al click di paginazione fa scroll smooth verso quell'elemento
+   * (utile per sezioni interne alla pagina, es. Dashboard).
+   * Se non fornito, porta smooth in cima alla finestra.
+   */
+  scrollTargetRef?: RefObject<HTMLElement | null>;
 }
 
 /**
@@ -22,17 +29,40 @@ interface PaginationProps {
  * - Mostra un range attorno alla pagina corrente
  * - Mostra ellissi per saltare intervalli ampi
  */
-export default function Pagination({ currentPage, totalPages, onPageChange, className }: PaginationProps) {
+export default function Pagination({ currentPage, totalPages, onPageChange, className, scrollTargetRef }: PaginationProps) {
   // Se c'è solo una pagina, non mostrare la paginazione
   if (totalPages <= 1) return null;
 
   /**
-   * Gestore click pagina
-   * Esegue il cambio pagina e riporta lo scroll all'inizio
+   * Gestore click pagina.
+   * Esegue il cambio pagina e anima lo scroll:
+   * - verso il ref fornito (sezioni interne, es. Dashboard), tenendo conto dell'header sticky
+   * - oppure verso la cima della finestra
+   * Lo scroll viene eseguito DOPO il re-render tramite doppio rAF per evitare
+   * che il cambio di stato interrompa l'animazione smooth.
    */
   const handlePageClick = (page: number) => {
     onPageChange(page);
-    window.scrollTo(0, 0);
+
+    // Doppio rAF: il primo aspetta che React abbia aggiornato il DOM,
+    // il secondo attende che il browser abbia fatto il layout,
+    // garantendo che lo scroll non venga annullato dal re-render.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (scrollTargetRef?.current) {
+          // Legge l'altezza dell'header sticky dal DOM per compensarla
+          const stickyHeader = document.querySelector('header');
+          const headerHeight = stickyHeader ? stickyHeader.getBoundingClientRect().height : 0;
+          const elementTop = scrollTargetRef.current.getBoundingClientRect().top + window.scrollY;
+          window.scrollTo({
+            top: elementTop - headerHeight - 8, // 8px di margine visivo
+            behavior: 'smooth',
+          });
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      });
+    });
   };
 
   const renderPageNumbers = () => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, type RefObject } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { FaArrowLeft, FaEdit, FaFileContract, FaEuroSign, FaPlusCircle } from 'react-icons/fa';
 import { useOwner, useOwnerContracts } from '../../hooks/useOwners';
@@ -22,6 +22,15 @@ const OwnerDetailPage: React.FC = () => {
   const returnUrl = location.state?.returnUrl;
 
   const [page, setPage] = useState(1);
+  // Ref per lo scroll smooth della paginazione verso la sezione contratti (solo mobile ≤ 600px)
+  const contractsSectionRef = useRef<HTMLHeadingElement>(null);
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 600px)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 600px)');
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<ContractWithRelations | null>(null);
   const [isDeleteContractModalOpen, setIsDeleteContractModalOpen] = useState(false);
@@ -140,7 +149,7 @@ const OwnerDetailPage: React.FC = () => {
 
       {/* Contracts Grid */}
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold text-text-title pb-2">
+        <h2 ref={contractsSectionRef} className="text-2xl font-bold text-text-title pb-2">
           Contratti associati:
         </h2>
 
@@ -180,6 +189,7 @@ const OwnerDetailPage: React.FC = () => {
               currentPage={page}
               totalPages={contractsData?.pagination.totalPages || 1}
               onPageChange={setPage}
+              scrollTargetRef={isMobile ? contractsSectionRef as RefObject<HTMLElement> : undefined}
             />
           </>
         )}

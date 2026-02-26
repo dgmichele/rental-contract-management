@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useRef, type RefObject } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useStats, useExpiringContracts } from '../../hooks/useDashboard';
 import { StatsCard } from '../../components/cards/StatsCard';
@@ -24,6 +24,10 @@ export default function Dashboard() {
   const [pageCurrent, setPageCurrent] = useState(1);
   const [pageNext, setPageNext] = useState(1);
 
+  // Refs per lo scroll smooth della paginazione verso le sezioni
+  const currentSectionRef = useRef<HTMLHeadingElement>(null);
+  const nextSectionRef = useRef<HTMLHeadingElement>(null);
+
   // Queries
   const statsQuery = useStats();
   
@@ -45,7 +49,6 @@ export default function Dashboard() {
   // Handlers
   const handlePageChangeCurrent = (page: number) => {
     setPageCurrent(page);
-    // Scroll to section potentially?
   };
 
   const handlePageChangeNext = (page: number) => {
@@ -114,7 +117,7 @@ export default function Dashboard() {
 
       {/* Expiring Contracts - Current Month */}
       <section className="mb-12">
-        <h2 className="text-xl font-heading font-bold text-text-title mb-6 flex items-center gap-2">
+        <h2 ref={currentSectionRef} className="text-xl font-heading font-bold text-text-title mb-6 flex items-center gap-2">
           Scadenze mese corrente:
           {expiringCurrentQuery.isFetching && <Spinner className="h-4 w-4" />}
         </h2>
@@ -153,6 +156,7 @@ export default function Dashboard() {
                         currentPage={expiringCurrentQuery.data.pagination.page}
                         totalPages={expiringCurrentQuery.data.pagination.totalPages}
                         onPageChange={handlePageChangeCurrent}
+                        scrollTargetRef={currentSectionRef as RefObject<HTMLElement>}
                         className="mt-8"
                     />
                 )}
@@ -161,8 +165,8 @@ export default function Dashboard() {
       </section>
 
        {/* Expiring Contracts - Next Month */}
-       <section className="mb-8">
-        <h2 className="text-xl font-heading font-bold text-text-title mb-6 flex items-center gap-2">
+       <section>
+        <h2 ref={nextSectionRef} className="text-xl font-heading font-bold text-text-title mb-6 flex items-center gap-2">
           Scadenze mese successivo:
            {expiringNextQuery.isFetching && <Spinner className="h-4 w-4" />}
         </h2>
@@ -195,6 +199,7 @@ export default function Dashboard() {
                         currentPage={expiringNextQuery.data.pagination.page}
                         totalPages={expiringNextQuery.data.pagination.totalPages}
                         onPageChange={handlePageChangeNext}
+                        scrollTargetRef={nextSectionRef as RefObject<HTMLElement>}
                         className="mt-8"
                     />
                 )}
