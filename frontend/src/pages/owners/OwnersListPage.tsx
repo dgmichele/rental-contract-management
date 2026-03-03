@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FaPlus, FaSearch } from 'react-icons/fa';
 import { useOwners, useDeleteOwner } from '../../hooks/useOwners';
+import { useDebounce } from '../../hooks/useDebounce';
 import OwnerCard from '../../components/cards/OwnerCard';
 import OwnerCardSkeleton from '../../components/cards/OwnerCardSkeleton';
 import Pagination from '../../components/ui/Pagination';
@@ -33,7 +34,7 @@ const OwnersListPage: React.FC = () => {
     }, { replace: true });
   };
 
-  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const debouncedSearch = useDebounce(search, 400);
   
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -44,14 +45,6 @@ const OwnersListPage: React.FC = () => {
 
   const { data, isLoading, error } = useOwners(page, 12, debouncedSearch);
   const deleteOwnerMutation = useDeleteOwner();
-
-  // Debounce search
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 400);
-    return () => clearTimeout(handler);
-  }, [search]);
 
   const handleEdit = (owner: Owner) => {
     setSelectedOwner(owner);
@@ -128,6 +121,9 @@ const OwnersListPage: React.FC = () => {
       ) : data?.data.length === 0 ? (
         <div className="text-center py-12 bg-bg-card rounded-xl border border-border">
           <p className="text-text-body">Nessun proprietario trovato.</p>
+          {search && (
+            <p className="text-text-subtle text-sm mt-2">Prova a modificare la ricerca.</p>
+          )}
         </div>
       ) : (
         <>

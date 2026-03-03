@@ -39,6 +39,7 @@ export const useContracts = (filters?: ContractFilters) => {
   return useQuery({
     queryKey: contractKeys.list(filters),
     queryFn: () => contractsService.getContracts(filters),
+    placeholderData: (previousData) => previousData,
     staleTime: 1000 * 60 * 5, // 5 minuti
   });
 };

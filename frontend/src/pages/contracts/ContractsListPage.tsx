@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FaPlus, FaSearch, FaFilter } from 'react-icons/fa';
 import { useContracts, useDeleteContract } from '../../hooks/useContracts';
+import { useDebounce } from '../../hooks/useDebounce';
 import { ContractCard } from '../../components/cards/ContractCard';
 import { ContractCardSkeleton } from '../../components/cards/ContractCardSkeleton';
 import Pagination from '../../components/ui/Pagination';
@@ -9,7 +10,7 @@ import Button from '../../components/ui/Button';
 import DeleteModal from '../../components/modals/DeleteModal';
 import ContractFiltersModal from '../../components/modals/ContractFiltersModal';
 import type { ContractWithRelations } from '../../types/shared';
-import clsx from 'clsx'; // Per conditional classes
+import clsx from 'clsx';
 
 const ContractsListPage = () => {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ const ContractsListPage = () => {
     }, { replace: true });
   };
 
-  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const debouncedSearch = useDebounce(search, 400);
 
   const filters = {
     expiryMonth: searchParams.get('expiryMonth') ? Number(searchParams.get('expiryMonth')) : undefined,
@@ -66,14 +67,6 @@ const ContractsListPage = () => {
   });
   
   const deleteContractMutation = useDeleteContract();
-
-  // Debounce search
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 400);
-    return () => clearTimeout(handler);
-  }, [search]);
 
   const handleDelete = (contract: ContractWithRelations) => {
     setSelectedContract(contract);
