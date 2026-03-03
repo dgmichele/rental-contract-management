@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FaPlus, FaSearch, FaFilter } from 'react-icons/fa';
 import { useContracts, useDeleteContract } from '../../hooks/useContracts';
@@ -57,6 +57,7 @@ const ContractsListPage = () => {
   // Modals state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isFiltersModalOpen, setIsFiltersModalOpen] = useState(false);
+  const [openedViaSticky, setOpenedViaSticky] = useState(false);
   const [selectedContract, setSelectedContract] = useState<ContractWithRelations | null>(null);
 
   const { data, isLoading, error } = useContracts({
@@ -84,10 +85,32 @@ const ContractsListPage = () => {
   const handleApplyFilters = (newFilters: { expiryMonth?: number; expiryYear?: number }) => {
     setFilters(newFilters);
     setIsFiltersModalOpen(false);
+    
+    // Se i filtri sono stati aperti dal pulsante sticky, scrolliamo in cima
+    if (openedViaSticky) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   // Check if any filter is active for UI indication
   const hasActiveFilters = filters.expiryMonth !== undefined || filters.expiryYear !== undefined;
+
+  // Sticky filter button logic for mobile/tablet
+  const [showStickyFilter, setShowStickyFilter] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (searchContainerRef.current) {
+        const rect = searchContainerRef.current.getBoundingClientRect();
+        // Mostra il bottone sticky quando il fondo della barra di ricerca esce dalla vista
+        setShowStickyFilter(rect.bottom < 0);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
     <div className="min-h-screen pb-24 px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
@@ -105,8 +128,30 @@ const ContractsListPage = () => {
         </Button>
       </div>
 
+      {/* Sticky Filter Button for Mobile/Tablet */}
+      <div className={clsx(
+        "fixed top-24 right-0 z-40 lg:hidden transition-all duration-500 ease-in-out pointer-events-none",
+        showStickyFilter ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full"
+      )}>
+      <button
+        onClick={() => {
+          setOpenedViaSticky(true);
+          setIsFiltersModalOpen(true);
+        }}
+        className={clsx(
+            "flex items-center justify-center w-12 h-12 rounded-l-2xl border-y border-l shadow-xl pointer-events-auto active:scale-95 transition-all duration-300",
+            hasActiveFilters 
+              ? "bg-secondary text-white border-secondary" 
+              : "bg-bg-card border-border text-text-body"
+          )}
+          title="Filtra contratti"
+        >
+          <FaFilter className={clsx(hasActiveFilters)} />
+        </button>
+      </div>
+
       {/* Search Bar & Filters & Counter */}
-      <div className="space-y-2">
+      <div ref={searchContainerRef} className="space-y-2">
         <div className="flex gap-2 w-full max-w-md">
           <div className="relative grow group">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-subtle group-focus-within:text-secondary transition-colors">
@@ -121,7 +166,10 @@ const ContractsListPage = () => {
             />
           </div>
           <button
-            onClick={() => setIsFiltersModalOpen(true)}
+            onClick={() => {
+              setOpenedViaSticky(false);
+              setIsFiltersModalOpen(true);
+            }}
             className={clsx(
               "flex items-center justify-center px-4 py-2.5 rounded-lg border transition-all duration-300 cursor-pointer shadow-sm",
               hasActiveFilters 
