@@ -20,6 +20,7 @@ import ContractDetailPage from './pages/contracts/ContractDetailPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/layout/Layout';
 import ScrollToTop from './components/ScrollToTop';
+import BackToTopButton from './components/ui/BackToTopButton';
 
 /**
  * APP - ROUTING PRINCIPALE
@@ -124,6 +125,7 @@ function App() {
           },
         }}
       />
+      <BackToTopButton />
     </>
   );
 }
