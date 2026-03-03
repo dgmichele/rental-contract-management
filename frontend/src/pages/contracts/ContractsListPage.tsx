@@ -176,6 +176,7 @@ const ContractsListPage = () => {
                 displayMode="owner" // Nella lista generale mostriamo proprietario come titolo principale (default)
                 onEdit={() => navigate(`/contracts/${contract.id}?mode=edit`, { state: { returnUrl: window.location.pathname + window.location.search } })}
                 onDelete={() => handleDelete(contract)}
+                showExpiryAlert={true}
               />
             ))}
           </div>
