@@ -68,12 +68,19 @@ const ContractDetailPage: React.FC = () => {
   const handleSubmit = async (data: ContractFormData) => {
     try {
       if (mode === 'add') {
-        await createContractMutation.mutateAsync({
+        const result = await createContractMutation.mutateAsync({
           ...data,
           last_annuity_paid: data.last_annuity_paid,
         });
         
-        navigate(-1);
+        if (result?.data?.id) {
+          navigate(`/contracts/${result.data.id}?mode=view`, { 
+            state: location.state,
+            replace: true 
+          });
+        } else {
+          navigate(-1);
+        }
       } else if (mode === 'edit' && contract) {
         await updateContractMutation.mutateAsync({
           id: contract.id,
