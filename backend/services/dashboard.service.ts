@@ -46,25 +46,37 @@ export const getStats = async (userId: number): Promise<DashboardStatsResponse> 
   const nextMonth = nextMonthDate.month() + 1;
   const nextYear = nextMonthDate.year();
 
-  // Contratti in scadenza mese corrente
-  const expiringContractsCurrentMonthResult = await db("contracts")
-    .join("owners", "contracts.owner_id", "owners.id")
-    .where("owners.user_id", userId)
-    .whereRaw("EXTRACT(MONTH FROM contracts.end_date) = ?", [currentMonth])
-    .whereRaw("EXTRACT(YEAR FROM contracts.end_date) = ?", [currentYear])
-    .count<{ count: string }>("contracts.id as count")
-    .first();
-  const expiringContractsCurrentMonth = parseInt(expiringContractsCurrentMonthResult?.count || "0", 10);
+  // Helper per contare scadenze combinate (contratti + annualità) per un dato mese/anno
+  const countCombinedExpirations = async (targetMonth: number, targetYear: number) => {
+    // Query contratti in scadenza (end_date)
+    const contractsQ = db("contracts")
+      .join("owners", "contracts.owner_id", "owners.id")
+      .where("owners.user_id", userId)
+      .whereRaw("EXTRACT(MONTH FROM contracts.end_date) = ?", [targetMonth])
+      .whereRaw("EXTRACT(YEAR FROM contracts.end_date) = ?", [targetYear])
+      .select(db.raw("1"));
 
-  // Contratti in scadenza mese successivo
-  const expiringContractsNextMonthResult = await db("contracts")
-    .join("owners", "contracts.owner_id", "owners.id")
-    .where("owners.user_id", userId)
-    .whereRaw("EXTRACT(MONTH FROM contracts.end_date) = ?", [nextMonth])
-    .whereRaw("EXTRACT(YEAR FROM contracts.end_date) = ?", [nextYear])
-    .count<{ count: string }>("contracts.id as count")
-    .first();
-  const expiringContractsNextMonth = parseInt(expiringContractsNextMonthResult?.count || "0", 10);
+    // Query annualità in scadenza (due_date E is_paid = false)
+    const annuitiesQ = db("annuities")
+      .join("contracts", "annuities.contract_id", "contracts.id")
+      .join("owners", "contracts.owner_id", "owners.id")
+      .where("owners.user_id", userId)
+      .where("annuities.is_paid", false)
+      .where("contracts.cedolare_secca", false)
+      .whereRaw("EXTRACT(MONTH FROM annuities.due_date) = ?", [targetMonth])
+      .whereRaw("EXTRACT(YEAR FROM annuities.due_date) = ?", [targetYear])
+      .select(db.raw("1"));
+
+    const result = await db
+      .from(contractsQ.unionAll(annuitiesQ).as("combined_expirations"))
+      .count<{ count: string }>("*")
+      .first();
+
+    return parseInt(result?.count || "0", 10);
+  };
+
+  const expiringContractsCurrentMonth = await countCombinedExpirations(currentMonth, currentYear);
+  const expiringContractsNextMonth = await countCombinedExpirations(nextMonth, nextYear);
 
   return {
     totalOwners,

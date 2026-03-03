@@ -67,7 +67,7 @@ const Header = () => {
           <Menu as="div" className="relative">
             <Menu.Button className="flex items-center justify-center w-10 h-10 rounded-full focus:outline-none cursor-pointer transition-all duration-300">
               {user?.name && user?.surname ? (
-                <div className="w-full h-full rounded-full bg-secondary hover:bg-primary transition-colors duration-300 flex items-center justify-center text-white font-bold text-sm shadow-md">
+                <div className="w-full h-full rounded-full bg-secondary hover:bg-primary transition-colors duration-300 flex items-center justify-center text-white font-bold text-sm">
                   {user.name.charAt(0).toUpperCase()}
                   {user.surname.charAt(0).toUpperCase()}
                 </div>
