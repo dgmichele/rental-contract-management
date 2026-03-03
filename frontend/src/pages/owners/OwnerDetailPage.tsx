@@ -13,6 +13,7 @@ import DeleteModal from '../../components/modals/DeleteModal';
 import type { ContractWithRelations } from '../../types/shared';
 import Skeleton from '../../components/ui/Skeleton';
 import { StatsCardSkeleton } from '../../components/cards/StatsCardSkeleton';
+import { formatCurrency } from '../../utils/format';
 
 const OwnerDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -141,7 +142,7 @@ const OwnerDetailPage: React.FC = () => {
             />
             <StatsCard
               label="Canone mensile totale"
-              value={`${owner.stats.total_monthly_rent.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}`}
+              value={formatCurrency(owner.stats.total_monthly_rent)}
               icon={<FaEuroSign />}
             />
           </>

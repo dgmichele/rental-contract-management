@@ -20,6 +20,7 @@ import type { ContractFormData } from '../../components/forms/ContractForm';
 import Button from '../../components/ui/Button';
 import Skeleton from '../../components/ui/Skeleton';
 import DeleteModal from '../../components/modals/DeleteModal';
+import { formatCurrency } from '../../utils/format';
 
 const ContractDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -257,7 +258,7 @@ const ContractDetailPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <FaMoneyBillWave className="text-text-subtle shrink-0" />
                 <span className="text-text-body font-medium">
-                  {contract.monthly_rent.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}
+                  {formatCurrency(contract.monthly_rent)}
                 </span>
               </div>
             </div>

@@ -15,6 +15,7 @@ import {
   FaCalendarWeek, 
   FaMoneyBillWave 
 } from 'react-icons/fa';
+import { formatCurrency } from '../../utils/format';
 
 
 export default function Dashboard() {
@@ -106,7 +107,7 @@ export default function Dashboard() {
               />
               <StatsCard
                 label="Totale canoni mensili"
-                value={`€ ${stats?.totalMonthlyRent?.toLocaleString('it-IT', { minimumFractionDigits: 2 }) || '0,00'}`}
+                value={formatCurrency(stats?.totalMonthlyRent)}
                 icon={<FaMoneyBillWave />}
                 className="min-w-[260px] xl:min-w-0"
               />

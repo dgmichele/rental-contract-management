@@ -6,6 +6,8 @@ import { FaEye, FaHome, FaCalendarDay, FaMoneyBillWave, FaUser, FaEdit, FaTrash 
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import type { ContractWithRelations } from '../../types/shared';
+import { formatCurrency } from '../../utils/format';
+
 
 interface ContractCardProps {
   contract: ContractWithRelations;
@@ -180,7 +182,7 @@ export const ContractCard = ({
             <span className="text-xs text-text-subtle block mb-1">Canone</span>
             <div className="flex items-center gap-1 font-semibold text-text-title text-sm">
                 <FaMoneyBillWave className="text-success shrink-0" />
-                <span className="truncate">€ {contract.monthly_rent}</span>
+                <span className="truncate">{formatCurrency(contract.monthly_rent)}</span>
             </div>
          </div>
          
