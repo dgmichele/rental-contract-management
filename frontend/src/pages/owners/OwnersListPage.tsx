@@ -92,18 +92,26 @@ const OwnersListPage: React.FC = () => {
         </Button>
       </div>
 
-      {/* Search Bar */}
-      <div className="max-w-md relative group">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-subtle group-focus-within:text-secondary transition-colors">
-          <FaSearch />
+      {/* Search Bar & Counter */}
+      <div className="space-y-2">
+        <div className="max-w-md relative group">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-subtle group-focus-within:text-secondary transition-colors">
+            <FaSearch />
+          </div>
+          <input
+            type="text"
+            placeholder="Cerca per nome o cognome..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="bg-bg-card border border-border rounded-lg pl-10 pr-3 py-2.5 focus:outline-none focus:border-secondary placeholder:text-text-subtle transition-all duration-300 w-full shadow-sm"
+          />
         </div>
-        <input
-          type="text"
-          placeholder="Cerca per nome o cognome..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="bg-bg-card border border-border rounded-lg pl-10 pr-3 py-2.5 focus:outline-none focus:border-secondary placeholder:text-text-subtle transition-all duration-300 w-full shadow-sm"
-        />
+
+        {!isLoading && !error && data && (
+          <p className="text-text-subtle text-sm ml-1">
+            Totale proprietari: <span className="font-semibold text-text-body">{data.pagination.total}</span>
+          </p>
+        )}
       </div>
 
       {/* Grid Section */}

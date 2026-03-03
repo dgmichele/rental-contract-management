@@ -112,32 +112,40 @@ const ContractsListPage = () => {
         </Button>
       </div>
 
-      {/* Search Bar & Filters */}
-      <div className="flex gap-2 w-full max-w-md">
-        <div className="relative grow group">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-subtle group-focus-within:text-secondary transition-colors">
-            <FaSearch />
+      {/* Search Bar & Filters & Counter */}
+      <div className="space-y-2">
+        <div className="flex gap-2 w-full max-w-md">
+          <div className="relative grow group">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-subtle group-focus-within:text-secondary transition-colors">
+              <FaSearch />
+            </div>
+            <input
+              type="text"
+              placeholder="Cerca proprietario o inquilino..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="bg-bg-card border border-border rounded-lg pl-10 pr-3 py-2.5 focus:outline-none focus:border-secondary placeholder:text-text-subtle transition-all duration-300 w-full shadow-sm"
+            />
           </div>
-          <input
-            type="text"
-            placeholder="Cerca proprietario o inquilino..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="bg-bg-card border border-border rounded-lg pl-10 pr-3 py-2.5 focus:outline-none focus:border-secondary placeholder:text-text-subtle transition-all duration-300 w-full shadow-sm"
-          />
+          <button
+            onClick={() => setIsFiltersModalOpen(true)}
+            className={clsx(
+              "flex items-center justify-center px-4 py-2.5 rounded-lg border transition-all duration-300 cursor-pointer shadow-sm",
+              hasActiveFilters 
+                ? "bg-secondary text-white border-secondary hover:bg-primary" 
+                : "bg-bg-card border-border text-text-body hover:border-secondary hover:text-secondary"
+            )}
+            title="Filtra contratti"
+          >
+            <FaFilter />
+          </button>
         </div>
-        <button
-          onClick={() => setIsFiltersModalOpen(true)}
-          className={clsx(
-            "flex items-center justify-center px-4 py-2.5 rounded-lg border transition-all duration-300 cursor-pointer shadow-sm",
-            hasActiveFilters 
-              ? "bg-secondary text-white border-secondary hover:bg-primary" 
-              : "bg-bg-card border-border text-text-body hover:border-secondary hover:text-secondary"
-          )}
-          title="Filtra contratti"
-        >
-          <FaFilter />
-        </button>
+
+        {!isLoading && !error && data && (
+          <p className="text-text-subtle text-sm ml-1">
+            Totale contratti: <span className="font-semibold text-text-body">{data.pagination.total}</span>
+          </p>
+        )}
       </div>
 
       {/* Grid Section */}
