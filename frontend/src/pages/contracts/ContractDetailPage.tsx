@@ -181,7 +181,7 @@ const ContractDetailPage: React.FC = () => {
           {/* Sezione Proprietario */}
           <div className="bg-bg-card rounded-xl border border-border p-6 shadow-sm h-full">
             <h3 className="text-lg font-bold text-text-title mb-4 flex items-center gap-2 pb-2 border-b border-border">
-              <FaUser className="text-secondary" /> Dati Proprietario
+              <FaUser className="text-secondary" /> Dati proprietario
             </h3>
             <div className="space-y-3">
               <div className="grid grid-cols-3 md:grid-cols-2 gap-y-2">
@@ -210,7 +210,7 @@ const ContractDetailPage: React.FC = () => {
           {/* Sezione Inquilino */}
           <div className="bg-bg-card rounded-xl border border-border p-6 shadow-sm h-full">
              <h3 className="text-lg font-bold text-text-title mb-4 flex items-center gap-2 pb-2 border-b border-border">
-              <FaUser className="text-secondary" /> Dati Inquilino
+              <FaUser className="text-secondary" /> Dati inquilino
             </h3>
             <div className="space-y-3">
               <div className="grid grid-cols-3 md:grid-cols-2 gap-y-2">
@@ -230,12 +230,12 @@ const ContractDetailPage: React.FC = () => {
         {/* Sezione Dati Contratto */}
         <div className="bg-bg-card rounded-xl border border-border p-6 shadow-sm">
           <h3 className="text-lg font-bold text-text-title mb-4 flex items-center gap-2 pb-2 border-b border-border">
-            <FaFileContract className="text-secondary" /> Dettagli Contratto
+            <FaFileContract className="text-secondary" /> Dettagli contratto
           </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="space-y-1">
-              <span className="text-text-subtle text-sm block">Indirizzo Immobile</span>
+              <span className="text-text-subtle text-sm block">Indirizzo immobile</span>
               <div className="flex items-start gap-2">
                 <FaHome className="text-text-subtle mt-1 shrink-0" />
                 <span className="text-text-body font-medium">{contract.address}</span>
@@ -253,7 +253,7 @@ const ContractDetailPage: React.FC = () => {
             </div>
 
             <div className="space-y-1">
-              <span className="text-text-subtle text-sm block">Canone Mensile</span>
+              <span className="text-text-subtle text-sm block">Canone mensile</span>
               <div className="flex items-center gap-2">
                 <FaMoneyBillWave className="text-text-subtle shrink-0" />
                 <span className="text-text-body font-medium">
@@ -263,12 +263,12 @@ const ContractDetailPage: React.FC = () => {
             </div>
 
             <div className="space-y-1">
-              <span className="text-text-subtle text-sm block">Regime Fiscale</span>
+              <span className="text-text-subtle text-sm block">Regime fiscale</span>
               <div className="flex items-center gap-2">
                 {contract.cedolare_secca ? (
-                   <span className="flex items-center gap-1 text-text-body font-medium"><FaCheckCircle className="text-xs text-text-subtle"/> Cedolare Secca</span>
+                   <span className="flex items-center gap-1 text-text-body font-medium"><FaCheckCircle className="text-xs text-text-subtle"/> Cedolare secca</span>
                 ) : (
-                   <span className="flex items-center gap-1 text-text-body"><FaTimesCircle className="text-xs text-text-subtle"/> Regime Ordinario</span>
+                   <span className="flex items-center gap-1 text-text-body"><FaTimesCircle className="text-xs text-text-subtle"/> Regime ordinario</span>
                 )}
               </div>
             </div>
@@ -286,7 +286,7 @@ const ContractDetailPage: React.FC = () => {
 
             {!contract.cedolare_secca && (
               <div className="space-y-1">
-                <span className="text-text-subtle text-sm block">Ultima Annualità Pagata</span>
+                <span className="text-text-subtle text-sm block">Ultima annualità pagata</span>
                 <div className="flex items-center gap-2">
                   <FaFileContract className="text-text-subtle shrink-0" />
                   <span className="text-text-body font-medium">
@@ -334,7 +334,7 @@ const ContractDetailPage: React.FC = () => {
       ) : (
         <div className="max-w-3xl mx-auto bg-bg-card p-6 sm:p-8 rounded-xl border border-border shadow-sm">
           <h1 className="text-2xl sm:text-3xl font-heading text-text-title mb-8">
-            {mode === 'add' ? 'Nuovo Contratto' : 'Modifica Contratto'}
+            {mode === 'add' ? 'Nuovo contratto' : 'Modifica contratto'}
           </h1>
           
           <ContractForm
@@ -355,7 +355,7 @@ const ContractDetailPage: React.FC = () => {
             allowOwnerChange={mode === 'add' && !preselectedOwnerId}
             onSubmit={handleSubmit}
             isLoading={createContractMutation.isPending || updateContractMutation.isPending}
-            submitLabel={mode === 'add' ? 'Aggiungi Contratto' : 'Salva Modifiche'}
+            submitLabel={mode === 'add' ? 'Aggiungi contratto' : 'Salva modifiche'}
             onDelete={mode === 'edit' ? () => setIsDeleteModalOpen(true) : undefined}
           />
         </div>

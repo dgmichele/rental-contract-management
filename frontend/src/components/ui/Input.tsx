@@ -63,6 +63,13 @@ export default function Input<T extends FieldValues>({
           type={type}
           // Integrazione con react-hook-form, gestisce valueAsNumber se type è number
           {...register(name, { valueAsNumber: type === 'number' })}
+          onFocus={(e) => {
+            if (type === 'number') {
+              e.target.select();
+            }
+            // Chiamata all'eventuale onFocus passato come prop
+            if (props.onFocus) props.onFocus(e);
+          }}
           className={clsx(
             // Stili base: background, bordo, padding, focus styles
             'bg-bg-card border border-border rounded px-3 py-2 focus:outline-none focus:border-secondary placeholder:text-text-subtle transition-colors duration-300 w-full',

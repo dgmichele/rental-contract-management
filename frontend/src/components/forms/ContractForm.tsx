@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
+import { Link } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { 
@@ -161,7 +162,7 @@ export default function ContractForm({
         {/* Sezione Proprietario */}
         {mode !== 'renew' && mode !== 'annuity' && (
           <div className="space-y-4">
-            <h3 className="text-lg font-bold text-text-title">Dati Proprietario</h3>
+            <h3 className="text-lg font-bold text-text-title">Dati proprietario</h3>
             
             <div className="flex flex-col gap-2">
               <label htmlFor="owner_id" className="text-sm font-semibold text-text-title">
@@ -194,7 +195,10 @@ export default function ContractForm({
             {/* TODO: Opzione per creare nuovo proprietario (da implementare con modal) */}
             {allowOwnerChange && mode === 'create' && (
               <p className="text-xs text-text-subtle italic">
-                💡 Se il proprietario non è in elenco, aggiungilo dalla pagina "Proprietari"
+                💡 Se il proprietario non è in elenco, aggiungilo {' '}
+                <Link to="/owners" className="text-primary hover:underline font-semibold">
+                  dalla pagina "Proprietari"
+                </Link>
               </p>
             )}
           </div>
@@ -207,11 +211,11 @@ export default function ContractForm({
 
         {/* Sezione Dati Contratto */}
         <div className="space-y-4">
-          <h3 className="text-lg font-bold text-text-title">Dati Contratto</h3>
+          <h3 className="text-lg font-bold text-text-title">Dati contratto</h3>
 
           {/* Indirizzo */}
           <Input
-            label="Indirizzo Immobile"
+            label="Indirizzo immobile"
             name="address"
             register={register}
             error={errors.address?.message}
@@ -223,7 +227,7 @@ export default function ContractForm({
           {/* Durata Contratto */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="Data Inizio"
+              label="Data inizio"
               name="start_date"
               type="date"
               register={register}
@@ -232,7 +236,7 @@ export default function ContractForm({
               disabled={isFieldDisabled('start_date')}
             />
             <Input
-              label="Data Fine"
+              label="Data fine"
               name="end_date"
               type="date"
               register={register}
@@ -264,7 +268,7 @@ export default function ContractForm({
           {/* Tipologia */}
           <div className="flex flex-col gap-2">
             <label htmlFor="typology" className="text-sm font-semibold text-text-title">
-              Tipologia Contratto
+              Tipologia contratto
             </label>
             <select
               id="typology"
@@ -352,7 +356,7 @@ export default function ContractForm({
               onClick={onDelete}
               disabled={isLoading}
             >
-              Elimina Contratto
+              Elimina contratto
             </Button>
           )}
         </div>
