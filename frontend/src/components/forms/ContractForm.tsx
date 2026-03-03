@@ -35,8 +35,12 @@ const contractSchema = z.object({
   cedolare_secca: z.boolean(),
   typology: z.enum(['residenziale', 'commerciale'] as const),
   canone_concordato: z.boolean(),
-  monthly_rent: z.number().min(0, 'Il canone è obbligatorio'),
-  last_annuity_paid: z.number().nullable().optional(),
+  monthly_rent: z.any().transform(val => (val === '' || val === null || isNaN(val as any) ? undefined : Number(val))).pipe(
+    z.number({ message: 'Il canone è obbligatorio' }).min(0, 'Il canone non può essere negativo')
+  ),
+  last_annuity_paid: z.any().transform(val => (val === '' || val === null || isNaN(val as any) ? null : Number(val))).pipe(
+    z.number({ message: 'Inserire un anno valido' }).nullable()
+  ),
 }).refine(
   (data) => {
     // Validazione: end_date deve essere dopo start_date
@@ -48,6 +52,18 @@ const contractSchema = z.object({
   {
     message: 'La data di fine deve essere successiva alla data di inizio',
     path: ['end_date'],
+  }
+).refine(
+  (data) => {
+    // Se NON è cedolare secca, l'ultima annualità pagata è OBBLIGATORIA
+    if (!data.cedolare_secca && data.last_annuity_paid === null) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: "Devi inserire obbligatoriamente l'annualità per procedere!",
+    path: ['last_annuity_paid'],
   }
 );
 
