@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { 
@@ -32,6 +32,11 @@ const ContractDetailPage: React.FC = () => {
   // Se c'è un ID ma non c'è mode, è view. Se non c'è ID, è add (gestito da route /new)
   const isNew = !id;
   const mode = isNew ? 'add' : (modeParam as 'view' | 'edit' | 'renew' | 'annuity' || 'view');
+
+  // Scroll to top quando cambia mode o dopo il salvataggio
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [mode, location.state?.justSaved]);
 
   // Pre-selected owner from navigation state (e.g. from OwnerDetailPage)
   const preselectedOwnerId = location.state?.ownerId;
@@ -76,7 +81,7 @@ const ContractDetailPage: React.FC = () => {
         
         if (result?.data?.id) {
           navigate(`/contracts/${result.data.id}?mode=view`, { 
-            state: location.state,
+            state: { ...location.state, justSaved: true },
             replace: true 
           });
         } else {
@@ -93,7 +98,7 @@ const ContractDetailPage: React.FC = () => {
         // Reindirizza alla vista dettaglio sostituendo la voce corrente della cronologia
         // per evitare loop al click del tasto "Torna indietro"
         navigate(`/contracts/${contract.id}?mode=view`, { 
-          state: location.state,
+          state: { ...location.state, justSaved: true },
           replace: true 
         });
       }
@@ -117,18 +122,7 @@ const ContractDetailPage: React.FC = () => {
   };
 
   const handleBack = () => {
-    if (mode === 'view') {
-      // Nella vista dettaglio, "Torna indietro" porta effettivamente alla pagina precedente (es. OwnersListPage)
-      navigate(-1);
-    } else {
-      // Nelle altre modalità (edit, renew, ecc.), "Annulla" torna alla vista dettaglio dello stesso contratto
-      // Utilizziamo replace per non aggiungere un'altra voce inutile alla cronologia
-      if (isNew) {
-        navigate(-1);
-      } else {
-        navigate(`?mode=view`, { replace: true });
-      }
-    }
+    navigate(-1);
   };
 
   // Render View Mode
@@ -162,7 +156,7 @@ const ContractDetailPage: React.FC = () => {
             <div className="flex gap-2">
               <Button 
                 variant="primary" 
-                onClick={() => navigate(`?mode=edit`, { state: location.state, replace: true })}
+                onClick={() => navigate(`?mode=edit`, { state: location.state })}
                 className="flex items-center gap-2"
               >
                 <FaEdit /> Modifica
@@ -312,13 +306,15 @@ const ContractDetailPage: React.FC = () => {
   return (
     <div className="min-h-screen pb-24 px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
       {/* Back Button */}
-      <button 
-        onClick={handleBack}
-        className="flex items-center gap-2 text-secondary hover:text-primary transition-colors font-semibold cursor-pointer mb-4"
-      >
-        <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" />
-        {getBackLabel()}
-      </button>
+      {!(mode === 'view' && location.state?.justSaved) && (
+        <button 
+          onClick={handleBack}
+          className="flex items-center gap-2 text-secondary hover:text-primary transition-colors font-semibold cursor-pointer mb-4"
+        >
+          <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" />
+          {getBackLabel()}
+        </button>
+      )}
 
       {/* Main Content */}
       {isLoading ? (

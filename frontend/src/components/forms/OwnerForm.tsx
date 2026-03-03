@@ -122,7 +122,7 @@ export default function OwnerForm({
             onClick={onDelete}
             disabled={isLoading}
           >
-            Elimina Proprietario
+            Elimina proprietario
           </Button>
         )}
       </div>
