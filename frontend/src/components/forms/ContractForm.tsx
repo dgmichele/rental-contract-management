@@ -322,7 +322,7 @@ export default function ContractForm({
 
           {/* Canone Mensile */}
           <Input
-            label="Canone Mensile (€)"
+            label="Canone mensile (€)"
             name="monthly_rent"
             type="number"
             register={register}
@@ -337,7 +337,7 @@ export default function ContractForm({
           {/* Ultima Annualità Pagata - Solo se NON cedolare secca */}
           {!cedolareSecca && (
             <Input
-              label="Ultima Annualità Pagata (Anno)"
+              label="Ultima annualità pagata (Anno)"
               name="last_annuity_paid"
               type="number"
               register={register}
@@ -345,9 +345,7 @@ export default function ContractForm({
               placeholder="es. 2025"
               startIcon={<FaFileContract />}
               disabled={isFieldDisabled('last_annuity_paid')}
-              helperText="Lascia vuoto se non applicabile"
               min="2000"
-              max="2100"
             />
           )}
         </div>
