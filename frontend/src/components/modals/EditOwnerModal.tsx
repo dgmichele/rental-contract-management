@@ -11,6 +11,7 @@ interface EditOwnerModalProps {
   onClose: () => void;
   owner: Owner;
   showDelete?: boolean;
+  afterLeave?: () => void;
 }
 
 /**
@@ -22,6 +23,7 @@ export default function EditOwnerModal({
   onClose,
   owner,
   showDelete = false,
+  afterLeave,
 }: EditOwnerModalProps) {
   const navigate = useNavigate();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -57,6 +59,7 @@ export default function EditOwnerModal({
         onClose={onClose}
         title="Modifica proprietario"
         size="md"
+        afterLeave={afterLeave}
       >
         <div className="py-2">
           <p className="text-sm text-text-subtle mb-6">

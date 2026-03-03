@@ -61,6 +61,12 @@ const OwnersListPage: React.FC = () => {
     setIsViewModalOpen(true);
   };
 
+  const clearSelectedOwner = () => {
+    if (!isEditModalOpen && !isViewModalOpen && !isDeleteModalOpen) {
+      setSelectedOwner(null);
+    }
+  };
+
   const confirmDelete = async () => {
     if (selectedOwner) {
       await deleteOwnerMutation.mutateAsync(selectedOwner.id);
@@ -158,32 +164,26 @@ const OwnersListPage: React.FC = () => {
         <>
           <EditOwnerModal
             isOpen={isEditModalOpen}
-            onClose={() => {
-              setIsEditModalOpen(false);
-              setSelectedOwner(null);
-            }}
+            onClose={() => setIsEditModalOpen(false)}
             owner={selectedOwner}
+            afterLeave={clearSelectedOwner}
           />
           
           <ViewOwnerModal
             isOpen={isViewModalOpen}
-            onClose={() => {
-              setIsViewModalOpen(false);
-              setSelectedOwner(null);
-            }}
+            onClose={() => setIsViewModalOpen(false)}
             owner={selectedOwner}
+            afterLeave={clearSelectedOwner}
           />
 
           <DeleteModal
             isOpen={isDeleteModalOpen}
-            onClose={() => {
-              setIsDeleteModalOpen(false);
-              setSelectedOwner(null);
-            }}
+            onClose={() => setIsDeleteModalOpen(false)}
             onConfirm={confirmDelete}
             title="Elimina proprietario"
             message={`Sei sicuro di voler eliminare ${selectedOwner.name} ${selectedOwner.surname}? L'operazione eliminerà anche tutti i contratti associati e sarà irreversibile.`}
             isLoading={deleteOwnerMutation.isPending}
+            afterLeave={clearSelectedOwner}
           />
         </>
       )}

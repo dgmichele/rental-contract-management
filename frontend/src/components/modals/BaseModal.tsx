@@ -9,6 +9,7 @@ interface BaseModalProps {
   title: string;
   children: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  afterLeave?: () => void;
 }
 
 /**
@@ -20,6 +21,7 @@ interface BaseModalProps {
  * @param title Titolo visualizzato nell'header
  * @param children Contenuto del modal
  * @param size Larghezza massima del modal (default: 'md')
+ * @param afterLeave Callback eseguita al termine dell'animazione di chiusura
  */
 export default function BaseModal({
   isOpen,
@@ -27,6 +29,7 @@ export default function BaseModal({
   title,
   children,
   size = 'md',
+  afterLeave,
 }: BaseModalProps) {
   const sizeClasses = {
     sm: 'max-w-sm',
@@ -37,7 +40,7 @@ export default function BaseModal({
   };
 
   return (
-    <Transition show={isOpen} as={Fragment}>
+    <Transition show={isOpen} as={Fragment} appear afterLeave={afterLeave}>
       <Dialog as="div" className="relative z-50" onClose={onClose}>
         {/* Overlay scuro con blur */}
         <TransitionChild

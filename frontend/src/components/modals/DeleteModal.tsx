@@ -9,6 +9,7 @@ interface DeleteModalProps {
   title: string;
   message: string;
   isLoading?: boolean;
+  afterLeave?: () => void;
 }
 
 /**
@@ -28,10 +29,17 @@ export default function DeleteModal({
   onConfirm,
   title,
   message,
-  isLoading,
+  isLoading = false,
+  afterLeave,
 }: DeleteModalProps) {
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title={title} size="md">
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+      size="sm"
+      afterLeave={afterLeave}
+    >
       <div className="flex flex-col items-center text-center">
         {/* Icona Warning */}
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 mb-4">

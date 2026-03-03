@@ -50,9 +50,9 @@ const OwnerDetailPage: React.FC = () => {
 
   if (!isOwnerLoading && (ownerError || !ownerData?.success)) {
     return (
-      <div className="flex flex-col items-center text-center py-12">
-        <p className="text-text-body font-semibold text-xl">Proprietario non trovato 😰</p>
-        <Button variant="primary" onClick={() => navigate('/owners')} className="mt-8">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <h2 className="text-xl font-bold text-text-title">Proprietario non trovato 😰</h2>
+        <Button variant="primary" onClick={() => navigate('/owners')} className="mt-4">
           Torna alla lista
         </Button>
       </div>
@@ -182,7 +182,7 @@ const OwnerDetailPage: React.FC = () => {
                   key={contract.id} 
                   contract={contract as ContractWithRelations} 
                   displayMode="tenant"
-                  onEdit={() => navigate(`/contracts/${contract.id}?mode=view`, { state: location.state })}
+                  onEdit={() => navigate(`/contracts/${contract.id}?mode=edit`, { state: location.state })}
                   onDelete={() => handleDeleteContract(contract as ContractWithRelations)}
                   showExpiryAlert={true}
                 />

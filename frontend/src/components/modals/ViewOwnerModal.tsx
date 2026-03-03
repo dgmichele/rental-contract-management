@@ -6,6 +6,7 @@ interface ViewOwnerModalProps {
   isOpen: boolean;
   onClose: () => void;
   owner: Owner;
+  afterLeave?: () => void;
 }
 
 /**
@@ -20,6 +21,7 @@ export default function ViewOwnerModal({
   isOpen,
   onClose,
   owner,
+  afterLeave,
 }: ViewOwnerModalProps) {
   return (
     <BaseModal
@@ -27,6 +29,7 @@ export default function ViewOwnerModal({
       onClose={onClose}
       title="Dettagli proprietario"
       size="md"
+      afterLeave={afterLeave}
     >
       <div className="space-y-6">
         {/* Identità */}

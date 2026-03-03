@@ -57,8 +57,8 @@ const ContractDetailPage: React.FC = () => {
   if (!isNew && !isLoading && (contractError || !contract)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <h2 className="text-xl font-bold text-text-title">Contratto non trovato</h2>
-        <Button variant="primary" onClick={() => navigate('/contracts')}>
+        <h2 className="text-xl font-bold text-text-title">Contratto non trovato 😰</h2>
+        <Button variant="primary" onClick={() => navigate('/contracts')} className="mt-4">
           Torna alla lista
         </Button>
       </div>
