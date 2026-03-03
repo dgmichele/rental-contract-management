@@ -127,11 +127,11 @@ const OwnerDetailPage: React.FC = () => {
       </div>
 
       {/* Stats Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="flex flex-col sm:flex-row gap-6">
         {isOwnerLoading ? (
           <>
-            <StatsCardSkeleton />
-            <StatsCardSkeleton />
+            <StatsCardSkeleton className="w-full sm:w-72" />
+            <StatsCardSkeleton className="w-full sm:w-72" />
           </>
         ) : owner && (
           <>
@@ -139,11 +139,13 @@ const OwnerDetailPage: React.FC = () => {
               label="Contratti attivi"
               value={owner.stats.total_contracts}
               icon={<FaFileContract />}
+              className="w-full sm:w-72"
             />
             <StatsCard
               label="Canone mensile totale"
               value={formatCurrency(owner.stats.total_monthly_rent)}
               icon={<FaEuroSign />}
+              className="w-full sm:w-72"
             />
           </>
         )}
