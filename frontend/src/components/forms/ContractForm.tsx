@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -25,8 +25,8 @@ const tenantDataSchema = z.object({
   email: z.string().email('Email non valida').optional().or(z.literal('')),
 });
 
-// Schema di validazione per il contratto
-const contractSchema = z.object({
+// Schema di validazione per il contratto come factory function per accettare parametri dinamici
+const createContractSchema = (minAnnuityYear?: number) => z.object({
   owner_id: z.number().min(1, 'Seleziona un proprietario'),
   tenant_data: tenantDataSchema,
   address: z.string().min(1, 'L\'indirizzo è obbligatorio').trim(),
@@ -39,7 +39,9 @@ const contractSchema = z.object({
     z.number({ message: 'Il canone è obbligatorio' }).min(0, 'Il canone non può essere negativo')
   ),
   last_annuity_paid: z.any().transform(val => (val === '' || val === null || isNaN(val as any) ? null : Number(val))).pipe(
-    z.number({ message: 'Inserire un anno valido' }).nullable()
+    z.number({ message: 'Inserire un anno valido' })
+     .min(minAnnuityYear || 2000, `L'anno non può essere inferiore a ${minAnnuityYear || 2000}`)
+     .nullable()
   ),
 }).refine(
   (data) => {
@@ -67,7 +69,7 @@ const contractSchema = z.object({
   }
 );
 
-export type ContractFormData = z.infer<typeof contractSchema>;
+export type ContractFormData = z.infer<ReturnType<typeof createContractSchema>>;
 
 interface ContractFormProps {
   initialData?: Partial<ContractFormData>;
@@ -79,6 +81,7 @@ interface ContractFormProps {
   preselectedOwnerId?: number; // Proprietario preselezionato (es. da OwnerDetailPage)
   allowOwnerChange?: boolean; // Se false, il campo owner è readonly
   mode?: 'create' | 'edit' | 'renew' | 'annuity'; // Modalità del form
+  minAnnuityYear?: number;
 }
 
 /**
@@ -110,10 +113,13 @@ export default function ContractForm({
   preselectedOwnerId,
   allowOwnerChange = true,
   mode = 'create',
+  minAnnuityYear,
 }: ContractFormProps) {
 
+  const schema = useMemo(() => createContractSchema(minAnnuityYear), [minAnnuityYear]);
+
   const methods = useForm<ContractFormData>({
-    resolver: zodResolver(contractSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       owner_id: preselectedOwnerId || initialData?.owner_id || 0,
       tenant_data: {
@@ -345,7 +351,7 @@ export default function ContractForm({
               placeholder="es. 2025"
               startIcon={<FaFileContract />}
               disabled={isFieldDisabled('last_annuity_paid')}
-              min="2000"
+              min={minAnnuityYear?.toString() || "2000"}
             />
           )}
         </div>

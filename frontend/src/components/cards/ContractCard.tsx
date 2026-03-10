@@ -69,7 +69,7 @@ export const ContractCard = ({
       return;
     }
     // Navigate to single contract page in specific mode
-    const mode = isRenewal ? 'renewal' : 'annuity';
+    const mode = isRenewal ? 'renew' : 'annuity';
     navigate(`/contracts/${contract.id}?mode=${mode}`, { state: { returnUrl } });
   };
 

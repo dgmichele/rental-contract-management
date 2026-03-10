@@ -13,7 +13,15 @@ import {
   FaCheckCircle, 
   FaTimesCircle 
 } from 'react-icons/fa';
-import { useContract, useCreateContract, useUpdateContract, useDeleteContract } from '../../hooks/useContracts';
+import { 
+  useContract, 
+  useCreateContract, 
+  useUpdateContract, 
+  useDeleteContract,
+  useRenewContract,
+  useUpdateContractAnnuity
+} from '../../hooks/useContracts';
+import { AnnuityTimeline } from '../../components/timeline/AnnuityTimeline';
 import { useOwners } from '../../hooks/useOwners';
 import ContractForm from '../../components/forms/ContractForm';
 import type { ContractFormData } from '../../components/forms/ContractForm';
@@ -48,6 +56,8 @@ const ContractDetailPage: React.FC = () => {
   const createContractMutation = useCreateContract();
   const updateContractMutation = useUpdateContract();
   const deleteContractMutation = useDeleteContract();
+  const renewContractMutation = useRenewContract();
+  const updateAnnuityMutation = useUpdateContractAnnuity();
 
   // State
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -97,6 +107,37 @@ const ContractDetailPage: React.FC = () => {
         
         // Reindirizza alla vista dettaglio sostituendo la voce corrente della cronologia
         // per evitare loop al click del tasto "Torna indietro"
+        navigate(`/contracts/${contract.id}?mode=view`, { 
+          state: { ...location.state, justSaved: true },
+          replace: true 
+        });
+      } else if (mode === 'renew' && contract) {
+        await renewContractMutation.mutateAsync({
+          id: contract.id,
+          data: {
+            start_date: data.start_date,
+            end_date: data.end_date,
+            cedolare_secca: data.cedolare_secca,
+            typology: data.typology,
+            canone_concordato: data.canone_concordato,
+            monthly_rent: data.monthly_rent,
+          },
+        });
+        
+        navigate(`/contracts/${contract.id}?mode=view`, { 
+          state: { ...location.state, justSaved: true },
+          replace: true 
+        });
+      } else if (mode === 'annuity' && contract) {
+        if (data.last_annuity_paid === null) return;
+        
+        await updateAnnuityMutation.mutateAsync({
+          id: contract.id,
+          data: {
+            last_annuity_paid: data.last_annuity_paid,
+          },
+        });
+        
         navigate(`/contracts/${contract.id}?mode=view`, { 
           state: { ...location.state, justSaved: true },
           replace: true 
@@ -293,10 +334,16 @@ const ContractDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Timeline placeholder (not implemented yet per instructions) */}
         {!contract.cedolare_secca && (
-          <div className="text-center p-4 border border-dashed border-border rounded-lg text-text-subtle text-sm">
-            Timeline annualità non ancora implementata.
+          <div className="bg-bg-card rounded-xl border border-border p-6 shadow-sm mt-8">
+            <h3 className="text-lg font-bold text-text-title mb-4 flex items-center gap-2 pb-2 border-b border-border">
+               Timeline Annualità
+            </h3>
+            <AnnuityTimeline 
+              annuities={contract?.annuities || []}
+              contractStartYear={dayjs(contract.start_date).year()}
+              contractEndYear={dayjs(contract.end_date).year()}
+            />
           </div>
         )}
       </div>
@@ -331,15 +378,48 @@ const ContractDetailPage: React.FC = () => {
       ) : (
         <div className="max-w-3xl mx-auto bg-bg-card p-6 sm:p-8 rounded-xl border border-border shadow-sm">
           <h1 className="text-2xl sm:text-3xl font-heading text-text-title mb-8">
-            {mode === 'add' ? 'Nuovo contratto' : 'Modifica contratto'}
+            {mode === 'add' ? 'Nuovo contratto' : 
+             mode === 'edit' ? 'Modifica contratto' : 
+             mode === 'renew' ? 'Rinnova contratto' : 
+             mode === 'annuity' ? 'Rinnova annualità' : ''}
           </h1>
+
+          {mode === 'renew' && (
+             <div className="flex items-start gap-3 bg-green-50/80 p-4 rounded-lg mb-8 border border-green-200">
+                <span className="text-xl shrink-0 mt-0.5">✅</span>
+                <p className="text-sm text-green-800 leading-relaxed font-medium">
+                  Rinnova il contratto inserendo la nuova data di inizio e di scadenza. Puoi anche modificare altri dati se le condizioni contrattuali hanno subito cambiamenti, tra cui l'annualità successiva se idonea alla tipologia contrattuale scelta.
+                </p>
+             </div>
+          )}
+
+          {mode === 'annuity' && (
+             <div className="flex flex-col gap-6 mb-8">
+                <div className="flex items-start gap-3 bg-green-50/80 p-4 rounded-lg border border-green-200">
+                    <span className="text-xl shrink-0 mt-0.5">✅</span>
+                    <p className="text-sm text-green-800 leading-relaxed font-medium">
+                    Rinnova l'annualità inserendo l'anno aggiornato dell'ultima annualità pagata.
+                    </p>
+                </div>
+                {contract && !contract.cedolare_secca && (
+                   <AnnuityTimeline 
+                      annuities={contract?.annuities || []}
+                      contractStartYear={dayjs(contract.start_date).year()}
+                      contractEndYear={dayjs(contract.end_date).year()}
+                   />
+                )}
+             </div>
+          )}
           
           <ContractForm
-            mode={mode === 'add' ? 'create' : 'edit'}
+            mode={mode === 'add' ? 'create' : mode}
             initialData={contract ? {
               ...contract,
               start_date: contract.start_date ? dayjs(contract.start_date).format('YYYY-MM-DD') : '',
               end_date: contract.end_date ? dayjs(contract.end_date).format('YYYY-MM-DD') : '',
+              last_annuity_paid: mode === 'annuity' && contract.last_annuity_paid 
+                ? contract.last_annuity_paid + 1 
+                : contract.last_annuity_paid,
               tenant_data: {
                 name: contract.tenant.name,
                 surname: contract.tenant.surname,
@@ -350,9 +430,20 @@ const ContractDetailPage: React.FC = () => {
             owners={owners}
             preselectedOwnerId={preselectedOwnerId}
             allowOwnerChange={mode === 'add' && !preselectedOwnerId}
+            minAnnuityYear={contract ? (contract.last_annuity_paid ? contract.last_annuity_paid + 1 : dayjs(contract.start_date).year() + 1) : 2000}
             onSubmit={handleSubmit}
-            isLoading={createContractMutation.isPending || updateContractMutation.isPending}
-            submitLabel={mode === 'add' ? 'Aggiungi contratto' : 'Salva modifiche'}
+            isLoading={
+              createContractMutation.isPending || 
+              updateContractMutation.isPending || 
+              renewContractMutation.isPending || 
+              updateAnnuityMutation.isPending
+            }
+            submitLabel={
+              mode === 'add' ? 'Aggiungi contratto' : 
+              mode === 'renew' ? 'Conferma rinnovo' :
+              mode === 'annuity' ? 'Conferma rinnovo annualità' : 
+              'Salva modifiche'
+            }
             onDelete={mode === 'edit' ? () => setIsDeleteModalOpen(true) : undefined}
           />
         </div>
