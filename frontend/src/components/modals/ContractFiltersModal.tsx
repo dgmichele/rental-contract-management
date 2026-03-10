@@ -58,12 +58,12 @@ const ContractFiltersModal: React.FC<ContractFiltersModalProps> = ({
   const years = Array.from({ length: 12 }, (_, i) => currentYear - 1 + i);
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title="Filtra Contratti" size="sm">
+    <BaseModal isOpen={isOpen} onClose={onClose} title="Filtra contratti" size="sm">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-4">
           <div className="flex flex-col gap-2">
             <label htmlFor="expiryMonth" className="text-sm font-semibold text-text-title">
-              Mese di Scadenza
+              Mese di scadenza
             </label>
             <select
               id="expiryMonth"
@@ -81,7 +81,7 @@ const ContractFiltersModal: React.FC<ContractFiltersModalProps> = ({
 
           <div className="flex flex-col gap-2">
             <label htmlFor="expiryYear" className="text-sm font-semibold text-text-title">
-              Anno di Scadenza
+              Anno di scadenza
             </label>
             <select
               id="expiryYear"
@@ -100,7 +100,7 @@ const ContractFiltersModal: React.FC<ContractFiltersModalProps> = ({
 
         <div className="flex flex-col gap-3 pt-4 border-t border-border">
           <Button type="submit" variant="primary" className="w-full">
-            Applica Filtri
+            Applica filtri
           </Button>
           <Button
             type="button"
@@ -108,7 +108,7 @@ const ContractFiltersModal: React.FC<ContractFiltersModalProps> = ({
             onClick={handleReset}
             className="w-full"
           >
-            Resetta Filtri
+            Resetta filtri
           </Button>
         </div>
       </form>

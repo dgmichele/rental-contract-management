@@ -2,6 +2,9 @@ import React from "react";
 import clsx from "clsx";
 import dayjs from "dayjs";
 import type { Annuity } from '../../types/contract';
+import { 
+  FaCheck
+} from 'react-icons/fa';
 
 interface AnnuityTimelineProps {
   annuities: Annuity[];
@@ -21,6 +24,11 @@ export const AnnuityTimeline: React.FC<AnnuityTimelineProps> = ({
   }
 
   const today = dayjs();
+  
+  // Trova l'annualità non pagata più imminente (la prima nel tempo)
+  const nextAnnuityYear = [...annuities]
+    .filter(a => !a.is_paid && a.due_date)
+    .sort((a, b) => dayjs(a.due_date).unix() - dayjs(b.due_date).unix())[0]?.year;
 
   return (
     <div className="w-full py-6">
@@ -61,6 +69,8 @@ export const AnnuityTimeline: React.FC<AnnuityTimelineProps> = ({
             }
           }
 
+          const isNext = year === nextAnnuityYear;
+
           return (
             <div
               key={year}
@@ -69,14 +79,18 @@ export const AnnuityTimeline: React.FC<AnnuityTimelineProps> = ({
               {/* Pallino */}
               <div
                 className={clsx(
-                  "flex items-center justify-center w-10 h-10 rounded-full border-2 bg-bg-main shrink-0",
-                  isPaid ? "border-primary text-primary" : "border-border text-border",
+                  "flex items-center justify-center w-10 h-10 rounded-full border-2 bg-bg-main shrink-0 transition-all duration-300 relative",
+                  isPaid ? "border-primary bg-primary" : "border-border text-border",
+                  isNext && "border-orange-500 shadow-lg animate-pulse-ring"
                 )}
               >
                 {isPaid ? (
-                  <span className="text-xl leading-none">✅</span>
+                  <span className=""><FaCheck className="text-bg-main"/></span>
                 ) : (
-                  <div className="w-4 h-4 rounded-full bg-transparent" />
+                  <div className={clsx(
+                    "w-4 h-4 rounded-full transition-colors duration-300",
+                    isNext ? "bg-orange-500 scale-110" : "bg-transparent"
+                  )} />
                 )}
               </div>
 
@@ -85,14 +99,14 @@ export const AnnuityTimeline: React.FC<AnnuityTimelineProps> = ({
                 <div className="flex flex-wrap md:justify-center items-center gap-2">
                   <span
                     className={clsx(
-                      "font-bold text-lg",
-                      isPaid ? "text-text-title" : "text-text-body",
+                      "font-bold text-lg transition-colors duration-300",
+                      isPaid ? "text-text-title" : (isNext ? "text-orange-600" : "text-text-body"),
                     )}
                   >
                     {year}
                   </span>
                   {scadeABreve && (
-                    <span className="bg-orange-100 text-orange-600 px-2 py-0.5 rounded text-xs border border-orange-200 whitespace-nowrap">
+                    <span className="bg-orange-50 text-orange-600 px-2 py-0.5 rounded text-xs border border-orange-200 whitespace-nowrap">
                       ⚠️ scade a breve
                     </span>
                   )}
@@ -108,7 +122,7 @@ export const AnnuityTimeline: React.FC<AnnuityTimelineProps> = ({
                 )}
                 {dueDate && (
                   <span className="text-text-body text-sm mt-1 text-center font-medium">
-                    Scad {dueDate}
+                    Scadenza: {dueDate}
                   </span>
                 )}
               </div>

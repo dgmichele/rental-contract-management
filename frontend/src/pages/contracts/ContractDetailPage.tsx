@@ -337,7 +337,7 @@ const ContractDetailPage: React.FC = () => {
         {!contract.cedolare_secca && (
           <div className="bg-bg-card rounded-xl border border-border p-6 shadow-sm mt-8">
             <h3 className="text-lg font-bold text-text-title mb-4 flex items-center gap-2 pb-2 border-b border-border">
-               Timeline Annualità
+                <FaCalendarAlt className="text-secondary" /> Timeline annualità
             </h3>
             <AnnuityTimeline 
               annuities={contract?.annuities || []}
@@ -386,7 +386,7 @@ const ContractDetailPage: React.FC = () => {
 
           {mode === 'renew' && (
              <div className="flex items-start gap-3 bg-green-50/80 p-4 rounded-lg mb-8 border border-green-200">
-                <span className="text-xl shrink-0 mt-0.5">✅</span>
+                <span className="text-xl shrink-0 mt-[-2px]">✅</span>
                 <p className="text-sm text-green-800 leading-relaxed font-medium">
                   Rinnova il contratto inserendo la nuova data di inizio e di scadenza. Puoi anche modificare altri dati se le condizioni contrattuali hanno subito cambiamenti, tra cui l'annualità successiva se idonea alla tipologia contrattuale scelta.
                 </p>
@@ -396,7 +396,7 @@ const ContractDetailPage: React.FC = () => {
           {mode === 'annuity' && (
              <div className="flex flex-col gap-6 mb-8">
                 <div className="flex items-start gap-3 bg-green-50/80 p-4 rounded-lg border border-green-200">
-                    <span className="text-xl shrink-0 mt-0.5">✅</span>
+                    <span className="text-xl shrink-0 mt-[-2px]">✅</span>
                     <p className="text-sm text-green-800 leading-relaxed font-medium">
                     Rinnova l'annualità inserendo l'anno aggiornato dell'ultima annualità pagata.
                     </p>

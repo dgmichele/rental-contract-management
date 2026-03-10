@@ -85,4 +85,21 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Pulse Ring Animation */
+  @keyframes pulse-ring {
+    0% {
+      box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.7);
+    }
+    70% {
+      box-shadow: 0 0 0 12px rgba(249, 115, 22, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
+    }
+  }
+
+  .animate-pulse-ring {
+    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
 }
