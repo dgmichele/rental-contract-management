@@ -11,7 +11,8 @@ import {
   FaMoneyBillWave, 
   FaFileContract, 
   FaCheckCircle, 
-  FaInfoCircle,
+  FaInfoCircle, 
+  FaScroll,
   FaTimesCircle 
 } from 'react-icons/fa';
 import { 
@@ -29,6 +30,7 @@ import type { ContractFormData } from '../../components/forms/ContractForm';
 import Button from '../../components/ui/Button';
 import Skeleton from '../../components/ui/Skeleton';
 import DeleteModal from '../../components/modals/DeleteModal';
+import ConfirmAnnuityModal from '../../components/modals/ConfirmAnnuityModal';
 import { formatCurrency } from '../../utils/format';
 
 const ContractDetailPage: React.FC = () => {
@@ -62,10 +64,16 @@ const ContractDetailPage: React.FC = () => {
 
   // State
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isAnnuityModalOpen, setIsAnnuityModalOpen] = useState(false);
 
   // Derived state
   const contract = contractData?.data;
   const owners = ownersData?.data || [];
+
+  // Calcola l'anno della prossima annualità da confermare
+  const nextAnnuityYear = contract?.last_annuity_paid 
+    ? contract.last_annuity_paid + 1 
+    : contract ? dayjs(contract.start_date).year() + 1 : 0;
   
   // Loading & Error states
   const isLoading = isContractLoading || (isNew && isOwnersLoading);
@@ -130,19 +138,8 @@ const ContractDetailPage: React.FC = () => {
           replace: true 
         });
       } else if (mode === 'annuity' && contract) {
-        if (data.last_annuity_paid === null) return;
-        
-        await updateAnnuityMutation.mutateAsync({
-          id: contract.id,
-          data: {
-            last_annuity_paid: data.last_annuity_paid,
-          },
-        });
-        
-        navigate(`/contracts/${contract.id}?mode=view`, { 
-          state: { ...location.state, justSaved: true },
-          replace: true 
-        });
+        // Gestito dal modal ConfirmAnnuityModal
+        return;
       }
     } catch (error) {
       console.error("Errore salvataggio contratto:", error);
@@ -156,6 +153,25 @@ const ContractDetailPage: React.FC = () => {
       setIsDeleteModalOpen(false);
       
       navigate(-1);
+    }
+  };
+
+  const handleAnnuityConfirm = async () => {
+    if (!contract) return;
+    try {
+      await updateAnnuityMutation.mutateAsync({
+        id: contract.id,
+        data: {
+          last_annuity_paid: nextAnnuityYear,
+        },
+      });
+      setIsAnnuityModalOpen(false);
+      navigate(`/contracts/${contract.id}?mode=view`, { 
+        state: { ...location.state, justSaved: true },
+        replace: true 
+      });
+    } catch (error) {
+      console.error("Errore aggiornamento annualità:", error);
     }
   };
 
@@ -303,9 +319,9 @@ const ContractDetailPage: React.FC = () => {
               <span className="text-text-subtle text-sm block">Regime fiscale</span>
               <div className="flex items-center gap-2">
                 {contract.cedolare_secca ? (
-                   <span className="flex items-center gap-1 text-text-body font-medium"><FaCheckCircle className="text-xs text-text-subtle"/> Cedolare secca</span>
+                   <span className="flex items-center gap-2 text-text-body font-medium"><FaScroll  className="text-xs text-text-subtle"/> Cedolare secca</span>
                 ) : (
-                   <span className="flex items-center gap-1 text-text-body"><FaTimesCircle className="text-xs text-text-subtle"/> Regime ordinario</span>
+                   <span className="flex items-center gap-2 text-text-body"><FaScroll  className="text-xs text-text-subtle"/> Regime ordinario</span>
                 )}
               </div>
             </div>
@@ -314,9 +330,9 @@ const ContractDetailPage: React.FC = () => {
               <span className="text-text-subtle text-sm block">Canone Concordato</span>
               <div className="flex items-center gap-2">
                  {contract.canone_concordato ? (
-                   <span className="flex items-center gap-1 text-text-body font-medium"><FaCheckCircle className="text-xs text-text-subtle"/> Sì</span>
+                   <span className="flex items-center gap-2 text-text-body font-medium"><FaCheckCircle className="text-xs text-text-subtle"/> Sì</span>
                 ) : (
-                   <span className="flex items-center gap-1 text-text-body"><FaTimesCircle className="text-xs text-text-subtle"/> No</span>
+                   <span className="flex items-center gap-2 text-text-body"><FaTimesCircle className="text-xs text-text-subtle"/> No</span>
                 )}
               </div>
             </div>
@@ -399,53 +415,64 @@ const ContractDetailPage: React.FC = () => {
              </div>
           )}
 
-          {mode === 'annuity' && (
-             <div className="flex flex-col gap-6 mb-8">
-                {contract && !contract.cedolare_secca && (
-                   <AnnuityTimeline 
-                      annuities={contract?.annuities || []}
-                      contractStartYear={dayjs(contract.start_date).year()}
-                      contractEndYear={dayjs(contract.end_date).year()}
-                   />
-                )}
-             </div>
-          )}
-          
-          <ContractForm
-            mode={mode === 'add' ? 'create' : mode}
-            initialData={contract ? {
-              ...contract,
-              start_date: contract.start_date ? dayjs(contract.start_date).format('YYYY-MM-DD') : '',
-              end_date: contract.end_date ? dayjs(contract.end_date).format('YYYY-MM-DD') : '',
-              last_annuity_paid: mode === 'annuity' && contract.last_annuity_paid 
-                ? contract.last_annuity_paid + 1 
-                : contract.last_annuity_paid,
-              tenant_data: {
-                name: contract.tenant.name,
-                surname: contract.tenant.surname,
-                phone: contract.tenant.phone || '',
-                email: contract.tenant.email || '',
+          {mode === 'annuity' ? (
+            <>
+              {contract && !contract.cedolare_secca && (
+                <div className="mb-8">
+                  <AnnuityTimeline 
+                    annuities={contract?.annuities || []}
+                    contractStartYear={dayjs(contract.start_date).year()}
+                    contractEndYear={dayjs(contract.end_date).year()}
+                  />
+                </div>
+              )}
+              <Button
+                variant="primary"
+                className="w-full"
+                onClick={() => setIsAnnuityModalOpen(true)}
+                isLoading={updateAnnuityMutation.isPending}
+              >
+                Conferma rinnovo annualità
+              </Button>
+            </>
+          ) : (
+            <ContractForm
+              mode={mode === 'add' ? 'create' : mode}
+              initialData={contract ? {
+                ...contract,
+                start_date: contract.start_date ? dayjs(contract.start_date).format('YYYY-MM-DD') : '',
+                end_date: contract.end_date ? dayjs(contract.end_date).format('YYYY-MM-DD') : '',
+                last_annuity_paid: contract.last_annuity_paid,
+                tenant_data: {
+                  name: contract.tenant.name,
+                  surname: contract.tenant.surname,
+                  phone: contract.tenant.phone || '',
+                  email: contract.tenant.email || '',
+                }
+              } : undefined}
+              owners={owners}
+              preselectedOwnerId={preselectedOwnerId}
+              allowOwnerChange={mode === 'add' && !preselectedOwnerId}
+              minAnnuityYear={contract 
+                ? (mode === 'edit' 
+                  ? dayjs(contract.start_date).year()
+                  : (contract.last_annuity_paid ? contract.last_annuity_paid + 1 : dayjs(contract.start_date).year() + 1))
+                : 2000
               }
-            } : undefined}
-            owners={owners}
-            preselectedOwnerId={preselectedOwnerId}
-            allowOwnerChange={mode === 'add' && !preselectedOwnerId}
-            minAnnuityYear={contract ? (contract.last_annuity_paid ? contract.last_annuity_paid + 1 : dayjs(contract.start_date).year() + 1) : 2000}
-            onSubmit={handleSubmit}
-            isLoading={
-              createContractMutation.isPending || 
-              updateContractMutation.isPending || 
-              renewContractMutation.isPending || 
-              updateAnnuityMutation.isPending
-            }
-            submitLabel={
-              mode === 'add' ? 'Aggiungi contratto' : 
-              mode === 'renew' ? 'Conferma rinnovo' :
-              mode === 'annuity' ? 'Conferma rinnovo annualità' : 
-              'Salva modifiche'
-            }
-            onDelete={mode === 'edit' ? () => setIsDeleteModalOpen(true) : undefined}
-          />
+              onSubmit={handleSubmit}
+              isLoading={
+                createContractMutation.isPending || 
+                updateContractMutation.isPending || 
+                renewContractMutation.isPending
+              }
+              submitLabel={
+                mode === 'add' ? 'Aggiungi contratto' : 
+                mode === 'renew' ? 'Conferma rinnovo' :
+                'Salva modifiche'
+              }
+              onDelete={mode === 'edit' ? () => setIsDeleteModalOpen(true) : undefined}
+            />
+          )}
         </div>
       )}
 
@@ -460,6 +487,15 @@ const ContractDetailPage: React.FC = () => {
           isLoading={deleteContractMutation.isPending}
         />
       )}
+
+      {/* Annuity Confirmation Modal */}
+      <ConfirmAnnuityModal
+        isOpen={isAnnuityModalOpen}
+        onClose={() => setIsAnnuityModalOpen(false)}
+        onConfirm={handleAnnuityConfirm}
+        annuityYear={nextAnnuityYear}
+        isLoading={updateAnnuityMutation.isPending}
+      />
     </div>
   );
 };

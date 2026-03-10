@@ -437,3 +437,85 @@ export const recalculateAnnuityDueDates = async (
     throw new AppError('Errore durante il ricalcolo delle annualità', 500);
   }
 };
+
+/**
+ * Sincronizza lo stato is_paid di tutte le annuities di un contratto
+ * in base al valore corrente di last_annuity_paid.
+ * 
+ * Logica:
+ * - Annuities con year <= last_annuity_paid → is_paid = true
+ * - Annuities con year > last_annuity_paid → is_paid = false, paid_at = null
+ * 
+ * Viene chiamata quando last_annuity_paid viene modificato in edit mode
+ * per riallineare la timeline.
+ * 
+ * @param contractId - ID del contratto
+ * @param trx - Transaction Knex opzionale
+ */
+export const syncAnnuityPaidStatus = async (
+  contractId: number,
+  trx?: Knex.Transaction
+): Promise<void> => {
+  console.log('[ANNUITY_SERVICE] Sync is_paid status per contractId:', contractId);
+
+  try {
+    const executSync = async (transaction: Knex.Transaction) => {
+      // 1. Recupera il contratto
+      const contract = await transaction<Contract>('contracts')
+        .where({ id: contractId })
+        .first();
+
+      if (!contract) {
+        throw new AppError('Contratto non trovato', 404);
+      }
+
+      if (contract.cedolare_secca) {
+        console.log('[ANNUITY_SERVICE] Contratto in cedolare secca, skip sync');
+        return;
+      }
+
+      const lastPaid = contract.last_annuity_paid || 0;
+      console.log('[ANNUITY_SERVICE] last_annuity_paid:', lastPaid);
+
+      // 2. Marca come pagate le annuities con anno <= last_annuity_paid
+      const paidCount = await transaction<Annuity>('annuities')
+        .where({ contract_id: contractId })
+        .andWhere('year', '<=', lastPaid)
+        .andWhere('is_paid', false)
+        .update({
+          is_paid: true,
+          paid_at: new Date(),
+          updated_at: new Date(),
+        });
+
+      console.log('[ANNUITY_SERVICE] Annuities marcate come pagate:', paidCount);
+
+      // 3. Marca come NON pagate le annuities con anno > last_annuity_paid
+      const unpaidCount = await transaction<Annuity>('annuities')
+        .where({ contract_id: contractId })
+        .andWhere('year', '>', lastPaid)
+        .andWhere('is_paid', true)
+        .update({
+          is_paid: false,
+          paid_at: null,
+          updated_at: new Date(),
+        });
+
+      console.log('[ANNUITY_SERVICE] Annuities marcate come non pagate:', unpaidCount);
+      console.log('[ANNUITY_SERVICE] ✅ Sync is_paid completato');
+    };
+
+    if (trx) {
+      await executSync(trx);
+    } else {
+      await db.transaction(async (newTrx) => {
+        await executSync(newTrx);
+      });
+    }
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+
+    console.error('[ANNUITY_SERVICE] Errore sync is_paid:', error);
+    throw new AppError('Errore durante la sincronizzazione dello stato annualità', 500);
+  }
+};

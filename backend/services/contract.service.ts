@@ -493,6 +493,17 @@ export const updateContract = async (
         console.log('[CONTRACT_SERVICE] ✅ Annuities ricalcolate');
       }
 
+      // ⭐ 7. NUOVO: Sincronizza is_paid delle annuities se last_annuity_paid è stato modificato
+      const newLastAnnuity = data.last_annuity_paid;
+      const oldLastAnnuity = existingContract.last_annuity_paid;
+      console.log('[CONTRACT_SERVICE] last_annuity_paid check - old:', oldLastAnnuity, '(type:', typeof oldLastAnnuity, ') new:', newLastAnnuity, '(type:', typeof newLastAnnuity, ')');
+      
+      if (newLastAnnuity !== undefined && Number(newLastAnnuity) !== Number(oldLastAnnuity)) {
+        console.log('[CONTRACT_SERVICE] last_annuity_paid modificato, sincronizzazione is_paid...');
+        await annuityService.syncAnnuityPaidStatus(contractId, trx);
+        console.log('[CONTRACT_SERVICE] ✅ is_paid annuities sincronizzato');
+      }
+
       return {
         ...updatedContract,
         start_date: dayjs(updatedContract.start_date).format('YYYY-MM-DD'),

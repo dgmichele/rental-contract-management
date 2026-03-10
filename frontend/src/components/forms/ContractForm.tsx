@@ -7,7 +7,8 @@ import {
   FaHome, 
   FaCalendarAlt, 
   FaMoneyBillWave, 
-  FaFileContract
+  FaFileContract,
+  FaInfoCircle
 } from 'react-icons/fa';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
@@ -114,7 +115,17 @@ export default function ContractForm({
   minAnnuityYear,
 }: ContractFormProps) {
 
-  const schema = useMemo(() => createContractSchema(minAnnuityYear), [minAnnuityYear]);
+  // In edit mode, il min è dinamico basato su start_date (real-time)
+  // In altri modeParam il min resta quello passato dal parent
+  const effectiveMinAnnuityYear = useMemo(() => {
+    if (mode === 'edit' && initialData?.start_date) {
+      const year = new Date(initialData.start_date).getFullYear();
+      if (!isNaN(year)) return year;
+    }
+    return minAnnuityYear;
+  }, [mode, initialData?.start_date, minAnnuityYear]);
+
+  const schema = useMemo(() => createContractSchema(effectiveMinAnnuityYear), [effectiveMinAnnuityYear]);
 
   const methods = useForm<ContractFormData>({
     resolver: zodResolver(schema),
@@ -147,6 +158,18 @@ export default function ContractForm({
 
   // Watch per cedolare_secca per mostrare/nascondere last_annuity_paid
   const cedolareSecca = watch('cedolare_secca');
+  const startDate = watch('start_date');
+
+  // In modalità renew, se l'utente toglie cedolare secca,
+  // assegna automaticamente l'anno della start_date al campo last_annuity_paid
+  useEffect(() => {
+    if (mode === 'renew' && !cedolareSecca && startDate) {
+      const year = new Date(startDate).getFullYear();
+      if (!isNaN(year)) {
+        setValue('last_annuity_paid', year, { shouldDirty: true });
+      }
+    }
+  }, [mode, cedolareSecca, startDate, setValue]);
 
   // Imposta il proprietario preselezionato se cambia
   useEffect(() => {
@@ -338,20 +361,30 @@ export default function ContractForm({
           )}
 
           {/* Ultima Annualità Pagata - Solo se NON cedolare secca */}
-          {!cedolareSecca && (
-            <div className={clsx(mode === 'annuity' ? "space-y-4" : "")}>
-              <Input
-                label={mode === 'annuity' ? "Inserisci l'anno dell'annualità rinnovata per confermare:" : "Ultima annualità pagata (Anno)"}
-                name="last_annuity_paid"
-                type="number"
-                register={register}
-                error={errors.last_annuity_paid?.message}
-                placeholder="es. 2025"
-                startIcon={<FaFileContract />}
-                disabled={isFieldDisabled('last_annuity_paid')}
-                min={minAnnuityYear?.toString() || "2000"}
-              />
+          {!cedolareSecca && mode === 'renew' && (
+            <div className="flex items-start gap-3 bg-bg-card p-3 rounded-lg border border-secondary">
+              <span className="text-2xl shrink-0 text-secondary"><FaInfoCircle /></span>
+              <p className="text-sm text-text-title leading-relaxed font-medium">
+                Il pagamento dell'annualità viene aggiunto in automatico in base all'anno di rinnovo.
+              </p>
             </div>
+          )}
+          {!cedolareSecca && mode !== 'renew' && mode !== 'annuity' && (
+            <Input
+              label="Ultima annualità pagata (Anno)"
+              name="last_annuity_paid"
+              type="number"
+              register={register}
+              error={errors.last_annuity_paid?.message}
+              placeholder="es. 2025"
+              startIcon={<FaFileContract />}
+              disabled={isFieldDisabled('last_annuity_paid')}
+              min={(
+                mode === 'edit' && startDate
+                  ? new Date(startDate).getFullYear()
+                  : (minAnnuityYear || 2000)
+              ).toString()}
+            />
           )}
         </div>
 
