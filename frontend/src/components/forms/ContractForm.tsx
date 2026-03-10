@@ -159,6 +159,31 @@ export default function ContractForm({
   // Watch per cedolare_secca per mostrare/nascondere last_annuity_paid
   const cedolareSecca = watch('cedolare_secca');
   const startDate = watch('start_date');
+  const endDate = watch('end_date');
+
+  // calcolo stringa data odierna formattata 'YYYY-MM-DD' per attributo min dell'input date
+  const todayStr = useMemo(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  }, []);
+
+  const isRenewDisabled = useMemo(() => {
+    if (mode !== 'renew') return false;
+    
+    if (!startDate || !endDate) return true; // disabilita se mancano date
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // Disabilita se le date sono passate (rispetto ad oggi) o start_date >= end_date
+    if (start < today || end < today) return true;
+    if (start >= end) return true;
+    
+    return false;
+  }, [mode, startDate, endDate]);
 
   // In modalità renew, se l'utente toglie cedolare secca,
   // assegna automaticamente l'anno della start_date al campo last_annuity_paid
@@ -279,6 +304,7 @@ export default function ContractForm({
                   error={errors.start_date?.message}
                   startIcon={<FaCalendarAlt />}
                   disabled={isFieldDisabled('start_date')}
+                  min={mode === 'renew' ? todayStr : undefined}
                 />
                 <Input
                   label="Data fine"
@@ -288,6 +314,7 @@ export default function ContractForm({
                   error={errors.end_date?.message}
                   startIcon={<FaCalendarAlt />}
                   disabled={isFieldDisabled('end_date')}
+                  min={mode === 'renew' ? todayStr : undefined}
                 />
               </div>
 
@@ -395,7 +422,7 @@ export default function ContractForm({
             variant="primary"
             className="w-full"
             isLoading={isLoading}
-            disabled={mode === 'edit' && !isDirty}
+            disabled={(mode === 'edit' && !isDirty) || isRenewDisabled}
           >
             {submitLabel}
           </Button>

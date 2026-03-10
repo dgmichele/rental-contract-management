@@ -31,6 +31,7 @@ import Button from '../../components/ui/Button';
 import Skeleton from '../../components/ui/Skeleton';
 import DeleteModal from '../../components/modals/DeleteModal';
 import ConfirmAnnuityModal from '../../components/modals/ConfirmAnnuityModal';
+import ConfirmRenewModal from '../../components/modals/ConfirmRenewModal';
 import { formatCurrency } from '../../utils/format';
 
 const ContractDetailPage: React.FC = () => {
@@ -65,6 +66,8 @@ const ContractDetailPage: React.FC = () => {
   // State
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isAnnuityModalOpen, setIsAnnuityModalOpen] = useState(false);
+  const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
+  const [renewFormData, setRenewFormData] = useState<ContractFormData | null>(null);
 
   // Derived state
   const contract = contractData?.data;
@@ -121,22 +124,8 @@ const ContractDetailPage: React.FC = () => {
           replace: true 
         });
       } else if (mode === 'renew' && contract) {
-        await renewContractMutation.mutateAsync({
-          id: contract.id,
-          data: {
-            start_date: data.start_date,
-            end_date: data.end_date,
-            cedolare_secca: data.cedolare_secca,
-            typology: data.typology,
-            canone_concordato: data.canone_concordato,
-            monthly_rent: data.monthly_rent,
-          },
-        });
-        
-        navigate(`/contracts/${contract.id}?mode=view`, { 
-          state: { ...location.state, justSaved: true },
-          replace: true 
-        });
+        setRenewFormData(data);
+        setIsRenewModalOpen(true);
       } else if (mode === 'annuity' && contract) {
         // Gestito dal modal ConfirmAnnuityModal
         return;
@@ -153,6 +142,31 @@ const ContractDetailPage: React.FC = () => {
       setIsDeleteModalOpen(false);
       
       navigate(-1);
+    }
+  };
+
+  const handleRenewConfirm = async () => {
+    if (!contract || !renewFormData) return;
+    try {
+      await renewContractMutation.mutateAsync({
+        id: contract.id,
+        data: {
+          start_date: renewFormData.start_date,
+          end_date: renewFormData.end_date,
+          cedolare_secca: renewFormData.cedolare_secca,
+          typology: renewFormData.typology,
+          canone_concordato: renewFormData.canone_concordato,
+          monthly_rent: renewFormData.monthly_rent,
+        },
+      });
+      setIsRenewModalOpen(false);
+      
+      navigate(`/contracts/${contract.id}?mode=view`, { 
+        state: { ...location.state, justSaved: true },
+        replace: true 
+      });
+    } catch (error) {
+      console.error("Errore rinnovo contratto:", error);
     }
   };
 
@@ -495,6 +509,16 @@ const ContractDetailPage: React.FC = () => {
         onConfirm={handleAnnuityConfirm}
         annuityYear={nextAnnuityYear}
         isLoading={updateAnnuityMutation.isPending}
+      />
+
+      {/* Renew Confirmation Modal */}
+      <ConfirmRenewModal
+        isOpen={isRenewModalOpen}
+        onClose={() => setIsRenewModalOpen(false)}
+        onConfirm={handleRenewConfirm}
+        newStartDate={renewFormData?.start_date}
+        newEndDate={renewFormData?.end_date}
+        isLoading={renewContractMutation.isPending}
       />
     </div>
   );

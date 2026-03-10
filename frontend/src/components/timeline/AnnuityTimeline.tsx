@@ -59,12 +59,15 @@ export const AnnuityTimeline: React.FC<AnnuityTimelineProps> = ({
              isPaid = false;
           }
 
-          // Controllo "scade a breve" se meno di 60 giorni
+          // Controllo scadenza
           let expireSoon = false;
+          let expired = false;
           if (!isPaid && annuity && annuity.due_date) {
             const expireDate = dayjs(annuity.due_date);
             const daysLeft = expireDate.diff(today, "day");
-            if (daysLeft >= 0 && daysLeft <= 60) {
+            if (daysLeft < 0) {
+              expired = true;
+            } else if (daysLeft <= 60) {
               expireSoon = true;
             }
           }
@@ -100,7 +103,7 @@ export const AnnuityTimeline: React.FC<AnnuityTimelineProps> = ({
                   <span
                     className={clsx(
                       "font-bold text-lg transition-colors duration-300",
-                      isPaid ? "text-text-title" : (isNext ? "text-orange-600" : "text-text-body"),
+                      isPaid ? "text-text-title" : (expired ? "text-error" : (isNext ? "text-orange-600" : "text-text-body")),
                     )}
                   >
                     {year}
@@ -108,6 +111,11 @@ export const AnnuityTimeline: React.FC<AnnuityTimelineProps> = ({
                   {expireSoon && (
                     <span className="bg-orange-50 text-orange-600 px-2 py-0.5 rounded text-xs border border-orange-200 whitespace-nowrap">
                       ⚠️ scade a breve
+                    </span>
+                  )}
+                  {expired && (
+                    <span className="bg-red-50 text-red-600 px-2 py-0.5 rounded text-xs border border-red-200 whitespace-nowrap">
+                      ⚠️ scaduta
                     </span>
                   )}
                 </div>

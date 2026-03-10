@@ -61,7 +61,8 @@ export const ContractCard = ({
   const finalEndDate = dayjs(contract.end_date);
   const nextDeadline = nextAnnuityDate.isAfter(finalEndDate) ? finalEndDate : nextAnnuityDate;
   const daysToDeadline = nextDeadline.diff(today, 'day');
-  const isExpiringSoon = showExpiryAlert && !isCedolareSecca && daysToDeadline < 60;
+  const isExpired = showExpiryAlert && !isCedolareSecca && daysToDeadline < 0;
+  const isExpiringSoon = showExpiryAlert && !isCedolareSecca && daysToDeadline >= 0 && daysToDeadline < 60;
   
   const handleManage = () => {
     if (!expiryType) {
@@ -170,6 +171,11 @@ export const ContractCard = ({
       </div>
 
       {/* Alert Banner for non-cedolare secca expiration */}
+      {isExpired && (
+        <div className="flex items-center gap-1.5 mb-4 px-3 py-2 bg-error/10 text-error border border-error/20 rounded-lg text-xs font-bold animate-pulse">
+           <span>⚠️ Annualità scaduta</span>
+        </div>
+      )}
       {isExpiringSoon && (
         <div className="flex items-center gap-1.5 mb-4 px-3 py-2 bg-warning/10 text-warning border border-warning/20 rounded-lg text-xs font-bold animate-pulse">
            <span>⚠️ Annualità in scadenza</span>
