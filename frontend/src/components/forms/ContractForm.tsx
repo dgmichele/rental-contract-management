@@ -7,9 +7,7 @@ import {
   FaHome, 
   FaCalendarAlt, 
   FaMoneyBillWave, 
-  FaFileContract,
-  FaCheckCircle,
-  FaTimesCircle 
+  FaFileContract
 } from 'react-icons/fa';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
@@ -233,131 +231,132 @@ export default function ContractForm({
 
         {/* Sezione Dati Contratto */}
         <div className="space-y-4">
-          <h3 className="text-lg font-bold text-text-title">Dati contratto</h3>
+          {mode !== 'annuity' && (
+            <>
+              <h3 className="text-lg font-bold text-text-title">Dati contratto</h3>
 
-          {/* Indirizzo */}
-          <Input
-            label="Indirizzo immobile"
-            name="address"
-            register={register}
-            error={errors.address?.message}
-            placeholder="es. Via Roma 123, Milano"
-            startIcon={<FaHome />}
-            disabled={isFieldDisabled('address')}
-          />
+              {/* Indirizzo */}
+              <Input
+                label="Indirizzo immobile"
+                name="address"
+                register={register}
+                error={errors.address?.message}
+                placeholder="es. Via Roma 123, Milano"
+                startIcon={<FaHome />}
+                disabled={isFieldDisabled('address')}
+              />
 
-          {/* Durata Contratto */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="Data inizio"
-              name="start_date"
-              type="date"
-              register={register}
-              error={errors.start_date?.message}
-              startIcon={<FaCalendarAlt />}
-              disabled={isFieldDisabled('start_date')}
-            />
-            <Input
-              label="Data fine"
-              name="end_date"
-              type="date"
-              register={register}
-              error={errors.end_date?.message}
-              startIcon={<FaCalendarAlt />}
-              disabled={isFieldDisabled('end_date')}
-            />
-          </div>
+              {/* Durata Contratto */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="Data inizio"
+                  name="start_date"
+                  type="date"
+                  register={register}
+                  error={errors.start_date?.message}
+                  startIcon={<FaCalendarAlt />}
+                  disabled={isFieldDisabled('start_date')}
+                />
+                <Input
+                  label="Data fine"
+                  name="end_date"
+                  type="date"
+                  register={register}
+                  error={errors.end_date?.message}
+                  startIcon={<FaCalendarAlt />}
+                  disabled={isFieldDisabled('end_date')}
+                />
+              </div>
 
-          {/* Cedolare Secca */}
-          <div className="flex items-center gap-3 p-4 bg-bg-card rounded-lg border border-border">
-            <input
-              type="checkbox"
-              id="cedolare_secca"
-              {...register('cedolare_secca')}
-              disabled={isFieldDisabled('cedolare_secca')}
-              className="w-5 h-5 text-primary bg-bg-card border-border rounded focus:ring-2 focus:ring-secondary cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-            />
-            <label htmlFor="cedolare_secca" className="text-sm font-semibold text-text-title cursor-pointer">
-              Cedolare Secca
-            </label>
-            {cedolareSecca ? (
-              <FaCheckCircle className="text-success ml-auto" />
-            ) : (
-              <FaTimesCircle className="text-error ml-auto" />
-            )}
-          </div>
+              {/* Cedolare Secca */}
+              <div className="flex items-center gap-3 p-4 bg-bg-card rounded-lg border border-border">
+                <input
+                  type="checkbox"
+                  id="cedolare_secca"
+                  {...register('cedolare_secca')}
+                  disabled={isFieldDisabled('cedolare_secca')}
+                  className="w-5 h-5 text-primary bg-bg-card border-border rounded focus:ring-2 focus:ring-secondary cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                />
+                <label htmlFor="cedolare_secca" className="text-sm font-semibold text-text-title cursor-pointer">
+                  Cedolare Secca
+                </label>
+              </div>
 
-          {/* Tipologia */}
-          <div className="flex flex-col gap-2">
-            <label htmlFor="typology" className="text-sm font-semibold text-text-title">
-              Tipologia contratto
-            </label>
-            <select
-              id="typology"
-              {...register('typology')}
-              disabled={isFieldDisabled('typology')}
-              className={clsx(
-                'bg-bg-card border border-border rounded px-3 py-2 focus:outline-none focus:border-secondary transition-colors duration-300 w-full',
-                {
-                  'border-red-500 focus:border-red-500': errors.typology,
-                  'opacity-60 cursor-not-allowed': isFieldDisabled('typology'),
-                }
-              )}
-            >
-              <option value="residenziale">Residenziale</option>
-              <option value="commerciale">Commerciale</option>
-            </select>
-            {errors.typology && (
-              <span className="text-xs text-red-500">{errors.typology.message}</span>
-            )}
-          </div>
+              {/* Tipologia */}
+              <div className="flex flex-col gap-2">
+                <label htmlFor="typology" className="text-sm font-semibold text-text-title">
+                  Tipologia contratto
+                </label>
+                <select
+                  id="typology"
+                  {...register('typology')}
+                  disabled={isFieldDisabled('typology')}
+                  className={clsx(
+                    'bg-bg-card border border-border rounded px-3 py-2 focus:outline-none focus:border-secondary transition-colors duration-300 w-full',
+                    {
+                      'border-red-500 focus:border-red-500': errors.typology,
+                      'opacity-60 cursor-not-allowed': isFieldDisabled('typology'),
+                    }
+                  )}
+                >
+                  <option value="residenziale">Residenziale</option>
+                  <option value="commerciale">Commerciale</option>
+                </select>
+                {errors.typology && (
+                  <span className="text-xs text-red-500">{errors.typology.message}</span>
+                )}
+              </div>
 
-          {/* Canone Concordato */}
-          <div className="flex items-center gap-3 p-4 bg-bg-card rounded-lg border border-border">
-            <input
-              type="checkbox"
-              id="canone_concordato"
-              {...register('canone_concordato')}
-              disabled={isFieldDisabled('canone_concordato')}
-              className="w-5 h-5 text-primary bg-bg-card border-border rounded focus:ring-2 focus:ring-secondary cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-            />
-            <label htmlFor="canone_concordato" className="text-sm font-semibold text-text-title cursor-pointer">
-              Canone Concordato
-            </label>
-          </div>
+              {/* Canone Concordato */}
+              <div className="flex items-center gap-3 p-4 bg-bg-card rounded-lg border border-border">
+                <input
+                  type="checkbox"
+                  id="canone_concordato"
+                  {...register('canone_concordato')}
+                  disabled={isFieldDisabled('canone_concordato')}
+                  className="w-5 h-5 text-primary bg-bg-card border-border rounded focus:ring-2 focus:ring-secondary cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                />
+                <label htmlFor="canone_concordato" className="text-sm font-semibold text-text-title cursor-pointer">
+                  Canone Concordato
+                </label>
+              </div>
 
-          {/* Canone Mensile */}
-          <Input
-            label="Canone mensile (€)"
-            name="monthly_rent"
-            type="number"
-            register={register}
-            error={errors.monthly_rent?.message}
-            placeholder="es. 800"
-            startIcon={<FaMoneyBillWave />}
-            disabled={isFieldDisabled('monthly_rent')}
-            step="0.01"
-            min="0"
-          />
+              {/* Canone Mensile */}
+              <Input
+                label="Canone mensile (€)"
+                name="monthly_rent"
+                type="number"
+                register={register}
+                error={errors.monthly_rent?.message}
+                placeholder="es. 800"
+                startIcon={<FaMoneyBillWave />}
+                disabled={isFieldDisabled('monthly_rent')}
+                step="0.01"
+                min="0"
+              />
+            </>
+          )}
 
           {/* Ultima Annualità Pagata - Solo se NON cedolare secca */}
           {!cedolareSecca && (
-            <Input
-              label="Ultima annualità pagata (Anno)"
-              name="last_annuity_paid"
-              type="number"
-              register={register}
-              error={errors.last_annuity_paid?.message}
-              placeholder="es. 2025"
-              startIcon={<FaFileContract />}
-              disabled={isFieldDisabled('last_annuity_paid')}
-              min={minAnnuityYear?.toString() || "2000"}
-            />
+            <div className={clsx(mode === 'annuity' ? "space-y-4" : "")}>
+              <Input
+                label={mode === 'annuity' ? "Inserisci l'anno dell'annualità rinnovata per confermare:" : "Ultima annualità pagata (Anno)"}
+                name="last_annuity_paid"
+                type="number"
+                register={register}
+                error={errors.last_annuity_paid?.message}
+                placeholder="es. 2025"
+                startIcon={<FaFileContract />}
+                disabled={isFieldDisabled('last_annuity_paid')}
+                min={minAnnuityYear?.toString() || "2000"}
+              />
+            </div>
           )}
         </div>
 
         {/* Action Buttons */}
-        <div className="pt-4 flex flex-col gap-3 border-t border-border">
+        <div className="pt-4 flex flex-col gap-3">
           <Button
             type="submit"
             variant="primary"

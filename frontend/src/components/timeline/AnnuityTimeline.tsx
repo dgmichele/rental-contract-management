@@ -60,12 +60,12 @@ export const AnnuityTimeline: React.FC<AnnuityTimelineProps> = ({
           }
 
           // Controllo "scade a breve" se meno di 60 giorni
-          let scadeABreve = false;
+          let expireSoon = false;
           if (!isPaid && annuity && annuity.due_date) {
-            const scadenza = dayjs(annuity.due_date);
-            const giorniMancanti = scadenza.diff(today, "day");
-            if (giorniMancanti >= 0 && giorniMancanti <= 60) {
-              scadeABreve = true;
+            const expireDate = dayjs(annuity.due_date);
+            const daysLeft = expireDate.diff(today, "day");
+            if (daysLeft >= 0 && daysLeft <= 60) {
+              expireSoon = true;
             }
           }
 
@@ -105,7 +105,7 @@ export const AnnuityTimeline: React.FC<AnnuityTimelineProps> = ({
                   >
                     {year}
                   </span>
-                  {scadeABreve && (
+                  {expireSoon && (
                     <span className="bg-orange-50 text-orange-600 px-2 py-0.5 rounded text-xs border border-orange-200 whitespace-nowrap">
                       ⚠️ scade a breve
                     </span>

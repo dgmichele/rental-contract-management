@@ -11,6 +11,7 @@ import {
   FaMoneyBillWave, 
   FaFileContract, 
   FaCheckCircle, 
+  FaInfoCircle,
   FaTimesCircle 
 } from 'react-icons/fa';
 import { 
@@ -377,30 +378,29 @@ const ContractDetailPage: React.FC = () => {
         renderViewMode()
       ) : (
         <div className="max-w-3xl mx-auto bg-bg-card p-6 sm:p-8 rounded-xl border border-border shadow-sm">
-          <h1 className="text-2xl sm:text-3xl font-heading text-text-title mb-8">
+          <h1 className="text-2xl sm:text-3xl font-heading text-text-title mb-2">
             {mode === 'add' ? 'Nuovo contratto' : 
              mode === 'edit' ? 'Modifica contratto' : 
              mode === 'renew' ? 'Rinnova contratto' : 
              mode === 'annuity' ? 'Rinnova annualità' : ''}
           </h1>
+          {contract && (mode === 'renew' || mode === 'annuity') && (
+            <p className="text-text-subtle mb-8 font-medium">
+              Contratto tra {contract.owner.name} {contract.owner.surname} e {contract.tenant.name} {contract.tenant.surname}
+            </p>
+          )}
 
           {mode === 'renew' && (
-             <div className="flex items-start gap-3 bg-green-50/80 p-4 rounded-lg mb-8 border border-green-200">
-                <span className="text-xl shrink-0 mt-[-2px]">✅</span>
-                <p className="text-sm text-green-800 leading-relaxed font-medium">
-                  Rinnova il contratto inserendo la nuova data di inizio e di scadenza. Puoi anche modificare altri dati se le condizioni contrattuali hanno subito cambiamenti, tra cui l'annualità successiva se idonea alla tipologia contrattuale scelta.
+             <div className="flex items-start gap-3 bg-bg-card p-3 rounded-lg mb-8 border border-secondary">
+                <span className="text-2xl shrink-0 text-secondary"><FaInfoCircle /></span>
+                <p className="text-sm text-text-title leading-relaxed font-medium">
+                  Rinnova il contratto inserendo la nuova data di inizio e di scadenza. Puoi anche modificare altri dati se le condizioni contrattuali hanno subito cambiamenti.
                 </p>
              </div>
           )}
 
           {mode === 'annuity' && (
              <div className="flex flex-col gap-6 mb-8">
-                <div className="flex items-start gap-3 bg-green-50/80 p-4 rounded-lg border border-green-200">
-                    <span className="text-xl shrink-0 mt-[-2px]">✅</span>
-                    <p className="text-sm text-green-800 leading-relaxed font-medium">
-                    Rinnova l'annualità inserendo l'anno aggiornato dell'ultima annualità pagata.
-                    </p>
-                </div>
                 {contract && !contract.cedolare_secca && (
                    <AnnuityTimeline 
                       annuities={contract?.annuities || []}
