@@ -117,12 +117,16 @@ const ContractDetailPage: React.FC = () => {
           },
         });
         
-        // Reindirizza alla vista dettaglio sostituendo la voce corrente della cronologia
-        // per evitare loop al click del tasto "Torna indietro"
-        navigate(`/contracts/${contract.id}?mode=view`, { 
-          state: { ...location.state, justSaved: true },
-          replace: true 
-        });
+        if (location.state?.fromView) {
+          navigate(-1);
+        } else {
+          // Reindirizza alla vista dettaglio sostituendo la voce corrente della cronologia
+          // per evitare loop al click del tasto "Torna indietro"
+          navigate(`/contracts/${contract.id}?mode=view`, { 
+            state: { ...location.state, justSaved: true },
+            replace: true 
+          });
+        }
       } else if (mode === 'renew' && contract) {
         setRenewFormData(data);
         setIsRenewModalOpen(true);
@@ -161,10 +165,14 @@ const ContractDetailPage: React.FC = () => {
       });
       setIsRenewModalOpen(false);
       
-      navigate(`/contracts/${contract.id}?mode=view`, { 
-        state: { ...location.state, justSaved: true },
-        replace: true 
-      });
+      if (location.state?.fromView) {
+        navigate(-1);
+      } else {
+        navigate(`/contracts/${contract.id}?mode=view`, { 
+          state: { ...location.state, justSaved: true },
+          replace: true 
+        });
+      }
     } catch (error) {
       console.error("Errore rinnovo contratto:", error);
     }
@@ -180,10 +188,15 @@ const ContractDetailPage: React.FC = () => {
         },
       });
       setIsAnnuityModalOpen(false);
-      navigate(`/contracts/${contract.id}?mode=view`, { 
-        state: { ...location.state, justSaved: true },
-        replace: true 
-      });
+      
+      if (location.state?.fromView) {
+        navigate(-1);
+      } else {
+        navigate(`/contracts/${contract.id}?mode=view`, { 
+          state: { ...location.state, justSaved: true },
+          replace: true 
+        });
+      }
     } catch (error) {
       console.error("Errore aggiornamento annualità:", error);
     }
@@ -228,7 +241,7 @@ const ContractDetailPage: React.FC = () => {
             <div className="flex gap-2">
               <Button 
                 variant="primary" 
-                onClick={() => navigate(`?mode=edit`, { state: location.state })}
+                onClick={() => navigate(`?mode=edit`, { state: { ...location.state, fromView: true } })}
                 className="flex items-center gap-2"
               >
                 <FaEdit /> Modifica
@@ -384,15 +397,13 @@ const ContractDetailPage: React.FC = () => {
   return (
     <div className="min-h-screen pb-24 px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
       {/* Back Button */}
-      {!(mode === 'view' && location.state?.justSaved) && (
-        <button 
-          onClick={handleBack}
-          className="flex items-center gap-2 text-secondary hover:text-primary transition-colors font-semibold cursor-pointer mb-4"
-        >
-          <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" />
-          {getBackLabel()}
-        </button>
-      )}
+      <button 
+        onClick={handleBack}
+        className="flex items-center gap-2 text-secondary hover:text-primary transition-colors font-semibold cursor-pointer mb-4"
+      >
+        <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" />
+        {getBackLabel()}
+      </button>
 
       {/* Main Content */}
       {isLoading ? (
