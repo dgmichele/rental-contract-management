@@ -15,6 +15,7 @@ import OwnersListPage from './pages/owners/OwnersListPage';
 import OwnerDetailPage from './pages/owners/OwnerDetailPage';
 import ContractsListPage from './pages/contracts/ContractsListPage';
 import ContractDetailPage from './pages/contracts/ContractDetailPage';
+import AccountSettingsPage from './pages/settings/AccountSettingsPage';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -86,9 +87,7 @@ function App() {
           <Route path="/contracts/new" element={<ContractDetailPage />} />
           <Route path="/contracts/:id" element={<ContractDetailPage />} />
           
-          {/* 
-          <Route path="/settings" element={<Settings />} />
-          */}
+          <Route path="/settings" element={<AccountSettingsPage />} />
         </Route>
       
         {/* 404 - Catch All */}

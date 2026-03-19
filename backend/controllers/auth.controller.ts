@@ -79,7 +79,7 @@ export const registerController = async (
         message: err.message,
       }));
 
-      return next(new AppError('Dati di input non validi', 400));
+      return next(error);
     }
 
     // Passa altri errori al middleware errorHandler
@@ -121,7 +121,7 @@ export const loginController = async (
   } catch (error) {
     if (error instanceof z.ZodError) {
       console.log('[AUTH_CONTROLLER] Errore validazione:', error.issues);
-      return next(new AppError('Dati di input non validi', 400));
+      return next(error);
     }
 
     next(error);
@@ -160,7 +160,7 @@ export const refreshTokenController = async (
   } catch (error) {
     if (error instanceof z.ZodError) {
       console.log('[AUTH_CONTROLLER] Errore validazione:', error.issues);
-      return next(new AppError('Refresh token mancante', 400));
+      return next(error);
     }
 
     next(error);
@@ -196,7 +196,7 @@ export const logoutController = async (
   } catch (error) {
     if (error instanceof z.ZodError) {
       console.log('[AUTH_CONTROLLER] Errore validazione:', error.issues);
-      return next(new AppError('Refresh token mancante', 400));
+      return next(error);
     }
 
     next(error);
@@ -235,7 +235,7 @@ export const forgotPasswordController = async (
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return next(new AppError('Email non valida', 400));
+      return next(error);
     }
     next(error);
   }
@@ -259,7 +259,7 @@ export const resetPasswordController = async (
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return next(new AppError('Token o password non validi', 400));
+      return next(error);
     }
     next(error);
   }

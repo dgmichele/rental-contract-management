@@ -191,8 +191,7 @@ export const createContractController = async (
   } catch (err) {
     if (err instanceof z.ZodError) {
       console.log('[CONTRACT_CONTROLLER] Errore validazione:', err.issues);
-      const errorMessage = err.issues.map(i => i.message).join(', ');
-      return next(new AppError(errorMessage, 400));
+      return next(err);
     }
     next(err);
   }
@@ -244,8 +243,7 @@ export const getContractsController = async (
   } catch (err) {
     if (err instanceof z.ZodError) {
       console.log('[CONTRACT_CONTROLLER] Errore validazione query:', err.issues);
-      const errorMessage = err.issues.map(i => i.message).join(', ');
-      return next(new AppError(errorMessage, 400));
+      return next(err);
     }
     next(err);
   }
@@ -362,8 +360,7 @@ export const updateContractController = async (
   } catch (err) {
     if (err instanceof z.ZodError) {
       console.log('[CONTRACT_CONTROLLER] Errore validazione:', err.issues);
-      const errorMessage = err.issues.map(i => i.message).join(', ');
-      return next(new AppError(errorMessage, 400));
+      return next(err);
     }
     next(err);
   }
@@ -458,8 +455,7 @@ export const renewContractController = async (
   } catch (err) {
     if (err instanceof z.ZodError) {
       console.log('[CONTRACT_CONTROLLER] ❌ Errore validazione rinnovo:', err.issues);
-      const errorMessage = err.issues.map(i => i.message).join(', ');
-      return next(new AppError(errorMessage, 400));
+      return next(err);
     }
     next(err);
   }
@@ -512,8 +508,7 @@ export const updateContractAnnuityController = async (
   } catch (err) {
     if (err instanceof z.ZodError) {
       console.log('[CONTRACT_CONTROLLER] ❌ Errore validazione annualità:', err.issues);
-      const errorMessage = err.issues.map(i => i.message).join(', ');
-      return next(new AppError(errorMessage, 400));
+      return next(err);
     }
     next(err);
   }

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ownersService from '../services/api/owners.service';
 import type { CreateOwnerRequest, UpdateOwnerRequest } from '../types/owner';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '../utils/errorHandler';
 
 /**
  * HOOK - OTTIENI LISTA PROPRIETARI
@@ -46,7 +47,7 @@ export const useCreateOwner = () => {
       toast.success(response.message || 'Proprietario creato con successo! 🎉');
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || 'Errore durante la creazione del proprietario';
+      const message = getErrorMessage(error) || 'Errore durante la creazione del proprietario';
       toast.error(message);
     },
   });
@@ -69,7 +70,7 @@ export const useUpdateOwner = () => {
       toast.success(response.message || 'Proprietario aggiornato con successo! ✅');
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || "Errore durante l'aggiornamento del proprietario";
+      const message = getErrorMessage(error) || "Errore durante l'aggiornamento del proprietario";
       toast.error(message);
     },
   });
@@ -91,7 +92,7 @@ export const useDeleteOwner = () => {
       toast.success(response.message || 'Proprietario eliminato con successo');
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || "Errore durante l'eliminazione del proprietario";
+      const message = getErrorMessage(error) || "Errore durante l'eliminazione del proprietario";
       toast.error(message);
     },
   });

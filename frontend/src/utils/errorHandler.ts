@@ -9,7 +9,15 @@ import type { ApiError } from '../types/api';
  */
 export const getErrorMessage = (error: AxiosError<ApiError>): string => {
   const status = error.response?.status;
-  const message = error.response?.data?.message;
+  const data = error.response?.data;
+  
+  // Se abbiamo errori di validazione dal backend (es. ZodError formattato o array errors)
+  if (data?.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+    // Ritorna il primo messaggio specifico utile
+    return data.errors[0].message || 'Dati di input non validi';
+  }
+
+  const message = data?.message;
 
   switch (status) {
     case 400:

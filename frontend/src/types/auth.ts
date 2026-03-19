@@ -61,6 +61,23 @@ export interface ResetPasswordRequest {
   newPassword: string;
 }
 
+/**
+ * Payload per aggiornamento dati utente.
+ */
+export interface UpdateDetailsRequest {
+  name: string;
+  surname: string;
+  email: string;
+}
+
+/**
+ * Payload per aggiornamento password.
+ */
+export interface UpdatePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
 // ============= AUTH RESPONSES =============
 
 /**
@@ -105,10 +122,10 @@ export interface AuthState {
   user: User | null;
   accessToken: string | null;
   refreshToken: string | null;
-  
+
   // Stato UI
   isAuthenticated: boolean;
-  
+
   // Actions
   setAuth: (user: User, tokens: AuthTokens) => void;
   clearAuth: () => void;

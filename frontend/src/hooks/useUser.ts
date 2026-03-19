@@ -1,0 +1,48 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
+import { userService } from '../services/api/user.service';
+import { useAuthStore } from '../store/authStore';
+import type { UpdateDetailsRequest, UpdatePasswordRequest } from '../types/auth';
+import { getErrorMessage } from '../utils/errorHandler';
+
+/**
+ * HOOK - AGGIORNA DATI UTENTE
+ * Aggiorna nome, cognome ed email dell'utente e lo store globale.
+ */
+export const useUpdateDetails = () => {
+  const { updateUser } = useAuthStore();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (details: UpdateDetailsRequest) => userService.updateDetails(details),
+    onSuccess: (response) => {
+      // Aggiorna lo store Zustand locale
+      updateUser(response.data);
+      
+      // Invalida eventuali query che usano i dati dell'utente
+      queryClient.invalidateQueries({ queryKey: ['user', 'me'] });
+      
+      toast.success(response.message || 'Profilo aggiornato con successo! ✅');
+    },
+    onError: (error: any) => {
+      const message = getErrorMessage(error) || "Errore durante l'aggiornamento del profilo";
+      toast.error(message);
+    },
+  });
+};
+
+/**
+ * HOOK - AGGIORNA PASSWORD
+ */
+export const useUpdatePassword = () => {
+  return useMutation({
+    mutationFn: (passwordData: UpdatePasswordRequest) => userService.updatePassword(passwordData),
+    onSuccess: (response) => {
+      toast.success(response.message || 'Password aggiornata con successo! 🔐');
+    },
+    onError: (error: any) => {
+      const message = getErrorMessage(error) || "Errore durante l'aggiornamento della password";
+      toast.error(message);
+    },
+  });
+};

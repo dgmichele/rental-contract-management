@@ -65,7 +65,7 @@ export const createOwnerController = async (
   } catch (err) {
     if (err instanceof z.ZodError) {
       console.log('[OWNER_CONTROLLER] Errore validazione:', err.issues);
-      return next(new AppError('Dati di input non validi', 400));
+      return next(err);
     }
     next(err);
   }
@@ -103,7 +103,7 @@ export const getOwnersController = async (
   } catch (err) {
     if (err instanceof z.ZodError) {
       console.log('[OWNER_CONTROLLER] Errore validazione query:', err.issues);
-      return next(new AppError('Parametri non validi', 400));
+      return next(err);
     }
     next(err);
   }
@@ -180,7 +180,7 @@ export const updateOwnerController = async (
   } catch (err) {
     if (err instanceof z.ZodError) {
       console.log('[OWNER_CONTROLLER] Errore validazione:', err.issues);
-      return next(new AppError('Dati di input non validi', 400));
+      return next(err);
     }
     next(err);
   }

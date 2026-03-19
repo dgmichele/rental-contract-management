@@ -77,7 +77,7 @@ export const updateDetails = async (
     // Gestione errori Zod
     if (err instanceof z.ZodError) {
       console.log('[USER_CONTROLLER] Errore validazione:', err.issues);
-      return next(new AppError('Dati di input non validi', 400));
+      return next(err);
     }
     
     next(err);
@@ -111,7 +111,7 @@ export const updatePassword = async (
     // Gestione errori Zod
     if (err instanceof z.ZodError) {
       console.log('[USER_CONTROLLER] Errore validazione:', err.issues);
-      return next(new AppError('Dati di input non validi', 400));
+      return next(err);
     }
     
     next(err);
