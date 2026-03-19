@@ -1,4 +1,5 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import { handleGlobalError } from '../../utils/errorHandler';
 
 /**
  * Istanza Axios configurata per comunicare con il backend.
@@ -100,6 +101,12 @@ api.interceptors.response.use(
 
         return Promise.reject(refreshError);
       }
+    }
+
+    // Gestore errori globali (mostra toast per Network Error, 5xx, 403, ecc.)
+    // Ignora errori di refresh per evitare doppi log (gestiti già dal try/catch interno)
+    if (!originalRequest.url?.includes('/auth/refresh')) {
+      handleGlobalError(error as any);
     }
 
     // Per tutti gli altri errori, passa al catch della chiamata
