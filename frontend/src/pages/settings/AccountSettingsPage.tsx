@@ -145,9 +145,10 @@ export default function AccountSettingsPage() {
                     variant="primary"
                     className="w-full justify-center gap-2"
                     disabled={!isDetailsDirty || updateDetailsMutation.isPending}
+                    isLoading={updateDetailsMutation.isPending}
                   >
                     <FiSave className="text-lg" />
-                    {updateDetailsMutation.isPending ? 'Salvataggio...' : 'Salva'}
+                    Salva
                   </Button>
                 </div>
               </form>
@@ -199,9 +200,10 @@ export default function AccountSettingsPage() {
                     variant="primary"
                     className="w-full justify-center gap-2"
                     disabled={!isPasswordSubmitEnabled || updatePasswordMutation.isPending}
+                    isLoading={updatePasswordMutation.isPending}
                   >
                     <FiSave className="text-lg" />
-                    {updatePasswordMutation.isPending ? 'Salvataggio...' : 'Salva'}
+                    Salva
                   </Button>
                 </div>
               </form>
