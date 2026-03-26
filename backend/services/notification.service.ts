@@ -9,40 +9,118 @@ import * as emailService from './email.service';
 import { logCron, logCronError } from './logger.service';
 
 /**
- * Verifica se una notifica è già stata inviata per un determinato contratto/tipo/anno.
- * Previene l'invio di email duplicate (spam) al cliente o al team.
- * * @param contractId - ID del contratto
+ * Tenta di "reclamare" una notifica inserendola atomicamente nel DB.
+ * Usa INSERT ... ON CONFLICT DO NOTHING per garantire che solo un processo
+ * riesca a inserire la notifica (vince la race condition).
+ * 
+ * Questo approccio elimina il problema TOCTOU (Time-of-Check to Time-of-Use):
+ * - VECCHIO: CHECK → SEND → INSERT (due processi possono entrambi passare il CHECK)
+ * - NUOVO: INSERT (atomico) → SEND solo se INSERT riuscito
+ * 
+ * @param contractId - ID del contratto
  * @param type - Tipo di notifica ('contract_renewal' o 'annuity_renewal')
- * @param year - Anno di riferimento (opzionale, null per rinnovo contratto)
- * @returns true se la notifica esiste già, false altrimenti
+ * @param year - Anno di riferimento (null per rinnovo contratto)
+ * @returns true se questo processo ha "reclamato" la notifica, false se già esisteva
  */
-export const checkNotificationSent = async (
+export const claimNotification = async (
   contractId: number, 
   type: NotificationType, 
-  year?: number | null
+  year: number | null
 ): Promise<boolean> => {
-  const query = db('notifications')
-    .where({
-      contract_id: contractId,
-      type: type
-    })
-    .first();
+  try {
+    // PostgreSQL gotcha: NULL ≠ NULL nel UNIQUE constraint.
+    // Quindi ON CONFLICT non funziona con year=NULL (contract_renewal).
+    // Soluzione: usiamo una transazione SERIALIZABLE con SELECT FOR UPDATE + INSERT.
+    // Questo garantisce atomicità anche con valori NULL.
+    
+    const result = await db.transaction(async (trx) => {
+      // 1. Prova a leggere con lock esclusivo (FOR UPDATE)
+      let existingQuery = trx('notifications')
+        .where({ contract_id: contractId, type: type });
+      
+      if (year !== null) {
+        existingQuery = existingQuery.where('year', year);
+      } else {
+        existingQuery = existingQuery.whereNull('year');
+      }
 
-  if (year !== undefined && year !== null) {
-    query.where('year', year);
-  } else {
-    query.whereNull('year');
+      // FOR UPDATE: blocca la riga se esiste, impedendo letture concorrenti
+      const existing = await existingQuery.forUpdate().first();
+      
+      if (existing) {
+        // Già inviata da un altro processo
+        return null;
+      }
+
+      // 2. Non esiste → inserisci (all'interno della stessa transaction)
+      const [inserted] = await trx('notifications').insert({
+        contract_id: contractId,
+        type: type,
+        year: year,
+        sent_to_client: false,
+        sent_to_internal: false,
+        sent_at: new Date(),
+      }).returning('id');
+
+      return inserted;
+    }, { isolationLevel: 'serializable' });
+
+    const claimed = result !== null;
+    
+    if (claimed) {
+      logCron(`[NOTIFICATION_SERVICE] 🔒 Notifica reclamata con successo (ID: ${result.id}) per contratto ${contractId}, tipo: ${type}, anno: ${year}`);
+    } else {
+      logCron(`[NOTIFICATION_SERVICE] ⏭️ Notifica già reclamata da altro processo per contratto ${contractId}, tipo: ${type}, anno: ${year}`);
+    }
+
+    return claimed;
+  } catch (error) {
+    logCronError(`[NOTIFICATION_SERVICE] ❌ Errore durante claim notifica per contratto ${contractId}:`, error);
+    return false;
   }
+};
 
-  const existing = await query;
-  return !!existing;
+/**
+ * Aggiorna lo stato di invio della notifica dopo l'effettivo invio delle email.
+ * 
+ * @param contractId - ID del contratto
+ * @param type - Tipo di notifica
+ * @param year - Anno di riferimento
+ * @param sentToClient - Se l'email al cliente è stata inviata
+ * @param sentToInternal - Se l'email interna è stata inviata
+ */
+const updateNotificationStatus = async (
+  contractId: number,
+  type: NotificationType,
+  year: number | null,
+  sentToClient: boolean,
+  sentToInternal: boolean
+): Promise<void> => {
+  try {
+    const query = db('notifications')
+      .where({ contract_id: contractId, type: type });
+
+    if (year !== null) {
+      query.where('year', year);
+    } else {
+      query.whereNull('year');
+    }
+
+    await query.update({
+      sent_to_client: sentToClient,
+      sent_to_internal: sentToInternal,
+    });
+  } catch (error) {
+    logCronError(`[NOTIFICATION_SERVICE] ❌ Errore aggiornamento stato notifica:`, error);
+  }
 };
 
 /**
  * Helper interno (System Level) per recuperare il contratto con tutte le relazioni.
  * NOTA: A differenza di contract.service.ts, questa funzione NON richiede userId.
  * Viene usata dal sistema (Cron Job) che ha permessi globali di lettura.
- * * @param contractId - ID del contratto da recuperare
+ * 
+ * @param contractId - ID del contratto da recuperare
  */
 const getFullContract = async (contractId: number): Promise<ContractWithRelations | null> => {
   // 1. Recupera il contratto raw
@@ -74,12 +152,18 @@ const getFullContract = async (contractId: number): Promise<ContractWithRelation
 
 /**
  * Funzione principale eseguita dal Cron Job (default: ogni giorno alle 08:00).
- * Logica:
+ * 
+ * Logica ANTI-DUPLICATI (atomica):
  * 1. Calcola la data target (oggi + N giorni).
- * 2. Cerca contratti in scadenza naturale (end_date).
- * 3. Cerca annualità in scadenza (due_date) non pagate.
- * 4. Invia email e registra la notifica per evitare duplicati.
- * * @returns Oggetto con statistiche sull'esecuzione
+ * 2. Cerca contratti/annualità in scadenza.
+ * 3. Per ogni match: PRIMA inserisce la notifica nel DB (atomico con ON CONFLICT).
+ * 4. Solo se l'inserimento riesce (= questo processo ha "vinto"), invia le email.
+ * 5. Aggiorna lo stato della notifica con i risultati dell'invio.
+ * 
+ * Questo garantisce che anche con N istanze del server (es. cPanel con multipli worker),
+ * le email vengono inviate una sola volta.
+ * 
+ * @returns Oggetto con statistiche sull'esecuzione
  */
 export const sendExpiringContractsNotifications = async () => {
   // Configurazione giorni da env o default a 7
@@ -107,9 +191,10 @@ export const sendExpiringContractsNotifications = async () => {
     for (const contract of expiringContracts) {
       stats.processed++;
 
-      // Verifica anti-duplicati
-      const alreadySent = await checkNotificationSent(contract.id, 'contract_renewal', null);
-      if (alreadySent) {
+      // CLAIM ATOMICO: tenta di inserire la notifica nel DB.
+      // Se un altro processo/istanza ha già inserito → skip (claimed = false)
+      const claimed = await claimNotification(contract.id, 'contract_renewal', null);
+      if (!claimed) {
         stats.skipped++;
         continue;
       }
@@ -123,22 +208,13 @@ export const sendExpiringContractsNotifications = async () => {
 
       logCron(`[NOTIFICATION_SERVICE] 📧 Invio reminder CONTRATTO ID: ${contract.id}`);
 
-      // Invia email (Best effort)
+      // Invia email (Best effort) — solo questo processo le invia
       const sentInternal = await emailService.sendExpirationReminderInternal(fullContract, 'contract');
       const sentClient = await emailService.sendExpirationReminderClient(fullContract, 'contract');
 
-      // Registra notifica se almeno un invio è riuscito
       if (sentInternal || sentClient) {
-        const newNotification: NewNotification = {
-          contract_id: contract.id,
-          type: 'contract_renewal',
-          year: null,
-          sent_to_client: sentClient,
-          sent_to_internal: sentInternal,
-          sent_at: new Date()
-        };
-
-        await db('notifications').insert(newNotification);
+        // Aggiorna lo stato della notifica con i risultati effettivi
+        await updateNotificationStatus(contract.id, 'contract_renewal', null, sentClient, sentInternal);
         stats.sent++;
       } else {
         logCronError(`[NOTIFICATION_SERVICE] ❌ Tutti i tentativi email falliti per contratto ${contract.id}`);
@@ -156,9 +232,9 @@ export const sendExpiringContractsNotifications = async () => {
     for (const annuity of expiringAnnuities) {
       stats.processed++;
 
-      // Verifica anti-duplicati
-      const alreadySent = await checkNotificationSent(annuity.contract_id, 'annuity_renewal', annuity.year);
-      if (alreadySent) {
+      // CLAIM ATOMICO: tenta di inserire la notifica nel DB
+      const claimed = await claimNotification(annuity.contract_id, 'annuity_renewal', annuity.year);
+      if (!claimed) {
         stats.skipped++;
         continue;
       }
@@ -171,20 +247,12 @@ export const sendExpiringContractsNotifications = async () => {
 
       logCron(`[NOTIFICATION_SERVICE] 📧 Invio reminder ANNUALITÀ ${annuity.year} Contratto ID: ${annuity.contract_id}`);
 
+      // Invia email — solo questo processo le invia
       const sentInternal = await emailService.sendExpirationReminderInternal(fullContract, 'annuity', annuity.year);
       const sentClient = await emailService.sendExpirationReminderClient(fullContract, 'annuity', annuity.year);
 
       if (sentInternal || sentClient) {
-        const newNotification: NewNotification = {
-          contract_id: annuity.contract_id,
-          type: 'annuity_renewal',
-          year: annuity.year,
-          sent_to_client: sentClient,
-          sent_to_internal: sentInternal,
-          sent_at: new Date()
-        };
-
-        await db('notifications').insert(newNotification);
+        await updateNotificationStatus(annuity.contract_id, 'annuity_renewal', annuity.year, sentClient, sentInternal);
         stats.sent++;
       } else {
         logCronError(`[NOTIFICATION_SERVICE] ❌ Tutti i tentativi email falliti per annualità contratto ${annuity.contract_id}`);

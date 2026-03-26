@@ -583,11 +583,14 @@ describe('Cron Job Notifications Integration Tests', () => {
       expect(stats.sent).toBe(0);
       expect(stats.failed).toBe(1);
 
-      // Nessuna notification inserita (tutte fallite)
+      // Con il pattern claim-first, la notification viene inserita PRIMA dell'invio
+      // ma i campi sent_to_* restano false (email non inviate)
       const notifications = await db('notifications');
-      expect(notifications.length).toBe(0);
+      expect(notifications.length).toBe(1);
+      expect(notifications[0].sent_to_client).toBe(false);
+      expect(notifications[0].sent_to_internal).toBe(false);
 
-      console.log('[CRON_TEST] ✅ Tutte le email fallite → marcato come failed');
+      console.log('[CRON_TEST] ✅ Tutte le email fallite → marcato come failed, notification con sent=false');
     });
   });
 
