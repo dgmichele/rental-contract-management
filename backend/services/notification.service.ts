@@ -127,7 +127,7 @@ const getFullContract = async (contractId: number): Promise<ContractWithRelation
   const contract = await db('contracts').where('id', contractId).first();
   if (!contract) return null;
 
-  // 2. Recupera owner, tenant e annuities in parallelo per efficienza
+  // 2. Recupera owner, tenant e annuities in parallelo
   const [owner, tenant, annuities] = await Promise.all([
     db('owners').where('id', contract.owner_id).first(),
     db('tenants').where('id', contract.tenant_id).first(),
@@ -139,14 +139,20 @@ const getFullContract = async (contractId: number): Promise<ContractWithRelation
     return null;
   }
 
-  // 3. Costruisce l'oggetto tipizzato ContractWithRelations
-  // Allineato con la logica di contract.service.ts (es. parsing monthly_rent)
+  // 3. Recupera l'email dell'utente gestore (User) associato all'owner
+  const managingUser = await db('users')
+    .select('email')
+    .where('id', owner.user_id)
+    .first();
+
+  // 4. Costruisce l'oggetto tipizzato ContractWithRelations
   return {
     ...contract,
     monthly_rent: typeof contract.monthly_rent === 'string' ? parseFloat(contract.monthly_rent) : contract.monthly_rent,
     owner,
     tenant,
-    annuities
+    annuities,
+    userEmail: managingUser?.email // ⭐ NUOVO: Aggiunge email utente per notifiche interne
   };
 };
 

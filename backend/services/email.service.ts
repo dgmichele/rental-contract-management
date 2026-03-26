@@ -136,7 +136,7 @@ export const sendExpirationReminderInternal = async (
     // Invia email tramite Resend API
     const { data, error } = await resend.emails.send({
       from: `${process.env.FROM_NAME} <${process.env.FROM_EMAIL}>`,
-      to: process.env.INTERNAL_NOTIFICATION_EMAIL as string,
+      to: contract.userEmail || process.env.INTERNAL_NOTIFICATION_EMAIL as string, // ⭐ Dinamico (User Email) o fallback statico
       subject,
       html,
     });
