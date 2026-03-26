@@ -265,7 +265,7 @@ const ContractDetailPage: React.FC = () => {
             </h3>
             <div className="space-y-3">
               <div className="grid grid-cols-3 md:grid-cols-2 gap-y-2">
-                <span className="text-text-subtle text-sm">Nome completo</span>
+                <span className="text-text-subtle text-sm">Nominativo</span>
                 <span className="text-text-body font-medium col-span-2 md:col-span-1">{contract.owner.name} {contract.owner.surname}</span>
                 
                 <span className="text-text-subtle text-sm">Email</span>
@@ -294,7 +294,7 @@ const ContractDetailPage: React.FC = () => {
             </h3>
             <div className="space-y-3">
               <div className="grid grid-cols-3 md:grid-cols-2 gap-y-2">
-                <span className="text-text-subtle text-sm">Nome completo</span>
+                <span className="text-text-subtle text-sm">Nominativo</span>
                 <span className="text-text-body font-medium col-span-2 md:col-span-1">{contract.tenant.name} {contract.tenant.surname}</span>
                 
                 <span className="text-text-subtle text-sm">Email</span>
