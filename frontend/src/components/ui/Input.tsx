@@ -49,7 +49,7 @@ export default function Input<T extends FieldValues>({
         {label}
       </label>
       
-      <div className="relative">
+      <div className="relative w-full">
         {/* Icona a sinistra */}
         {startIcon && (
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-subtle">
@@ -72,7 +72,7 @@ export default function Input<T extends FieldValues>({
           }}
           className={clsx(
             // Stili base: background, bordo, padding, focus styles
-            'bg-bg-card border border-border rounded px-3 py-2 focus:outline-none focus:border-secondary placeholder:text-text-subtle transition-colors duration-300 w-full',
+            'bg-bg-card border border-border rounded px-3 py-2 focus:outline-none focus:border-secondary placeholder:text-text-subtle transition-colors duration-300 w-full min-w-0 max-w-full',
             {
               // Bordo rosso se presente errore
               'border-red-500 focus:border-red-500': error,
