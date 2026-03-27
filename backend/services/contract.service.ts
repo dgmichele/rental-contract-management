@@ -580,10 +580,9 @@ export const renewContract = async (
         updated_at: new Date(),
       };
 
-      const [updatedContract] = await trx<Contract>('contracts')
+      await trx<Contract>('contracts')
         .where({ id: contractId })
-        .update(updateData)
-        .returning('*');
+        .update(updateData);
 
       console.log('[CONTRACT_SERVICE] ✅ Contratto aggiornato con nuove condizioni');
 
