@@ -19,7 +19,6 @@ interface ContractCardProps {
   onDelete?: () => void;
   className?: string;
   returnUrl?: string;
-  showExpiryAlert?: boolean;
 }
 
 export const ContractCard = ({ 
@@ -31,8 +30,7 @@ export const ContractCard = ({
   onEdit,
   onDelete,
   className,
-  returnUrl,
-  showExpiryAlert = false
+  returnUrl
 }: ContractCardProps) => {
   const navigate = useNavigate();
 
@@ -51,18 +49,6 @@ export const ContractCard = ({
     buttonLabel = 'Visualizza contratto';
   }
   
-  // Scadenza a breve logic (only if showExpiryAlert is true and not cedolare secca)
-  // Check if next annuity or final end_date is < 60 days away
-  const today = dayjs();
-  const nextAnnuityYear = contract.last_annuity_paid 
-    ? contract.last_annuity_paid + 1 
-    : dayjs(contract.start_date).year() + 1;
-  const nextAnnuityDate = dayjs(contract.start_date).year(nextAnnuityYear);
-  const finalEndDate = dayjs(contract.end_date);
-  const nextDeadline = nextAnnuityDate.isAfter(finalEndDate) ? finalEndDate : nextAnnuityDate;
-  const daysToDeadline = nextDeadline.diff(today, 'day');
-  const isExpired = showExpiryAlert && !isCedolareSecca && daysToDeadline < 0;
-  const isExpiringSoon = showExpiryAlert && !isCedolareSecca && daysToDeadline >= 0 && daysToDeadline < 60;
   
   const handleManage = () => {
     if (!expiryType) {
@@ -170,17 +156,6 @@ export const ContractCard = ({
          </div>
       </div>
 
-      {/* Alert Banner for non-cedolare secca expiration */}
-      {isExpired && (
-        <div className="flex items-center gap-1.5 mb-4 px-3 py-2 bg-error/10 text-error border border-error/20 rounded-lg text-xs font-bold animate-pulse">
-           <span>⚠️ Annualità scaduta</span>
-        </div>
-      )}
-      {isExpiringSoon && (
-        <div className="flex items-center gap-1.5 mb-4 px-3 py-2 bg-warning/10 text-warning border border-warning/20 rounded-lg text-xs font-bold animate-pulse">
-           <span>⚠️ Annualità in scadenza</span>
-        </div>
-      )}
 
       {/* Financials Grid */}
       <div className={clsx("grid gap-3 mb-4 mt-auto", isCedolareSecca ? "grid-cols-1" : "grid-cols-2")}>

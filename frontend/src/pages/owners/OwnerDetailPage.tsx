@@ -184,7 +184,6 @@ const OwnerDetailPage: React.FC = () => {
                   displayMode="tenant"
                   onEdit={() => navigate(`/contracts/${contract.id}?mode=edit`, { state: location.state })}
                   onDelete={() => handleDeleteContract(contract as ContractWithRelations)}
-                  showExpiryAlert={true}
                 />
               ))}
             </div>
