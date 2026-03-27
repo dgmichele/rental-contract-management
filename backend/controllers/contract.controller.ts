@@ -255,7 +255,7 @@ export const getContractByIdController = async (
   console.log('[CONTRACT_CONTROLLER] GET /:id - userId:', req.userId, 'contractId:', req.params.id);
 
   try {
-    const contractId = parseNumericId(req.params.id, 'ID contratto non valido');
+    const contractId = parseNumericId(req.params.id as string, 'ID contratto non valido');
 
     // Chiama service (ora include annuities)
     const contract = await contractService.getContractById(req.userId, contractId);
@@ -281,7 +281,7 @@ export const getContractAnnuitiesController = async (
   console.log('[CONTRACT_CONTROLLER] GET /:id/annuities - userId:', req.userId, 'contractId:', req.params.id);
 
   try {
-    const contractId = parseNumericId(req.params.id, 'ID contratto non valido');
+    const contractId = parseNumericId(req.params.id as string, 'ID contratto non valido');
 
     const annuities = await annuityService.getAnnuitiesByContract(req.userId, contractId);
 
@@ -311,7 +311,7 @@ export const updateContractController = async (
   console.log('[CONTRACT_CONTROLLER] PUT /:id - userId:', req.userId, 'contractId:', req.params.id);
 
   try {
-    const contractId = parseNumericId(req.params.id, 'ID contratto non valido');
+    const contractId = parseNumericId(req.params.id as string, 'ID contratto non valido');
 
     // Validazione body (ora include tenant_data)
     const validatedData = updateContractSchema.parse(req.body);
@@ -350,7 +350,7 @@ export const deleteContractController = async (
   console.log('[CONTRACT_CONTROLLER] DELETE /:id - userId:', req.userId, 'contractId:', req.params.id);
 
   try {
-    const contractId = parseNumericId(req.params.id, 'ID contratto non valido');
+    const contractId = parseNumericId(req.params.id as string, 'ID contratto non valido');
 
     // Chiama service
     await contractService.deleteContract(req.userId, contractId);
@@ -392,7 +392,7 @@ export const renewContractController = async (
   console.log('[CONTRACT_CONTROLLER] 🔄 PUT /:id/renew - userId:', req.userId, 'contractId:', req.params.id);
 
   try {
-    const contractId = parseNumericId(req.params.id, 'ID contratto non valido');
+    const contractId = parseNumericId(req.params.id as string, 'ID contratto non valido');
 
     // Validazione body con schema rinnovo
     const validatedData = renewContractSchema.parse(req.body);
@@ -438,7 +438,7 @@ export const updateContractAnnuityController = async (
   console.log('[CONTRACT_CONTROLLER] 💹 PUT /:id/annuity - userId:', req.userId, 'contractId:', req.params.id);
 
   try {
-    const contractId = parseNumericId(req.params.id, 'ID contratto non valido');
+    const contractId = parseNumericId(req.params.id as string, 'ID contratto non valido');
 
     // 2. Validazione Body
     const validatedData = updateAnnuitySchema.parse(req.body) as RenewAnnuityBody;

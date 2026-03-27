@@ -114,7 +114,7 @@ export const getOwnerByIdController = async (
   console.log('[OWNER_CONTROLLER] GET /:id - userId:', req.userId, 'ownerId:', req.params.id);
 
   try {
-    const ownerId = parseNumericId(req.params.id, 'ID proprietario non valido');
+    const ownerId = parseNumericId(req.params.id as string, 'ID proprietario non valido');
 
     // Chiama service
     const owner = await ownerService.getOwnerById(req.userId, ownerId);
@@ -146,7 +146,7 @@ export const updateOwnerController = async (
   console.log('[OWNER_CONTROLLER] PUT /:id - userId:', req.userId, 'ownerId:', req.params.id);
 
   try {
-    const ownerId = parseNumericId(req.params.id, 'ID proprietario non valido');
+    const ownerId = parseNumericId(req.params.id as string, 'ID proprietario non valido');
 
     // Validazione body
     const validatedData = updateOwnerSchema.parse(req.body);
@@ -177,7 +177,7 @@ export const deleteOwnerController = async (
   console.log('[OWNER_CONTROLLER] DELETE /:id - userId:', req.userId, 'ownerId:', req.params.id);
 
   try {
-    const ownerId = parseNumericId(req.params.id, 'ID proprietario non valido');
+    const ownerId = parseNumericId(req.params.id as string, 'ID proprietario non valido');
 
     // Chiama service
     await ownerService.deleteOwner(req.userId, ownerId);
@@ -203,7 +203,7 @@ export const getOwnerContractsController = async (
   console.log('[OWNER_CONTROLLER] GET /:id/contracts - userId:', req.userId, 'ownerId:', req.params.id);
 
   try {
-    const ownerId = parseNumericId(req.params.id, 'ID proprietario non valido');
+    const ownerId = parseNumericId(req.params.id as string, 'ID proprietario non valido');
 
     // Validazione query params
     const page = Number(req.query.page) || 1;
