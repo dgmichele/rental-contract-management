@@ -36,8 +36,8 @@ const ExpirationReminderClient = ({
 
   // Messaggio principale basato sul tipo di scadenza
   const mainMessage = type === 'contract'
-    ? `Le scriviamo per informarla che il contratto di locazione dell'immobile${address ? ` sito in ${address}` : ''} scadrà in data ${expiryDate}.`
-    : `Le scriviamo per ricordarle che l'annualità successiva (anno ${annuityYear}) per il contratto di locazione${address ? ` dell'immobile sito in ${address}` : ''} scadrà in data ${expiryDate}.`;
+    ? `Le scriviamo per informarla che il contratto di locazione dell'immobile${address ? ` sito in ${address}` : ''}, scadrà in data ${expiryDate}.`
+    : `Le scriviamo per ricordarle che l'annualità successiva (anno ${annuityYear}) per il contratto di locazione${address ? ` dell'immobile sito in ${address}` : ''}, scadrà in data ${expiryDate}.`;
 
   // Call-to-action
   const ctaMessage = type === 'contract'
@@ -78,7 +78,7 @@ const ExpirationReminderClient = ({
 
             {/* Dettagli contratto */}
             <Container style={styles.detailsBox}>
-              <Text style={styles.detailsTitle}>Dettagli Contratto 📜</Text>
+              <Text style={styles.detailsTitle}>Dettagli contratto 📜</Text>
               
               <Text style={styles.detailRow}>
                 <strong>Inquilino:</strong> {tenantName}
@@ -91,12 +91,12 @@ const ExpirationReminderClient = ({
               )}
               
               <Text style={styles.detailRow}>
-                <strong>Data di Scadenza:</strong> {expiryDate}
+                <strong>Data di scadenza:</strong> {expiryDate}
               </Text>
               
               {type === 'annuity' && annuityYear && (
                 <Text style={styles.detailRow}>
-                  <strong>Anno Annualità:</strong> {annuityYear}
+                  <strong>Anno annualità:</strong> {annuityYear}
                 </Text>
               )}
             </Container>
@@ -135,7 +135,7 @@ const ExpirationReminderClient = ({
             </Text>
             <Text style={styles.footerText}>
               Via Jervis 64, 10015 Ivrea (TO)<br />
-              Tel: 0125.45148 | Email: info@bichimmobiliare.it <br />
+              Tel: 0125.45148 <br />
               P.IVA: 07636590015 | REA: TO907845 <br />
               <Link href="https://www.bichimmobiliare.it" style={{color: '#b41c3c'}}>www.bichimmobiliare.it</Link>
             </Text>

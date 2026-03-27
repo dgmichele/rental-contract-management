@@ -74,11 +74,11 @@ const ExpirationReminderInternal = ({
               </Text>
             )}
             <Text style={styles.detailRow}>
-              <strong>Data Scadenza:</strong> {expiryDate}
+              <strong>Data scadenza:</strong> {expiryDate}
             </Text>
             {type === 'annuity' && annuityYear && (
               <Text style={styles.detailRow}>
-                <strong>Anno Annualità:</strong> {annuityYear}
+                <strong>Anno annualità:</strong> {annuityYear}
               </Text>
             )}
           </Container>
