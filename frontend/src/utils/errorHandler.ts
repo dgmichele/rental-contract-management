@@ -22,6 +22,11 @@ export const getErrorMessage = (error: AxiosError<ApiError>): string => {
     case 400:
       return message || 'Dati non validi';
     case 401:
+      // Se l'errore deriva da un tentativo di login (es. credenziali errate) o register, mantieni il messaggio
+      if (error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/register')) {
+        return message || 'Credenziali non valide';
+      }
+      // In tutti gli altri casi, assume sia la sessione scaduta
       return 'Sessione scaduta, effettua nuovamente il login';
     case 403:
       return 'Non hai i permessi per questa operazione';
@@ -48,21 +53,23 @@ export const handleGlobalError = (error: AxiosError<ApiError>) => {
   const status = error.response?.status;
 
   // Errore di rete (server irraggiungibile)
-  if (!error.response && error.message === 'Network Error') {
-    toast.error('Impossibile connettersi al server. Controlla la tua connessione.');
+  if (!error.response || error.code === 'ECONNABORTED' || error.message === 'Network Error') {
+    toast.error('Impossibile connettersi al server. Controlla la tua connessione.', { id: 'network-error' });
+    (error as any)._isHandled = true;
     return;
   }
 
   // Errori Server (5xx)
   if (status && status >= 500) {
-    toast.error(getErrorMessage(error));
+    toast.error(getErrorMessage(error), { id: `server-error-${status}` });
+    (error as any)._isHandled = true;
     return;
   }
 
   // Errori Auth critici (non gestiti dal refresh o dopo il fallimento del refresh)
-  // Nota: l'interceptor gestisce già i 401 eseguendo il refresh e/o logout
   if (status === 403) {
-    toast.error('Accesso negato: non possiedi i permessi necessari.');
+    toast.error('Accesso negato: non possiedi i permessi necessari.', { id: 'auth-error-403' });
+    (error as any)._isHandled = true;
     return;
   }
 };

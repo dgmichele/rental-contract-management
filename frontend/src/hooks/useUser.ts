@@ -25,8 +25,9 @@ export const useUpdateDetails = () => {
       toast.success(response.message || 'Profilo aggiornato con successo! ✅');
     },
     onError: (error: any) => {
+      if (error._isHandled) return;
       const message = getErrorMessage(error) || "Errore durante l'aggiornamento del profilo";
-      toast.error(message);
+      toast.error(message, { id: 'profile-update-error' });
     },
   });
 };
@@ -41,8 +42,9 @@ export const useUpdatePassword = () => {
       toast.success(response.message || 'Password aggiornata con successo! 🔐');
     },
     onError: (error: any) => {
+      if (error._isHandled) return;
       const message = getErrorMessage(error) || "Errore durante l'aggiornamento della password";
-      toast.error(message);
+      toast.error(message, { id: 'password-update-error' });
     },
   });
 };

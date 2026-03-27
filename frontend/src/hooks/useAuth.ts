@@ -37,10 +37,11 @@ export const useAuth = () => {
       navigate('/dashboard');
     },
     onError: (error: any) => {
+      if (error._isHandled) return;
       const message = getErrorMessage(error) || 'Errore durante il login';
       // I toast non vengono mostrati per errori specifici dei campi, gestiti manualmente nel form
       if (message !== 'Email non trovata' && message !== 'Password errata') {
-        toast.error(message);
+        toast.error(message, { id: 'auth-login-error' });
       }
     },
   });
@@ -57,11 +58,12 @@ export const useAuth = () => {
       navigate('/dashboard');
     },
     onError: (error: any) => {
+      if (error._isHandled) return;
       const message = getErrorMessage(error) || 'Errore durante la registrazione';
       // Supponiamo che la registrazione possa avere errori di campo (es. email duplicata)
       // Se il backend restituisce "Email già registrata", lo gestiamo nel form
       if (message !== 'Email già registrata') {
-        toast.error(message);
+        toast.error(message, { id: 'auth-register-error' });
       }
     },
   });
@@ -82,8 +84,9 @@ export const useAuth = () => {
     onError: (error: any) => {
       clearAuth();
       navigate('/login');
+      if (error._isHandled) return;
       const message = getErrorMessage(error) || 'Errore durante il logout';
-      toast.error(message);
+      toast.error(message, { id: 'auth-logout-error' });
     },
   });
 
@@ -94,9 +97,10 @@ export const useAuth = () => {
       toast.success(response.message || 'Email inviata! Controlla la tua casella di posta.');
     },
     onError: (error: any) => {
+      if (error._isHandled) return;
       const message = getErrorMessage(error) || 'Errore durante l\'invio dell\'email';
       if (message !== 'Email non registrata') {
-        toast.error(message);
+        toast.error(message, { id: 'auth-forgot-error' });
       }
     },
   });
@@ -111,8 +115,9 @@ export const useAuth = () => {
       }, 1500);
     },
     onError: (error: any) => {
+      if (error._isHandled) return;
       const message = getErrorMessage(error) || 'Errore durante il reset della password';
-      toast.error(message);
+      toast.error(message, { id: 'auth-reset-error' });
     },
   });
 

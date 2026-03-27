@@ -122,7 +122,8 @@ export const useCreateContract = () => {
       toast.success(response.message || 'Contratto creato con successo');
     },
     onError: (error: AxiosError<ApiError>) => {
-      toast.error(getErrorMessage(error));
+      if ((error as any)._isHandled) return;
+      toast.error(getErrorMessage(error), { id: 'contract-create-error' });
     },
   });
 };
@@ -161,7 +162,8 @@ export const useUpdateContract = () => {
       toast.success(response.message || 'Contratto aggiornato con successo');
     },
     onError: (error: AxiosError<ApiError>) => {
-      toast.error(getErrorMessage(error));
+      if ((error as any)._isHandled) return;
+      toast.error(getErrorMessage(error), { id: 'contract-update-error' });
     },
   });
 };
@@ -212,7 +214,8 @@ export const useRenewContract = () => {
       toast.success(response.message || 'Contratto rinnovato con successo');
     },
     onError: (error: AxiosError<ApiError>) => {
-      toast.error(getErrorMessage(error));
+      if ((error as any)._isHandled) return;
+      toast.error(getErrorMessage(error), { id: 'contract-renew-error' });
     },
   });
 };
@@ -253,7 +256,8 @@ export const useUpdateContractAnnuity = () => {
       toast.success(response.message || 'Annualità aggiornata con successo');
     },
     onError: (error: AxiosError<ApiError>) => {
-      toast.error(getErrorMessage(error));
+      if ((error as any)._isHandled) return;
+      toast.error(getErrorMessage(error), { id: 'annuity-update-error' });
     },
   });
 };
@@ -285,7 +289,8 @@ export const useDeleteContract = () => {
       toast.success('Contratto eliminato con successo');
     },
     onError: (error: AxiosError<ApiError>) => {
-      toast.error(getErrorMessage(error));
+      if ((error as any)._isHandled) return;
+      toast.error(getErrorMessage(error), { id: 'contract-delete-error' });
     },
   });
 };

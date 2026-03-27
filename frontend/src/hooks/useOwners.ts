@@ -47,8 +47,9 @@ export const useCreateOwner = () => {
       toast.success(response.message || 'Proprietario creato con successo! 🎉');
     },
     onError: (error: any) => {
+      if (error._isHandled) return;
       const message = getErrorMessage(error) || 'Errore durante la creazione del proprietario';
-      toast.error(message);
+      toast.error(message, { id: 'owner-create-error' });
     },
   });
 };
@@ -70,8 +71,9 @@ export const useUpdateOwner = () => {
       toast.success(response.message || 'Proprietario aggiornato con successo! ✅');
     },
     onError: (error: any) => {
+      if (error._isHandled) return;
       const message = getErrorMessage(error) || "Errore durante l'aggiornamento del proprietario";
-      toast.error(message);
+      toast.error(message, { id: 'owner-update-error' });
     },
   });
 };
@@ -92,8 +94,9 @@ export const useDeleteOwner = () => {
       toast.success(response.message || 'Proprietario eliminato con successo');
     },
     onError: (error: any) => {
+      if (error._isHandled) return;
       const message = getErrorMessage(error) || "Errore durante l'eliminazione del proprietario";
-      toast.error(message);
+      toast.error(message, { id: 'owner-delete-error' });
     },
   });
 };
