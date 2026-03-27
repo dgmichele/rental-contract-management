@@ -4,6 +4,7 @@ import AppError from '../utils/AppError';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { Knex } from 'knex';
+import { formatAnnuityRow } from '../utils/contract.utils';
 
 dayjs.extend(utc);
 
@@ -143,19 +144,23 @@ export const generateAnnuitiesForContract = async (
  * @throws AppError 404 se contratto non trovato
  */
 export const getAnnuitiesByContract = async (
+  userId: number,
   contractId: number
 ): Promise<Annuity[]> => {
-  console.log('[ANNUITY_SERVICE] Get annuities per contractId:', contractId);
+  console.log('[ANNUITY_SERVICE] Get annuities per contractId:', contractId, 'userId:', userId);
 
   try {
-    // Verifica che il contratto esista
+    // 1. Verifica che il contratto esista e appartenga all'utente
     const contract = await db<Contract>('contracts')
-      .where({ id: contractId })
+      .join('owners', 'contracts.owner_id', 'owners.id')
+      .where('contracts.id', contractId)
+      .andWhere('owners.user_id', userId)
+      .select('contracts.*')
       .first();
 
     if (!contract) {
-      console.log('[ANNUITY_SERVICE] Contratto non trovato:', contractId);
-      throw new AppError('Contratto non trovato', 404);
+      console.log('[ANNUITY_SERVICE] Contratto non trovato o accesso negato:', contractId, 'userId:', userId);
+      throw new AppError('Contratto non trovato o accesso negato', 404);
     }
 
     // Recupera tutte le annuities ordinate per anno
@@ -163,11 +168,8 @@ export const getAnnuitiesByContract = async (
       .where({ contract_id: contractId })
       .orderBy('year', 'asc');
     
-    // FIX: Formattiamo due_date come stringa YYYY-MM-DD per coerenza
-    const formattedAnnuities = annuities.map(annuity => ({
-      ...annuity,
-      due_date: dayjs(annuity.due_date).format('YYYY-MM-DD'),
-    }));
+    // FIX: Formattiamo tramite helper per coerenza
+    const formattedAnnuities = annuities.map(annuity => formatAnnuityRow(annuity)) as Annuity[];
 
     console.log('[ANNUITY_SERVICE] Annuities trovate:', formattedAnnuities.length);
 
@@ -194,14 +196,28 @@ export const getAnnuitiesByContract = async (
  * @throws AppError 400 se annuity già pagata
  */
 export const updateAnnuityPaid = async (
+  userId: number,
   contractId: number,
   year: number
 ): Promise<Annuity> => {
-  console.log('[ANNUITY_SERVICE] Update annuity paid:', { contractId, year });
+  console.log('[ANNUITY_SERVICE] Update annuity paid:', { contractId, year, userId });
 
   try {
     return await db.transaction(async (trx) => {
-      // 1. Trova l'annuity
+      // 1. Verifica ownership del contratto (sicurezza!)
+      const contract = await trx<Contract>('contracts')
+        .join('owners', 'contracts.owner_id', 'owners.id')
+        .where('contracts.id', contractId)
+        .andWhere('owners.user_id', userId)
+        .select('contracts.*')
+        .first();
+
+      if (!contract) {
+        console.log('[ANNUITY_SERVICE] Contratto non trovato o accesso negato:', contractId);
+        throw new AppError('Contratto non trovato o accesso negato', 404);
+      }
+
+      // 2. Trova l'annuity associata
       const annuity = await trx<Annuity>('annuities')
         .where({ contract_id: contractId, year })
         .first();
@@ -229,16 +245,7 @@ export const updateAnnuityPaid = async (
 
       console.log('[ANNUITY_SERVICE] Annuity marcata come pagata:', updatedAnnuity.id);
 
-      // 4. Aggiorna last_annuity_paid del contratto
-      // IMPORTANTE: Aggiorniamo SOLO se il nuovo anno è maggiore del precedente last_annuity_paid
-      const contract = await trx<Contract>('contracts')
-        .where({ id: contractId })
-        .first();
-
-      if (!contract) {
-        throw new AppError('Contratto non trovato', 404);
-      }
-
+      // 5. Aggiorna last_annuity_paid del contratto
       const currentLastAnnuity = contract.last_annuity_paid || 0;
       
       if (year > currentLastAnnuity) {
@@ -254,13 +261,8 @@ export const updateAnnuityPaid = async (
         console.log('[ANNUITY_SERVICE] last_annuity_paid non aggiornato (anno non maggiore)');
       }
 
-      // FIX: Formattiamo due_date per coerenza prima di restituirla
-      const finalAnnuity = {
-        ...updatedAnnuity,
-        due_date: dayjs(updatedAnnuity.due_date).format('YYYY-MM-DD'),
-      };
-
-      return finalAnnuity;
+      // 6. Formatta tramite helper
+      return formatAnnuityRow(updatedAnnuity) as Annuity;
     });
   } catch (error) {
     if (error instanceof AppError) throw error;

@@ -6,6 +6,7 @@ import * as annuityService from '../services/annuity.service';
 import { CreateContractBody, RenewAnnuityBody } from '../types/api'; 
 import { AuthenticatedRequest } from '../types/express';
 import AppError from '../utils/AppError';
+import { parseNumericId } from '../utils/validation.utils';
 
 // ============= ZOD SCHEMAS =============
 
@@ -189,10 +190,6 @@ export const createContractController = async (
       message: 'Contratto creato con successo',
     });
   } catch (err) {
-    if (err instanceof z.ZodError) {
-      console.log('[CONTRACT_CONTROLLER] Errore validazione:', err.issues);
-      return next(err);
-    }
     next(err);
   }
 };
@@ -241,10 +238,6 @@ export const getContractsController = async (
       },
     });
   } catch (err) {
-    if (err instanceof z.ZodError) {
-      console.log('[CONTRACT_CONTROLLER] Errore validazione query:', err.issues);
-      return next(err);
-    }
     next(err);
   }
 };
@@ -262,12 +255,7 @@ export const getContractByIdController = async (
   console.log('[CONTRACT_CONTROLLER] GET /:id - userId:', req.userId, 'contractId:', req.params.id);
 
   try {
-    const contractId = Number(req.params.id);
-
-    // Validazione id
-    if (isNaN(contractId) || contractId <= 0) {
-      throw new AppError('ID contratto non valido', 400);
-    }
+    const contractId = parseNumericId(req.params.id, 'ID contratto non valido');
 
     // Chiama service (ora include annuities)
     const contract = await contractService.getContractById(req.userId, contractId);
@@ -293,16 +281,9 @@ export const getContractAnnuitiesController = async (
   console.log('[CONTRACT_CONTROLLER] GET /:id/annuities - userId:', req.userId, 'contractId:', req.params.id);
 
   try {
-    const contractId = Number(req.params.id);
+    const contractId = parseNumericId(req.params.id, 'ID contratto non valido');
 
-    // Validazione id
-    if (isNaN(contractId) || contractId <= 0) {
-      throw new AppError('ID contratto non valido', 400);
-    }
-
-    // IMPORTANTE: Prima verifica che il contratto appartenga all'utente
-    // getAnnuitiesByContract fa già questo controllo internamente
-    const annuities = await annuityService.getAnnuitiesByContract(contractId);
+    const annuities = await annuityService.getAnnuitiesByContract(req.userId, contractId);
 
     // Nota: getAnnuitiesByContract verifica ownership tramite contratto
     // Se l'utente non è autorizzato, lancerà un 404
@@ -330,12 +311,7 @@ export const updateContractController = async (
   console.log('[CONTRACT_CONTROLLER] PUT /:id - userId:', req.userId, 'contractId:', req.params.id);
 
   try {
-    const contractId = Number(req.params.id);
-
-    // Validazione id
-    if (isNaN(contractId) || contractId <= 0) {
-      throw new AppError('ID contratto non valido', 400);
-    }
+    const contractId = parseNumericId(req.params.id, 'ID contratto non valido');
 
     // Validazione body (ora include tenant_data)
     const validatedData = updateContractSchema.parse(req.body);
@@ -358,10 +334,6 @@ export const updateContractController = async (
       message: 'Contratto aggiornato con successo',
     });
   } catch (err) {
-    if (err instanceof z.ZodError) {
-      console.log('[CONTRACT_CONTROLLER] Errore validazione:', err.issues);
-      return next(err);
-    }
     next(err);
   }
 };
@@ -378,12 +350,7 @@ export const deleteContractController = async (
   console.log('[CONTRACT_CONTROLLER] DELETE /:id - userId:', req.userId, 'contractId:', req.params.id);
 
   try {
-    const contractId = Number(req.params.id);
-
-    // Validazione id
-    if (isNaN(contractId) || contractId <= 0) {
-      throw new AppError('ID contratto non valido', 400);
-    }
+    const contractId = parseNumericId(req.params.id, 'ID contratto non valido');
 
     // Chiama service
     await contractService.deleteContract(req.userId, contractId);
@@ -425,12 +392,7 @@ export const renewContractController = async (
   console.log('[CONTRACT_CONTROLLER] 🔄 PUT /:id/renew - userId:', req.userId, 'contractId:', req.params.id);
 
   try {
-    const contractId = Number(req.params.id);
-
-    // Validazione id
-    if (isNaN(contractId) || contractId <= 0) {
-      throw new AppError('ID contratto non valido', 400);
-    }
+    const contractId = parseNumericId(req.params.id, 'ID contratto non valido');
 
     // Validazione body con schema rinnovo
     const validatedData = renewContractSchema.parse(req.body);
@@ -453,10 +415,6 @@ export const renewContractController = async (
       message: 'Contratto rinnovato con successo',
     });
   } catch (err) {
-    if (err instanceof z.ZodError) {
-      console.log('[CONTRACT_CONTROLLER] ❌ Errore validazione rinnovo:', err.issues);
-      return next(err);
-    }
     next(err);
   }
 };
@@ -480,12 +438,7 @@ export const updateContractAnnuityController = async (
   console.log('[CONTRACT_CONTROLLER] 💹 PUT /:id/annuity - userId:', req.userId, 'contractId:', req.params.id);
 
   try {
-    const contractId = Number(req.params.id);
-
-    // 1. Validazione ID
-    if (isNaN(contractId) || contractId <= 0) {
-      throw new AppError('ID contratto non valido', 400);
-    }
+    const contractId = parseNumericId(req.params.id, 'ID contratto non valido');
 
     // 2. Validazione Body
     const validatedData = updateAnnuitySchema.parse(req.body) as RenewAnnuityBody;
@@ -495,6 +448,7 @@ export const updateContractAnnuityController = async (
     // 3. Chiama service
     // Il service gestisce la doppia logica e la verifica di ownership
     const updatedContract = await annuityService.updateAnnuityPaid(
+      req.userId,
       contractId,
       last_annuity_paid
     );
@@ -506,10 +460,6 @@ export const updateContractAnnuityController = async (
     });
 
   } catch (err) {
-    if (err instanceof z.ZodError) {
-      console.log('[CONTRACT_CONTROLLER] ❌ Errore validazione annualità:', err.issues);
-      return next(err);
-    }
     next(err);
   }
 };

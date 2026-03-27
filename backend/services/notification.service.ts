@@ -7,6 +7,7 @@ import {
 import { ContractWithRelations } from '../types/api';
 import * as emailService from './email.service';
 import { logCron, logCronError } from './logger.service';
+import { parseDecimal } from '../utils/contract.utils';
 
 /**
  * Tenta di "reclamare" una notifica inserendola atomicamente nel DB.
@@ -148,7 +149,7 @@ const getFullContract = async (contractId: number): Promise<ContractWithRelation
   // 4. Costruisce l'oggetto tipizzato ContractWithRelations
   return {
     ...contract,
-    monthly_rent: typeof contract.monthly_rent === 'string' ? parseFloat(contract.monthly_rent) : contract.monthly_rent,
+    monthly_rent: parseDecimal(contract.monthly_rent),
     owner,
     tenant,
     annuities,

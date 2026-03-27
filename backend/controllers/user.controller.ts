@@ -74,12 +74,6 @@ export const updateDetails = async (
       data: updatedUser,
     });
   } catch (err) {
-    // Gestione errori Zod
-    if (err instanceof z.ZodError) {
-      console.log('[USER_CONTROLLER] Errore validazione:', err.issues);
-      return next(err);
-    }
-    
     next(err);
   }
 };
@@ -108,12 +102,6 @@ export const updatePassword = async (
       message: 'Password aggiornata con successo',
     });
   } catch (err) {
-    // Gestione errori Zod
-    if (err instanceof z.ZodError) {
-      console.log('[USER_CONTROLLER] Errore validazione:', err.issues);
-      return next(err);
-    }
-    
     next(err);
   }
 };

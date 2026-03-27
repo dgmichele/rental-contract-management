@@ -48,7 +48,7 @@ router.post('/refresh', refreshTokenController);
 router.post('/logout', logoutController);
 
 // Password reset
-router.post('/forgot-password', forgotPasswordController);
+router.post('/forgot-password', forgotPasswordLimiter, forgotPasswordController);
 router.post('/reset-password', forgotPasswordLimiter, resetPasswordController);
 
 export default router;

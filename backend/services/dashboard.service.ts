@@ -7,6 +7,7 @@ import {
   ExpiringItem,
   ContractWithRelations,
 } from "../types/api";
+import { parseDecimal } from "../utils/contract.utils";
 
 /**
  * Service per la generazione delle statistiche della dashboard.
@@ -36,7 +37,7 @@ export const getStats = async (userId: number): Promise<DashboardStatsResponse> 
     .where("owners.user_id", userId)
     .sum<{ sum: string | null }>("contracts.monthly_rent as sum")
     .first();
-  const totalMonthlyRent = parseFloat(totalMonthlyRentResult?.sum || "0");
+  const totalMonthlyRent = parseDecimal(totalMonthlyRentResult?.sum);
 
   // Calcolo scadenze contratti
   const now = dayjs();

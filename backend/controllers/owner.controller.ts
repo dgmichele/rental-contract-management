@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { NewOwner } from '../types/database';
 import { AuthenticatedRequest } from '../types/express';
 import AppError from '../utils/AppError';
+import { parseNumericId } from '../utils/validation.utils';
 
 // ============= ZOD SCHEMAS =============
 
@@ -63,10 +64,6 @@ export const createOwnerController = async (
       message: 'Proprietario creato con successo',
     });
   } catch (err) {
-    if (err instanceof z.ZodError) {
-      console.log('[OWNER_CONTROLLER] Errore validazione:', err.issues);
-      return next(err);
-    }
     next(err);
   }
 };
@@ -101,10 +98,6 @@ export const getOwnersController = async (
       },
     });
   } catch (err) {
-    if (err instanceof z.ZodError) {
-      console.log('[OWNER_CONTROLLER] Errore validazione query:', err.issues);
-      return next(err);
-    }
     next(err);
   }
 };
@@ -121,12 +114,7 @@ export const getOwnerByIdController = async (
   console.log('[OWNER_CONTROLLER] GET /:id - userId:', req.userId, 'ownerId:', req.params.id);
 
   try {
-    const ownerId = Number(req.params.id);
-
-    // Validazione id
-    if (isNaN(ownerId) || ownerId <= 0) {
-      throw new AppError('ID proprietario non valido', 400);
-    }
+    const ownerId = parseNumericId(req.params.id, 'ID proprietario non valido');
 
     // Chiama service
     const owner = await ownerService.getOwnerById(req.userId, ownerId);
@@ -158,12 +146,7 @@ export const updateOwnerController = async (
   console.log('[OWNER_CONTROLLER] PUT /:id - userId:', req.userId, 'ownerId:', req.params.id);
 
   try {
-    const ownerId = Number(req.params.id);
-
-    // Validazione id
-    if (isNaN(ownerId) || ownerId <= 0) {
-      throw new AppError('ID proprietario non valido', 400);
-    }
+    const ownerId = parseNumericId(req.params.id, 'ID proprietario non valido');
 
     // Validazione body
     const validatedData = updateOwnerSchema.parse(req.body);
@@ -178,10 +161,6 @@ export const updateOwnerController = async (
       message: 'Proprietario aggiornato con successo',
     });
   } catch (err) {
-    if (err instanceof z.ZodError) {
-      console.log('[OWNER_CONTROLLER] Errore validazione:', err.issues);
-      return next(err);
-    }
     next(err);
   }
 };
@@ -198,12 +177,7 @@ export const deleteOwnerController = async (
   console.log('[OWNER_CONTROLLER] DELETE /:id - userId:', req.userId, 'ownerId:', req.params.id);
 
   try {
-    const ownerId = Number(req.params.id);
-
-    // Validazione id
-    if (isNaN(ownerId) || ownerId <= 0) {
-      throw new AppError('ID proprietario non valido', 400);
-    }
+    const ownerId = parseNumericId(req.params.id, 'ID proprietario non valido');
 
     // Chiama service
     await ownerService.deleteOwner(req.userId, ownerId);
@@ -229,12 +203,7 @@ export const getOwnerContractsController = async (
   console.log('[OWNER_CONTROLLER] GET /:id/contracts - userId:', req.userId, 'ownerId:', req.params.id);
 
   try {
-    const ownerId = Number(req.params.id);
-
-    // Validazione id
-    if (isNaN(ownerId) || ownerId <= 0) {
-      throw new AppError('ID proprietario non valido', 400);
-    }
+    const ownerId = parseNumericId(req.params.id, 'ID proprietario non valido');
 
     // Validazione query params
     const page = Number(req.query.page) || 1;

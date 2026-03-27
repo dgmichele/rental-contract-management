@@ -4,6 +4,7 @@ import { CreateContractBody, UpdateContractBody, RenewContractBody } from '../ty
 import AppError from '../utils/AppError';
 import dayjs from 'dayjs';
 import * as annuityService from './annuity.service';
+import { formatContractRow, formatAnnuityRow, parseDecimal } from '../utils/contract.utils';
 
 /**
  * Crea un nuovo contratto.
@@ -126,12 +127,7 @@ export const createContract = async (
         console.log('[CONTRACT_SERVICE] Contratto in cedolare_secca, nessuna annuity generata');
       }
 
-      return {
-        ...contract,
-        start_date: dayjs(contract.start_date).format('YYYY-MM-DD'),
-        end_date: dayjs(contract.end_date).format('YYYY-MM-DD'),
-        monthly_rent: parseFloat(contract.monthly_rent as any),
-      };
+      return formatContractRow(contract) as Contract;
     });
   } catch (error) {
     if (error instanceof AppError) throw error;
@@ -246,36 +242,8 @@ export const getContracts = async (
       .limit(limit)
       .orderBy('contracts.end_date', 'asc'); // Ordina per scadenza
 
-    // Formatta response con owner e tenant nested
-    const formattedContracts = contracts.map((row: any) => ({
-      id: row.id,
-      owner_id: row.owner_id,
-      tenant_id: row.tenant_id,
-      start_date: dayjs(row.start_date).format('YYYY-MM-DD'),
-      end_date: dayjs(row.end_date).format('YYYY-MM-DD'),
-      cedolare_secca: row.cedolare_secca,
-      typology: row.typology,
-      canone_concordato: row.canone_concordato,
-      monthly_rent: parseFloat(row.monthly_rent), // Decimal to number
-      last_annuity_paid: row.last_annuity_paid,
-      address: row.address, // Added address
-      created_at: row.created_at,
-      updated_at: row.updated_at,
-      owner: {
-        id: row.owner_id,
-        name: row.owner_name,
-        surname: row.owner_surname,
-        email: row.owner_email,
-        phone: row.owner_phone,
-      },
-      tenant: {
-        id: row.tenant_id,
-        name: row.tenant_name,
-        surname: row.tenant_surname,
-        email: row.tenant_email,
-        phone: row.tenant_phone,
-      },
-    }));
+    // Formatta response tramite helper centralizzato
+    const formattedContracts = contracts.map((row: any) => formatContractRow(row));
 
     console.log('[CONTRACT_SERVICE] Contratti trovati:', formattedContracts.length, 'di', total);
 
@@ -333,49 +301,11 @@ export const getContractById = async (
 
     console.log('[CONTRACT_SERVICE] Annuities trovate:', annuities.length);
 
-    // Formatta annuities (converti due_date in formato stringa YYYY-MM-DD)
-    const formattedAnnuities = annuities.map(annuity => ({
-      id: annuity.id,
-      contract_id: annuity.contract_id,
-      year: annuity.year,
-      due_date: dayjs(annuity.due_date).format('YYYY-MM-DD'),
-      is_paid: annuity.is_paid,
-      paid_at: annuity.paid_at,
-      created_at: annuity.created_at,
-      updated_at: annuity.updated_at,
-    }));
-
-    // Formatta response
-    const formattedContract = {
-      id: contract.id,
-      owner_id: contract.owner_id,
-      tenant_id: contract.tenant_id,
-      start_date: dayjs(contract.start_date).format('YYYY-MM-DD'),
-      end_date: dayjs(contract.end_date).format('YYYY-MM-DD'),
-      cedolare_secca: contract.cedolare_secca,
-      typology: contract.typology,
-      canone_concordato: contract.canone_concordato,
-      monthly_rent: parseFloat(contract.monthly_rent as any),
-      last_annuity_paid: contract.last_annuity_paid,
-      address: contract.address, // Added address
-      created_at: contract.created_at,
-      updated_at: contract.updated_at,
-      owner: {
-        id: contract.owner_id,
-        name: contract.owner_name,
-        surname: contract.owner_surname,
-        email: contract.owner_email,
-        phone: contract.owner_phone,
-      },
-      tenant: {
-        id: contract.tenant_id,
-        name: contract.tenant_name,
-        surname: contract.tenant_surname,
-        email: contract.tenant_email,
-        phone: contract.tenant_phone,
-      },
-      annuities: formattedAnnuities, // FASE 3: Includi annuities nella response
-    };
+    // Idrata contratto con helper centralizzato (include owner e tenant)
+    const formattedContract = formatContractRow(contract) as any;
+    
+    // Aggiunge le annualità formattate
+    formattedContract.annuities = annuities.map(a => formatAnnuityRow(a));
 
     console.log('[CONTRACT_SERVICE] Contratto trovato:', formattedContract.id);
     return formattedContract;
@@ -504,12 +434,7 @@ export const updateContract = async (
         console.log('[CONTRACT_SERVICE] ✅ is_paid annuities sincronizzato');
       }
 
-      return {
-        ...updatedContract,
-        start_date: dayjs(updatedContract.start_date).format('YYYY-MM-DD'),
-        end_date: dayjs(updatedContract.end_date).format('YYYY-MM-DD'),
-        monthly_rent: parseFloat(updatedContract.monthly_rent as any),
-      };
+      return formatContractRow(updatedContract) as Contract;
     });
   } catch (error) {
     if (error instanceof AppError) throw error;
@@ -704,48 +629,9 @@ export const renewContract = async (
         )
         .first();
 
-      // Formatta annuities per response
-      const formattedAnnuities = newAnnuities.map(annuity => ({
-        id: annuity.id,
-        contract_id: annuity.contract_id,
-        year: annuity.year,
-        due_date: dayjs(annuity.due_date).format('YYYY-MM-DD'),
-        is_paid: annuity.is_paid,
-        paid_at: annuity.paid_at,
-        created_at: annuity.created_at,
-        updated_at: annuity.updated_at,
-      }));
-
-      // Response completa con tutti i dettagli
-      const response = {
-        id: contractDetails.id,
-        owner_id: contractDetails.owner_id,
-        tenant_id: contractDetails.tenant_id,
-        start_date: dayjs(contractDetails.start_date).format('YYYY-MM-DD'),
-        end_date: dayjs(contractDetails.end_date).format('YYYY-MM-DD'),
-        cedolare_secca: contractDetails.cedolare_secca,
-        typology: contractDetails.typology,
-        canone_concordato: contractDetails.canone_concordato,
-        monthly_rent: parseFloat(contractDetails.monthly_rent as any),
-        last_annuity_paid: contractDetails.last_annuity_paid,
-        created_at: contractDetails.created_at,
-        updated_at: contractDetails.updated_at,
-        owner: {
-          id: contractDetails.owner_id,
-          name: contractDetails.owner_name,
-          surname: contractDetails.owner_surname,
-          email: contractDetails.owner_email,
-          phone: contractDetails.owner_phone,
-        },
-        tenant: {
-          id: contractDetails.tenant_id,
-          name: contractDetails.tenant_name,
-          surname: contractDetails.tenant_surname,
-          email: contractDetails.tenant_email,
-          phone: contractDetails.tenant_phone,
-        },
-        annuities: formattedAnnuities, // ⭐ Timeline completa per frontend
-      };
+      // Formatta contratto con helper e aggiunge annualità
+      const response = formatContractRow(contractDetails) as any;
+      response.annuities = newAnnuities.map(a => formatAnnuityRow(a));
 
       console.log('[CONTRACT_SERVICE] ✅ Contratto rinnovato con successo. Dati inviati al client.');
 

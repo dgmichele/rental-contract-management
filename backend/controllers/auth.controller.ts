@@ -70,19 +70,6 @@ export const registerController = async (
       message: 'Registrazione completata con successo',
     });
   } catch (error) {
-    // Gestione errori Zod (validazione)
-    if (error instanceof z.ZodError) {
-      console.log('[AUTH_CONTROLLER] Errore validazione:', error.issues);
-
-      const formattedErrors = error.issues.map((err) => ({
-        field: err.path.join('.'),
-        message: err.message,
-      }));
-
-      return next(error);
-    }
-
-    // Passa altri errori al middleware errorHandler
     next(error);
   }
 };
@@ -119,11 +106,6 @@ export const loginController = async (
       message: 'Login effettuato con successo',
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      console.log('[AUTH_CONTROLLER] Errore validazione:', error.issues);
-      return next(error);
-    }
-
     next(error);
   }
 };
@@ -158,11 +140,6 @@ export const refreshTokenController = async (
       message: 'Token rinnovato con successo',
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      console.log('[AUTH_CONTROLLER] Errore validazione:', error.issues);
-      return next(error);
-    }
-
     next(error);
   }
 };
@@ -189,16 +166,14 @@ export const logoutController = async (
     console.log('[AUTH_CONTROLLER] Logout completato');
 
     // Response 200 OK
+    // Nota: Se usassimo i cookie (e.g. HttpOnly), qui dovremmo pulire il cookie 
+    // con res.clearCookie('refreshToken').
+    
     res.status(200).json({
       success: true,
       message: 'Logout effettuato con successo',
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      console.log('[AUTH_CONTROLLER] Errore validazione:', error.issues);
-      return next(error);
-    }
-
     next(error);
   }
 };
@@ -234,9 +209,6 @@ export const forgotPasswordController = async (
       message: `Email per il reset della password inviata se l'utente esiste`
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return next(error);
-    }
     next(error);
   }
 };
@@ -258,9 +230,6 @@ export const resetPasswordController = async (
       message: 'Password resettata con successo',
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return next(error);
-    }
     next(error);
   }
 };

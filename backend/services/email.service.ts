@@ -68,6 +68,15 @@ export const sendPasswordResetEmail = async (to: string, token: string): Promise
 };
 
 /**
+ * Helper per estrarre la data di scadenza (contratto o annualità)
+ */
+const extractExpiryDateRaw = (contract: ContractWithRelations, type: 'contract' | 'annuity', year?: number): string | undefined => {
+  return type === 'contract' 
+    ? contract.end_date 
+    : contract.annuities?.find(a => a.year === year)?.due_date;
+};
+
+/**
  * Formatta una data in formato italiano leggibile.
  * Esempio: "15 gennaio 2028"
  * 
@@ -101,9 +110,8 @@ export const sendExpirationReminderInternal = async (
     const ownerName = `${contract.owner.name} ${contract.owner.surname}`;
     const tenantName = `${contract.tenant.name} ${contract.tenant.surname}`;
     
-    // Determina data di scadenza in base al tipo
-    const expiryDateRaw = type === 'contract' ? contract.end_date : 
-      contract.annuities?.find(a => a.year === year)?.due_date;
+    // Determina data di scadenza (unificato)
+    const expiryDateRaw = extractExpiryDateRaw(contract, type, year);
     
     if (!expiryDateRaw) {
       console.error('[EMAIL_SERVICE] ❌ Data di scadenza non trovata per contratto:', contract.id);
@@ -185,9 +193,8 @@ export const sendExpirationReminderClient = async (
       return false;
     }
 
-    // Determina data di scadenza in base al tipo
-    const expiryDateRaw = type === 'contract' ? contract.end_date : 
-      contract.annuities?.find(a => a.year === year)?.due_date;
+    // Determina data di scadenza (unificato)
+    const expiryDateRaw = extractExpiryDateRaw(contract, type, year);
     
     if (!expiryDateRaw) {
       console.error('[EMAIL_SERVICE] ❌ Data di scadenza non trovata per contratto:', contract.id);

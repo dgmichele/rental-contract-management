@@ -2,6 +2,7 @@ import knex from "../config/db";
 import { NewOwner, UpdateOwner, Owner, Contract } from "../types/database";
 import AppError from "../utils/AppError";
 import { Knex } from "knex";
+import { formatContractRow, parseDecimal } from "../utils/contract.utils";
 
 export const createOwner = async (
   user_id: number,
@@ -114,25 +115,8 @@ export const getOwnerContracts = async (
     .limit(limit)
     .orderBy("contracts.start_date", "desc");
 
-  // Formattazione per matchare il tipo ContractWithRelations del frontend
-  const formattedData = data.map((row: any) => ({
-    ...row,
-    monthly_rent: parseFloat(row.monthly_rent),
-    owner: {
-      id: row.owner_id,
-      name: row.owner_name,
-      surname: row.owner_surname,
-      email: row.owner_email,
-      phone: row.owner_phone,
-    },
-    tenant: {
-      id: row.tenant_id,
-      name: row.tenant_name,
-      surname: row.tenant_surname,
-      email: row.tenant_email,
-      phone: row.tenant_phone,
-    },
-  }));
+  // Formattazione tramite helper centralizzato
+  const formattedData = data.map((row: any) => formatContractRow(row));
 
   return { data: formattedData, total };
 };
@@ -151,6 +135,6 @@ export const getOwnerStats = async (
 
   return {
     total_contracts: parseInt((result?.count as string) || "0", 10),
-    total_monthly_rent: parseFloat((result?.total_rent as string) || "0"),
+    total_monthly_rent: parseDecimal(result?.total_rent),
   };
 };
