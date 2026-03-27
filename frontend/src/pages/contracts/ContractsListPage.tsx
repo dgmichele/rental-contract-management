@@ -1,64 +1,27 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { FaPlus, FaSearch, FaFilter } from 'react-icons/fa';
-import { useContracts, useDeleteContract } from '../../hooks/useContracts';
-import { useDebounce } from '../../hooks/useDebounce';
+import { useContracts } from '../../hooks/useContracts';
+import { useContractsListLogic } from './hooks/useContractsListLogic';
 import { ContractCard } from '../../components/cards/ContractCard';
 import { ContractCardSkeleton } from '../../components/cards/ContractCardSkeleton';
 import Pagination from '../../components/ui/Pagination';
 import Button from '../../components/ui/Button';
 import DeleteModal from '../../components/modals/DeleteModal';
 import ContractFiltersModal from '../../components/modals/ContractFiltersModal';
-import type { ContractWithRelations } from '../../types/shared';
 import clsx from 'clsx';
 
 const ContractsListPage = () => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   
-  const page = Number(searchParams.get('page')) || 1;
-  const setPage = (newPage: number) => {
-    setSearchParams(prev => {
-      prev.set('page', newPage.toString());
-      return prev;
-    }, { replace: true });
-  };
-
-  const search = searchParams.get('search') || '';
-  const setSearch = (newSearch: string) => {
-    setSearchParams(prev => {
-      if (newSearch) prev.set('search', newSearch);
-      else prev.delete('search');
-      prev.set('page', '1');
-      return prev;
-    }, { replace: true });
-  };
-
-  const debouncedSearch = useDebounce(search, 400);
-
-  const filters = {
-    expiryMonth: searchParams.get('expiryMonth') ? Number(searchParams.get('expiryMonth')) : undefined,
-    expiryYear: searchParams.get('expiryYear') ? Number(searchParams.get('expiryYear')) : undefined,
-  };
-  
-  const setFilters = (newFilters: { expiryMonth?: number; expiryYear?: number }) => {
-    setSearchParams(prev => {
-      if (newFilters.expiryMonth !== undefined) prev.set('expiryMonth', newFilters.expiryMonth.toString());
-      else prev.delete('expiryMonth');
-      
-      if (newFilters.expiryYear !== undefined) prev.set('expiryYear', newFilters.expiryYear.toString());
-      else prev.delete('expiryYear');
-      
-      prev.set('page', '1');
-      return prev;
-    }, { replace: true });
-  };
-  
-  // Modals state
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isFiltersModalOpen, setIsFiltersModalOpen] = useState(false);
-  const [openedViaSticky, setOpenedViaSticky] = useState(false);
-  const [selectedContract, setSelectedContract] = useState<ContractWithRelations | null>(null);
+  const {
+    state,
+    dispatch,
+    searchParams: { page, setPage, search, setSearch, debouncedSearch, filters, hasActiveFilters },
+    searchContainerRef,
+    deleteContractMutation,
+    confirmDelete,
+    handleApplyFilters
+  } = useContractsListLogic();
 
   const { data, isLoading, error } = useContracts({
     page,
@@ -66,51 +29,6 @@ const ContractsListPage = () => {
     search: debouncedSearch,
     ...filters,
   });
-  
-  const deleteContractMutation = useDeleteContract();
-
-  const handleDelete = (contract: ContractWithRelations) => {
-    setSelectedContract(contract);
-    setIsDeleteModalOpen(true);
-  };
-
-  const confirmDelete = async () => {
-    if (selectedContract) {
-      await deleteContractMutation.mutateAsync(selectedContract.id);
-      setIsDeleteModalOpen(false);
-      setSelectedContract(null);
-    }
-  };
-
-  const handleApplyFilters = (newFilters: { expiryMonth?: number; expiryYear?: number }) => {
-    setFilters(newFilters);
-    setIsFiltersModalOpen(false);
-    
-    // Se i filtri sono stati aperti dal pulsante sticky, scrolliamo in cima
-    if (openedViaSticky) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  // Check if any filter is active for UI indication
-  const hasActiveFilters = filters.expiryMonth !== undefined || filters.expiryYear !== undefined;
-
-  // Sticky filter button logic for mobile/tablet
-  const [showStickyFilter, setShowStickyFilter] = useState(false);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (searchContainerRef.current) {
-        const rect = searchContainerRef.current.getBoundingClientRect();
-        // Mostra il bottone sticky quando il fondo della barra di ricerca esce dalla vista
-        setShowStickyFilter(rect.bottom < 0);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   return (
     <div className="min-h-screen pb-24 px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
@@ -131,13 +49,10 @@ const ContractsListPage = () => {
       {/* Sticky Filter Button for Mobile/Tablet */}
       <div className={clsx(
         "fixed top-24 right-0 z-40 lg:hidden transition-all duration-500 ease-in-out pointer-events-none",
-        showStickyFilter ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full"
+        state.showStickyFilter ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full"
       )}>
       <button
-        onClick={() => {
-          setOpenedViaSticky(true);
-          setIsFiltersModalOpen(true);
-        }}
+        onClick={() => dispatch({ type: 'OPEN_FILTERS_MODAL', openedViaSticky: true })}
         className={clsx(
             "flex items-center justify-center w-12 h-12 rounded-l-2xl border-y border-l shadow-xl pointer-events-auto active:scale-95 transition-all duration-300",
             hasActiveFilters 
@@ -166,10 +81,7 @@ const ContractsListPage = () => {
             />
           </div>
           <button
-            onClick={() => {
-              setOpenedViaSticky(false);
-              setIsFiltersModalOpen(true);
-            }}
+            onClick={() => dispatch({ type: 'OPEN_FILTERS_MODAL', openedViaSticky: false })}
             className={clsx(
               "flex items-center justify-center px-4 py-2.5 rounded-lg border transition-all duration-300 cursor-pointer shadow-sm",
               hasActiveFilters 
@@ -216,7 +128,7 @@ const ContractsListPage = () => {
                 contract={contract}
                 displayMode="owner" // Nella lista generale mostriamo proprietario come titolo principale (default)
                 onEdit={() => navigate(`/contracts/${contract.id}?mode=edit`, { state: { returnUrl: window.location.pathname + window.location.search } })}
-                onDelete={() => handleDelete(contract)}
+                onDelete={() => dispatch({ type: 'OPEN_DELETE_MODAL', payload: contract })}
               />
             ))}
           </div>
@@ -232,18 +144,15 @@ const ContractsListPage = () => {
 
       {/* Modals */}
       <ContractFiltersModal
-        isOpen={isFiltersModalOpen}
-        onClose={() => setIsFiltersModalOpen(false)}
+        isOpen={state.isFiltersModalOpen}
+        onClose={() => dispatch({ type: 'CLOSE_FILTERS_MODAL' })}
         onApplyFilters={handleApplyFilters}
         currentFilters={filters}
       />
 
       <DeleteModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => {
-          setIsDeleteModalOpen(false);
-          setSelectedContract(null);
-        }}
+        isOpen={state.isDeleteModalOpen}
+        onClose={() => dispatch({ type: 'CLOSE_DELETE_MODAL' })}
         onConfirm={confirmDelete}
         title="Elimina contratto"
         message={`Sei sicuro di voler eliminare questo contratto? L'operazione sarà irreversibile.`}

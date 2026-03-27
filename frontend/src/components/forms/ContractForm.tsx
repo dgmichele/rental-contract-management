@@ -1,8 +1,5 @@
-import { useEffect, useMemo } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
+import { FormProvider } from 'react-hook-form';
 import { Link } from 'react-router-dom';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { 
   FaHome, 
   FaCalendarAlt, 
@@ -15,60 +12,9 @@ import Button from '../ui/Button';
 import TenantForm from './TenantForm';
 import type { Owner } from '../../types/owner';
 import clsx from 'clsx';
+import { useContractFormLogic, type ContractFormData } from './hooks/useContractFormLogic';
 
-// Schema di validazione per i dati dell'inquilino
-const tenantDataSchema = z.object({
-  name: z.string().min(1, 'Il nome è obbligatorio').trim(),
-  surname: z.string().min(1, 'Il cognome è obbligatorio').trim(),
-  phone: z.string().optional().or(z.literal('')),
-  email: z.string().email('Email non valida').optional().or(z.literal('')),
-});
-
-// Schema di validazione per il contratto come factory function per accettare parametri dinamici
-const createContractSchema = (minAnnuityYear?: number) => z.object({
-  owner_id: z.number().min(1, 'Seleziona un proprietario'),
-  tenant_data: tenantDataSchema,
-  address: z.string().min(1, 'L\'indirizzo è obbligatorio').trim(),
-  start_date: z.string().min(1, 'La data di inizio è obbligatoria'),
-  end_date: z.string().min(1, 'La data di fine è obbligatoria'),
-  cedolare_secca: z.boolean(),
-  typology: z.enum(['residenziale', 'commerciale'] as const),
-  canone_concordato: z.boolean(),
-  monthly_rent: z.any().transform(val => (val === '' || val === null || isNaN(val as any) ? undefined : Number(val))).pipe(
-    z.number({ message: 'Il canone è obbligatorio' }).min(0, 'Il canone non può essere negativo')
-  ),
-  last_annuity_paid: z.any().transform(val => (val === '' || val === null || isNaN(val as any) ? null : Number(val))).pipe(
-    z.number({ message: 'Inserire un anno valido' })
-     .min(minAnnuityYear || 2000, `L'anno non può essere inferiore a ${minAnnuityYear || 2000}`)
-     .nullable()
-  ),
-}).refine(
-  (data) => {
-    // Validazione: end_date deve essere dopo start_date
-    if (data.start_date && data.end_date) {
-      return new Date(data.end_date) > new Date(data.start_date);
-    }
-    return true;
-  },
-  {
-    message: 'La data di fine deve essere successiva alla data di inizio',
-    path: ['end_date'],
-  }
-).refine(
-  (data) => {
-    // Se NON è cedolare secca, l'ultima annualità pagata è OBBLIGATORIA
-    if (!data.cedolare_secca && data.last_annuity_paid === null) {
-      return false;
-    }
-    return true;
-  },
-  {
-    message: "Devi inserire obbligatoriamente l'annualità per procedere!",
-    path: ['last_annuity_paid'],
-  }
-);
-
-export type ContractFormData = z.infer<ReturnType<typeof createContractSchema>>;
+export type { ContractFormData };
 
 interface ContractFormProps {
   initialData?: Partial<ContractFormData>;
@@ -83,25 +29,6 @@ interface ContractFormProps {
   minAnnuityYear?: number;
 }
 
-/**
- * ContractForm - Form complesso per la gestione dei contratti
- * 
- * Supporta diverse modalità:
- * - create: Creazione nuovo contratto (tutti i campi editabili)
- * - edit: Modifica contratto esistente (tutti i campi editabili)
- * - renew: Rinnovo contratto (solo dati contratto editabili)
- * - annuity: Rinnovo annualità (solo last_annuity_paid editabile)
- * 
- * @param initialData Dati iniziali per pre-compilare il form
- * @param onSubmit Callback chiamata al submit del form validato
- * @param onDelete Callback per eliminazione (opzionale)
- * @param isLoading Stato di caricamento
- * @param submitLabel Testo personalizzato per il pulsante di submit
- * @param owners Lista dei proprietari disponibili
- * @param preselectedOwnerId ID del proprietario preselezionato
- * @param allowOwnerChange Se false, il campo owner è readonly
- * @param mode Modalità del form (default: 'create')
- */
 export default function ContractForm({
   initialData,
   onSubmit,
@@ -115,114 +42,24 @@ export default function ContractForm({
   minAnnuityYear,
 }: ContractFormProps) {
 
-  // In edit mode, il min è dinamico basato su start_date (real-time)
-  // In altri modeParam il min resta quello passato dal parent
-  const effectiveMinAnnuityYear = useMemo(() => {
-    if (mode === 'edit' && initialData?.start_date) {
-      const year = new Date(initialData.start_date).getFullYear();
-      if (!isNaN(year)) return year;
-    }
-    return minAnnuityYear;
-  }, [mode, initialData?.start_date, minAnnuityYear]);
-
-  const schema = useMemo(() => createContractSchema(effectiveMinAnnuityYear), [effectiveMinAnnuityYear]);
-
-  const methods = useForm<ContractFormData>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      owner_id: preselectedOwnerId || initialData?.owner_id || 0,
-      tenant_data: {
-        name: initialData?.tenant_data?.name || '',
-        surname: initialData?.tenant_data?.surname || '',
-        phone: initialData?.tenant_data?.phone || '',
-        email: initialData?.tenant_data?.email || '',
-      },
-      address: initialData?.address || '',
-      start_date: initialData?.start_date || '',
-      end_date: initialData?.end_date || '',
-      cedolare_secca: initialData?.cedolare_secca ?? true,
-      typology: initialData?.typology || 'residenziale',
-      canone_concordato: initialData?.canone_concordato ?? false,
-      monthly_rent: initialData?.monthly_rent || 0,
-      last_annuity_paid: initialData?.last_annuity_paid || null,
-    },
+  const {
+    methods,
+    cedolareSecca,
+    startDate,
+    todayStr,
+    isRenewDisabled,
+    isFieldDisabled,
+    errors,
+    isDirty
+  } = useContractFormLogic({
+    initialData,
+    preselectedOwnerId,
+    mode,
+    minAnnuityYear,
+    isLoading
   });
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors, isDirty },
-  } = methods;
-
-  // Watch per cedolare_secca per mostrare/nascondere last_annuity_paid
-  const cedolareSecca = watch('cedolare_secca');
-  const startDate = watch('start_date');
-  const endDate = watch('end_date');
-
-  // calcolo stringa data odierna formattata 'YYYY-MM-DD' per attributo min dell'input date
-  const todayStr = useMemo(() => {
-    const today = new Date();
-    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  }, []);
-
-  const isRenewDisabled = useMemo(() => {
-    if (mode !== 'renew') return false;
-    
-    if (!startDate || !endDate) return true; // disabilita se mancano date
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    
-    // Disabilita se le date sono passate (rispetto ad oggi) o start_date >= end_date
-    if (start < today || end < today) return true;
-    if (start >= end) return true;
-    
-    return false;
-  }, [mode, startDate, endDate]);
-
-  // In modalità renew, se l'utente toglie cedolare secca,
-  // assegna automaticamente l'anno della start_date al campo last_annuity_paid
-  useEffect(() => {
-    if (mode === 'renew' && !cedolareSecca && startDate) {
-      const year = new Date(startDate).getFullYear();
-      if (!isNaN(year)) {
-        setValue('last_annuity_paid', year, { shouldDirty: true });
-      }
-    }
-  }, [mode, cedolareSecca, startDate, setValue]);
-
-  // Imposta il proprietario preselezionato se cambia
-  useEffect(() => {
-    if (preselectedOwnerId) {
-      setValue('owner_id', preselectedOwnerId);
-    }
-  }, [preselectedOwnerId, setValue]);
-
-  // Determina quali campi sono editabili in base alla modalità
-  const isFieldDisabled = (fieldName: string) => {
-    if (isLoading) return true;
-    
-    switch (mode) {
-      case 'renew':
-        // In modalità rinnovo, solo i dati del contratto sono editabili
-        return !['address', 'start_date', 'end_date', 'cedolare_secca', 'typology', 'canone_concordato', 'monthly_rent', 'last_annuity_paid'].includes(fieldName);
-      
-      case 'annuity':
-        // In modalità annualità, solo last_annuity_paid è editabile
-        return fieldName !== 'last_annuity_paid';
-      
-      case 'edit':
-      case 'create':
-      default:
-        // In modalità edit/create, tutti i campi sono editabili
-        return false;
-    }
-  };
+  const { register, handleSubmit } = methods;
 
   return (
     <FormProvider {...methods}>
@@ -260,7 +97,7 @@ export default function ContractForm({
               )}
             </div>
 
-            {/* TODO: Opzione per creare nuovo proprietario (da implementare con modal) */}
+            {/* Opzione per creare nuovo proprietario (da implementare con modal) */}
             {allowOwnerChange && mode === 'create' && (
               <p className="text-xs text-text-subtle italic">
                 💡 Se il proprietario non è in elenco, aggiungilo {' '}

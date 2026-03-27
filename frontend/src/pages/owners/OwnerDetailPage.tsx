@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect, type RefObject } from 'react';
-import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import React from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { FaArrowLeft, FaEdit, FaFileContract, FaEuroSign, FaPlusCircle } from 'react-icons/fa';
 import { useOwner, useOwnerContracts } from '../../hooks/useOwners';
-import { useDeleteContract } from '../../hooks/useContracts';
+import { useOwnerDetailLogic } from './hooks/useOwnerDetailLogic';
 import { StatsCard } from '../../components/cards/StatsCard';
 import { ContractCard } from '../../components/cards/ContractCard';
 import { ContractCardSkeleton } from '../../components/cards/ContractCardSkeleton';
@@ -21,32 +21,18 @@ const OwnerDetailPage: React.FC = () => {
   const ownerId = Number(id);
   const location = useLocation();
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const page = Number(searchParams.get('page')) || 1;
-  
-  const setPage = (newPage: number) => {
-    setSearchParams((prev: URLSearchParams) => {
-      prev.set('page', newPage.toString());
-      return prev;
-    }, { replace: true });
-  };
-  // Ref per lo scroll smooth della paginazione verso la sezione contratti (solo mobile ≤ 600px)
-  const contractsSectionRef = useRef<HTMLHeadingElement>(null);
-  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 600px)').matches);
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 600px)');
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedContract, setSelectedContract] = useState<ContractWithRelations | null>(null);
-  const [isDeleteContractModalOpen, setIsDeleteContractModalOpen] = useState(false);
+  const {
+    state,
+    dispatch,
+    page,
+    setPage,
+    contractsSectionRef,
+    handlers: { confirmDeleteContract, handleBack },
+    mutations: { deleteContractMutation }
+  } = useOwnerDetailLogic();
 
   const { data: ownerData, isLoading: isOwnerLoading, error: ownerError } = useOwner(ownerId);
   const { data: contractsData, isLoading: isContractsLoading } = useOwnerContracts(ownerId, page, 12);
-  const deleteContractMutation = useDeleteContract();
-
 
   if (!isOwnerLoading && (ownerError || !ownerData?.success)) {
     return (
@@ -61,27 +47,6 @@ const OwnerDetailPage: React.FC = () => {
 
   const owner = ownerData?.data;
 
-  const handleDeleteContract = (contract: ContractWithRelations) => {
-    setSelectedContract(contract);
-    setIsDeleteContractModalOpen(true);
-  };
-
-  const confirmDeleteContract = async () => {
-    if (selectedContract) {
-      await deleteContractMutation.mutateAsync(selectedContract.id);
-      setIsDeleteContractModalOpen(false);
-      setSelectedContract(null);
-    }
-  };
-
-  const getBackLabel = () => {
-    return 'Torna indietro';
-  };
-
-  const handleBack = () => {
-    navigate(-1);
-  };
-
   return (
     <div className="min-h-screen pb-24 px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
       {/* Top Navigation */}
@@ -91,7 +56,7 @@ const OwnerDetailPage: React.FC = () => {
           className="flex items-center gap-2 text-secondary hover:text-primary transition-colors font-semibold cursor-pointer"
         >
           <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" />
-          {getBackLabel()}
+          Torna indietro
         </button>
       </div>
 
@@ -108,7 +73,7 @@ const OwnerDetailPage: React.FC = () => {
           {!isOwnerLoading && (
             <>
               <button
-                onClick={() => setIsEditModalOpen(true)}
+                onClick={() => dispatch({ type: 'OPEN_EDIT_MODAL' })}
                 className="text-secondary hover:text-primary transition-all active:scale-95 flex items-center justify-center p-1 cursor-pointer" 
                 title="Modifica proprietario"
               >
@@ -183,7 +148,7 @@ const OwnerDetailPage: React.FC = () => {
                   contract={contract as ContractWithRelations} 
                   displayMode="tenant"
                   onEdit={() => navigate(`/contracts/${contract.id}?mode=edit`, { state: location.state })}
-                  onDelete={() => handleDeleteContract(contract as ContractWithRelations)}
+                  onDelete={() => dispatch({ type: 'OPEN_DELETE_CONTRACT_MODAL', payload: contract as ContractWithRelations })}
                 />
               ))}
             </div>
@@ -192,7 +157,7 @@ const OwnerDetailPage: React.FC = () => {
               currentPage={page}
               totalPages={contractsData?.pagination.totalPages || 1}
               onPageChange={setPage}
-              scrollTargetRef={isMobile ? contractsSectionRef as RefObject<HTMLElement> : undefined}
+              scrollTargetRef={state.isMobile ? contractsSectionRef as React.RefObject<HTMLElement> : undefined}
             />
           </>
         )}
@@ -201,19 +166,16 @@ const OwnerDetailPage: React.FC = () => {
       {/* Modals */}
       {owner && (
         <EditOwnerModal
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
+          isOpen={state.isEditModalOpen}
+          onClose={() => dispatch({ type: 'CLOSE_EDIT_MODAL' })}
           owner={owner}
           showDelete
         />
       )}
 
       <DeleteModal
-        isOpen={isDeleteContractModalOpen}
-        onClose={() => {
-          setIsDeleteContractModalOpen(false);
-          setSelectedContract(null);
-        }}
+        isOpen={state.isDeleteContractModalOpen}
+        onClose={() => dispatch({ type: 'CLOSE_DELETE_CONTRACT_MODAL' })}
         onConfirm={confirmDeleteContract}
         title="Elimina contratto"
         message={`Sei sicuro di voler eliminare questo contratto? L'operazione sarà irreversibile.`}

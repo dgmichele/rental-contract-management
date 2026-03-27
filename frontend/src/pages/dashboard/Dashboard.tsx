@@ -1,7 +1,5 @@
-
-import { useState, useRef, type RefObject } from 'react';
-import { useAuthStore } from '../../store/authStore';
-import { useStats, useExpiringContracts } from '../../hooks/useDashboard';
+import { type RefObject } from 'react';
+import { useDashboardLogic } from './hooks/useDashboardLogic';
 import { StatsCard } from '../../components/cards/StatsCard';
 import { ContractCard } from '../../components/cards/ContractCard';
 import Pagination from '../../components/ui/Pagination';
@@ -17,47 +15,18 @@ import {
 } from 'react-icons/fa';
 import { formatCurrency } from '../../utils/format';
 
-
 export default function Dashboard() {
-  const user = useAuthStore((state) => state.user);
-
-  // Pagination States
-  const [pageCurrent, setPageCurrent] = useState(1);
-  const [pageNext, setPageNext] = useState(1);
-
-  // Refs per lo scroll smooth della paginazione verso le sezioni
-  const currentSectionRef = useRef<HTMLHeadingElement>(null);
-  const nextSectionRef = useRef<HTMLHeadingElement>(null);
-
-  // Queries
-  const statsQuery = useStats();
-  
-  const expiringCurrentQuery = useExpiringContracts({
-    period: 'current',
-    page: pageCurrent,
-    limit: 12,
-  });
-
-  const expiringNextQuery = useExpiringContracts({
-    period: 'next',
-    page: pageNext,
-    limit: 12,
-  });
-
-  // Derived Data
-  const stats = statsQuery.data;
-  
-  // Handlers
-  const handlePageChangeCurrent = (page: number) => {
-    setPageCurrent(page);
-  };
-
-  const handlePageChangeNext = (page: number) => {
-    setPageNext(page);
-  };
-
-
-
+  const {
+    user,
+    setPageCurrent,
+    setPageNext,
+    currentSectionRef,
+    nextSectionRef,
+    statsQuery,
+    expiringCurrentQuery,
+    expiringNextQuery,
+    stats
+  } = useDashboardLogic();
   return (
     <div className="min-h-screen pb-24 px-4 sm:px-6 lg:px-8 pt-8"> {/* Added horizontal and top padding */}
       {/* Header */}
@@ -156,7 +125,7 @@ export default function Dashboard() {
                     <Pagination
                         currentPage={expiringCurrentQuery.data.pagination.page}
                         totalPages={expiringCurrentQuery.data.pagination.totalPages}
-                        onPageChange={handlePageChangeCurrent}
+                        onPageChange={setPageCurrent}
                         scrollTargetRef={currentSectionRef as RefObject<HTMLElement>}
                         className="mt-8"
                     />
@@ -199,7 +168,7 @@ export default function Dashboard() {
                     <Pagination
                         currentPage={expiringNextQuery.data.pagination.page}
                         totalPages={expiringNextQuery.data.pagination.totalPages}
-                        onPageChange={handlePageChangeNext}
+                        onPageChange={setPageNext}
                         scrollTargetRef={nextSectionRef as RefObject<HTMLElement>}
                         className="mt-8"
                     />
