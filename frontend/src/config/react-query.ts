@@ -58,8 +58,10 @@ export const QUERY_KEYS = {
 
   // ============= DASHBOARD =============
   dashboard: {
+    all: ['dashboard'] as const,
     stats: ['dashboard', 'stats'] as const,
-    expiring: (filters: string) => ['dashboard', 'expiring', filters] as const,
+    expiringLists: () => [...QUERY_KEYS.dashboard.all, 'expiring'] as const,
+    expiring: (filters: string) => [...QUERY_KEYS.dashboard.expiringLists(), filters] as const,
   },
 
   // ============= USER =============

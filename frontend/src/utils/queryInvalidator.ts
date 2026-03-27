@@ -10,20 +10,20 @@ export const invalidateRelatedQueries = (queryClient: QueryClient, resource: 'co
     case 'contracts':
       // Quando un contratto cambia, invalidiamo:
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.contracts.all }); // Liste e dettagli
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard.stats }); // KPI dashboard
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard.all }); // KPI e liste scadenze
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.owners.all }); // I proprietari potrebbero avere stats aggiornate
       break;
       
     case 'owners':
       // Quando un proprietario cambia, invalidiamo:
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.owners.all });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard.stats });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard.all }); // KPI e liste scadenze
       // Se cambiano i dati del proprietario, i contratti associati potrebbero rifletterlo
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.contracts.all });
       break;
       
     case 'dashboard':
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard.stats });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard.all });
       break;
       
     case 'user':

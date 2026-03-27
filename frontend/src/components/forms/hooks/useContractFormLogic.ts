@@ -3,6 +3,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createContractSchema, type ContractFormData } from '../../../schemas/contract.schema';
 
+export type { ContractFormData };
+
 interface UseContractFormLogicProps {
   initialData?: Partial<ContractFormData>;
   preselectedOwnerId?: number;

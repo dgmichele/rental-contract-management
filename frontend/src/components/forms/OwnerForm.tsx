@@ -6,6 +6,8 @@ import Button from '../ui/Button';
 
 import { ownerSchema, type OwnerFormData } from '../../schemas/owner.schema';
 
+export type { OwnerFormData };
+
 interface OwnerFormProps {
   initialData?: Partial<OwnerFormData>;
   onSubmit: (data: OwnerFormData) => void;
