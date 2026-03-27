@@ -43,13 +43,13 @@ export default function Input<T extends FieldValues>({
   ...props
 }: InputProps<T>) {
   return (
-    <div className={clsx('flex flex-col gap-1 w-full', className)}>
+    <div className={clsx('flex flex-col gap-1 w-full min-w-0', className)}>
       {/* Label del campo */}
       <label htmlFor={name} className="text-sm font-semibold text-text-title">
         {label}
       </label>
       
-      <div className="relative w-full">
+      <div className="relative w-full min-w-0">
         {/* Icona a sinistra */}
         {startIcon && (
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-subtle">
@@ -72,12 +72,14 @@ export default function Input<T extends FieldValues>({
           }}
           className={clsx(
             // Stili base: background, bordo, padding, focus styles
-            'bg-bg-card border border-border rounded px-3 py-2 focus:outline-none focus:border-secondary placeholder:text-text-subtle transition-colors duration-300 w-full min-w-0 max-w-full',
+            'block w-0 min-w-full bg-bg-card border border-border rounded px-3 py-2 m-0 box-border focus:outline-none focus:border-secondary placeholder:text-text-subtle transition-colors duration-300',
             {
               // Bordo rosso se presente errore
               'border-red-500 focus:border-red-500': error,
               // Padding extra a sinistra se c'è l'icona
               'pl-10': startIcon,
+              // Safari fix per input type date
+              'appearance-none': type === 'date',
             }
           )}
           {...props}
