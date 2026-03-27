@@ -115,7 +115,12 @@ export const useContractDetailLogic = (
     if (contract) {
       await deleteContractMutation.mutateAsync(contract.id);
       dispatch({ type: 'CLOSE_DELETE_MODAL' });
-      navigate(-1);
+      
+      if (location.state?.fromView) {
+        navigate(-2);
+      } else {
+        navigate(-1);
+      }
     }
   };
 
