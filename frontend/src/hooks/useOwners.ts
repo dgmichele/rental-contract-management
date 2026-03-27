@@ -2,7 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ownersService from '../services/api/owners.service';
 import type { CreateOwnerRequest, UpdateOwnerRequest } from '../types/owner';
 import toast from 'react-hot-toast';
-import { getErrorMessage } from '../utils/errorHandler';
+import { getErrorMessage, type HandledAxiosError } from '../utils/errorHandler';
+import { QUERY_KEYS } from '../config/react-query';
+import { invalidateRelatedQueries, invalidateResourceDetail } from '../utils/queryInvalidator';
+import type { ApiError } from '../types/api';
 
 /**
  * HOOK - OTTIENI LISTA PROPRIETARI
@@ -10,7 +13,7 @@ import { getErrorMessage } from '../utils/errorHandler';
  */
 export const useOwners = (page = 1, limit = 12, search = '') => {
   return useQuery({
-    queryKey: ['owners', { page, limit, search }],
+    queryKey: QUERY_KEYS.owners.list(JSON.stringify({ page, limit, search })),
     queryFn: () => ownersService.getOwners(page, limit, search),
     placeholderData: (previousData) => previousData,
     staleTime: 5 * 60 * 1000, // 5 minuti
@@ -23,7 +26,7 @@ export const useOwners = (page = 1, limit = 12, search = '') => {
  */
 export const useOwner = (id: number) => {
   return useQuery({
-    queryKey: ['owner', id],
+    queryKey: QUERY_KEYS.owners.detail(id),
     queryFn: () => ownersService.getOwnerById(id),
     enabled: !!id && !isNaN(id),
     staleTime: 5 * 60 * 1000,
@@ -39,14 +42,10 @@ export const useCreateOwner = () => {
   return useMutation({
     mutationFn: (ownerData: CreateOwnerRequest) => ownersService.createOwner(ownerData),
     onSuccess: (response) => {
-      // Invalida la lista per forzare il refresh
-      queryClient.invalidateQueries({ queryKey: ['owners'] });
-      // Invalida anche le stats della dashboard visto che potrebbero cambiare
-      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-      
+      invalidateRelatedQueries(queryClient, 'owners');
       toast.success(response.message || 'Proprietario creato con successo! 🎉');
     },
-    onError: (error: any) => {
+    onError: (error: HandledAxiosError<ApiError>) => {
       if (error._isHandled) return;
       const message = getErrorMessage(error) || 'Errore durante la creazione del proprietario';
       toast.error(message, { id: 'owner-create-error' });
@@ -64,13 +63,10 @@ export const useUpdateOwner = () => {
     mutationFn: ({ id, data }: { id: number; data: UpdateOwnerRequest }) =>
       ownersService.updateOwner(id, data),
     onSuccess: (response) => {
-      // Aggiorna la cache per il singolo owner e per la lista
-      queryClient.invalidateQueries({ queryKey: ['owners'] });
-      queryClient.invalidateQueries({ queryKey: ['owner', response.data.id] });
-      
+      invalidateResourceDetail(queryClient, 'owners', response.data.id);
       toast.success(response.message || 'Proprietario aggiornato con successo! ✅');
     },
-    onError: (error: any) => {
+    onError: (error: HandledAxiosError<ApiError>) => {
       if (error._isHandled) return;
       const message = getErrorMessage(error) || "Errore durante l'aggiornamento del proprietario";
       toast.error(message, { id: 'owner-update-error' });
@@ -87,13 +83,10 @@ export const useDeleteOwner = () => {
   return useMutation({
     mutationFn: (id: number) => ownersService.deleteOwner(id),
     onSuccess: (response) => {
-      // Invalida liste e stats
-      queryClient.invalidateQueries({ queryKey: ['owners'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-      
+      invalidateRelatedQueries(queryClient, 'owners');
       toast.success(response.message || 'Proprietario eliminato con successo');
     },
-    onError: (error: any) => {
+    onError: (error: HandledAxiosError<ApiError>) => {
       if (error._isHandled) return;
       const message = getErrorMessage(error) || "Errore durante l'eliminazione del proprietario";
       toast.error(message, { id: 'owner-delete-error' });
@@ -106,7 +99,7 @@ export const useDeleteOwner = () => {
  */
 export const useOwnerContracts = (id: number, page = 1, limit = 12) => {
   return useQuery({
-    queryKey: ['owner-contracts', id, { page, limit }],
+    queryKey: QUERY_KEYS.owners.contracts(id),
     queryFn: () => ownersService.getOwnerContracts(id, page, limit),
     enabled: !!id && !isNaN(id),
     placeholderData: (previousData) => previousData,

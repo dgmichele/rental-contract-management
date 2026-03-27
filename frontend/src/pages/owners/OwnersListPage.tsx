@@ -1,8 +1,5 @@
-import React, { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React from 'react';
 import { FaPlus, FaSearch } from 'react-icons/fa';
-import { useOwners, useDeleteOwner } from '../../hooks/useOwners';
-import { useDebounce } from '../../hooks/useDebounce';
 import OwnerCard from '../../components/cards/OwnerCard';
 import OwnerCardSkeleton from '../../components/cards/OwnerCardSkeleton';
 import Pagination from '../../components/ui/Pagination';
@@ -11,69 +8,33 @@ import AddOwnerModal from '../../components/modals/AddOwnerModal';
 import EditOwnerModal from '../../components/modals/EditOwnerModal';
 import DeleteModal from '../../components/modals/DeleteModal';
 import ViewOwnerModal from '../../components/modals/ViewOwnerModal';
-import type { Owner } from '../../types/owner';
+import { useOwnersListLogic } from './hooks/useOwnersListLogic';
 
 const OwnersListPage: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  
-  const page = Number(searchParams.get('page')) || 1;
-  const setPage = (newPage: number) => {
-    setSearchParams(prev => {
-      prev.set('page', newPage.toString());
-      return prev;
-    }, { replace: true });
-  };
+  const {
+    isAddModalOpen,
+    isEditModalOpen,
+    isDeleteModalOpen,
+    isViewModalOpen,
+    selectedOwner,
+    page,
+    search,
+    setPage,
+    setSearch,
+    ownersQuery,
+    deleteOwnerMutation,
+    handleEdit,
+    handleDelete,
+    handleView,
+    clearSelectedOwner,
+    confirmDelete,
+    setIsAddModalOpen,
+    setIsEditModalOpen,
+    setIsViewModalOpen,
+    setIsDeleteModalOpen
+  } = useOwnersListLogic();
 
-  const search = searchParams.get('search') || '';
-  const setSearch = (newSearch: string) => {
-    setSearchParams(prev => {
-      if (newSearch) prev.set('search', newSearch);
-      else prev.delete('search');
-      prev.set('page', '1');
-      return prev;
-    }, { replace: true });
-  };
-
-  const debouncedSearch = useDebounce(search, 400);
-  
-  // Modals state
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedOwner, setSelectedOwner] = useState<Owner | null>(null);
-
-  const { data, isLoading, error } = useOwners(page, 12, debouncedSearch);
-  const deleteOwnerMutation = useDeleteOwner();
-
-  const handleEdit = (owner: Owner) => {
-    setSelectedOwner(owner);
-    setIsEditModalOpen(true);
-  };
-
-  const handleDelete = (owner: Owner) => {
-    setSelectedOwner(owner);
-    setIsDeleteModalOpen(true);
-  };
-
-  const handleView = (owner: Owner) => {
-    setSelectedOwner(owner);
-    setIsViewModalOpen(true);
-  };
-
-  const clearSelectedOwner = () => {
-    if (!isEditModalOpen && !isViewModalOpen && !isDeleteModalOpen) {
-      setSelectedOwner(null);
-    }
-  };
-
-  const confirmDelete = async () => {
-    if (selectedOwner) {
-      await deleteOwnerMutation.mutateAsync(selectedOwner.id);
-      setIsDeleteModalOpen(false);
-      setSelectedOwner(null);
-    }
-  };
+  const { data, isLoading, error } = ownersQuery;
 
   return (
     <div className="min-h-screen pb-24 px-4 sm:px-6 lg:px-8 pt-8 space-y-6">

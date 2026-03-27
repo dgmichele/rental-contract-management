@@ -3,6 +3,13 @@ import toast from 'react-hot-toast';
 import type { ApiError } from '../types/api';
 
 /**
+ * Estende AxiosError per includere il flag interno di gestione
+ */
+export interface HandledAxiosError<T = any> extends AxiosError<T> {
+  _isHandled?: boolean;
+}
+
+/**
  * Utility per mappare errori HTTP a messaggi user-friendly
  * 
  * @param error - Errore Axios con tipo ApiError
@@ -49,27 +56,27 @@ export const getErrorMessage = (error: AxiosError<ApiError>): string => {
  * 
  * @param error - Errore Axios
  */
-export const handleGlobalError = (error: AxiosError<ApiError>) => {
+export const handleGlobalError = (error: HandledAxiosError<ApiError>) => {
   const status = error.response?.status;
 
   // Errore di rete (server irraggiungibile)
   if (!error.response || error.code === 'ECONNABORTED' || error.message === 'Network Error') {
     toast.error('Impossibile connettersi al server. Controlla la tua connessione.', { id: 'network-error' });
-    (error as any)._isHandled = true;
+    error._isHandled = true;
     return;
   }
 
   // Errori Server (5xx)
   if (status && status >= 500) {
     toast.error(getErrorMessage(error), { id: `server-error-${status}` });
-    (error as any)._isHandled = true;
+    error._isHandled = true;
     return;
   }
 
   // Errori Auth critici (non gestiti dal refresh o dopo il fallimento del refresh)
   if (status === 403) {
     toast.error('Accesso negato: non possiedi i permessi necessari.', { id: 'auth-error-403' });
-    (error as any)._isHandled = true;
+    error._isHandled = true;
     return;
   }
 };

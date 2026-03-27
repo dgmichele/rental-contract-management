@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
@@ -9,7 +9,8 @@ import type {
   ForgotPasswordRequest,
   ResetPasswordRequest,
 } from '../types/auth';
-import { getErrorMessage } from '../utils/errorHandler';
+import { getErrorMessage, type HandledAxiosError } from '../utils/errorHandler';
+import type { ApiError } from '../types/api';
 
 /**
  * CUSTOM HOOK - AUTENTICAZIONE
@@ -23,6 +24,7 @@ import { getErrorMessage } from '../utils/errorHandler';
  */
 export const useAuth = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { setAuth, clearAuth } = useAuthStore();
 
   // ============= LOGIN =============
@@ -36,7 +38,7 @@ export const useAuth = () => {
       toast.success(`Benvenuto, ${response.data.user.name}! 🎉`);
       navigate('/dashboard');
     },
-    onError: (error: any) => {
+    onError: (error: HandledAxiosError<ApiError>) => {
       if (error._isHandled) return;
       const message = getErrorMessage(error) || 'Errore durante il login';
       // I toast non vengono mostrati per errori specifici dei campi, gestiti manualmente nel form
@@ -57,7 +59,7 @@ export const useAuth = () => {
       toast.success(`Account creato con successo! Benvenuto, ${response.data.user.name}! 🎉`);
       navigate('/dashboard');
     },
-    onError: (error: any) => {
+    onError: (error: HandledAxiosError<ApiError>) => {
       if (error._isHandled) return;
       const message = getErrorMessage(error) || 'Errore durante la registrazione';
       // Supponiamo che la registrazione possa avere errori di campo (es. email duplicata)
@@ -78,11 +80,13 @@ export const useAuth = () => {
     },
     onSuccess: () => {
       clearAuth();
+      queryClient.clear();
       toast.success('Logout effettuato con successo');
       navigate('/login');
     },
-    onError: (error: any) => {
+    onError: (error: HandledAxiosError<ApiError>) => {
       clearAuth();
+      queryClient.clear();
       navigate('/login');
       if (error._isHandled) return;
       const message = getErrorMessage(error) || 'Errore durante il logout';
@@ -96,7 +100,7 @@ export const useAuth = () => {
     onSuccess: (response) => {
       toast.success(response.message || 'Email inviata! Controlla la tua casella di posta.');
     },
-    onError: (error: any) => {
+    onError: (error: HandledAxiosError<ApiError>) => {
       if (error._isHandled) return;
       const message = getErrorMessage(error) || 'Errore durante l\'invio dell\'email';
       if (message !== 'Email non registrata') {
@@ -114,7 +118,7 @@ export const useAuth = () => {
         navigate('/login');
       }, 1500);
     },
-    onError: (error: any) => {
+    onError: (error: HandledAxiosError<ApiError>) => {
       if (error._isHandled) return;
       const message = getErrorMessage(error) || 'Errore durante il reset della password';
       toast.error(message, { id: 'auth-reset-error' });

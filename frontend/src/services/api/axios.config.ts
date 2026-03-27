@@ -1,5 +1,7 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { handleGlobalError } from '../../utils/errorHandler';
+import { useAuthStore } from '../../store/authStore';
+import type { ApiError } from '../../types/api';
 
 /**
  * Istanza Axios configurata per comunicare con il backend.
@@ -34,17 +36,40 @@ api.interceptors.request.use(
   }
 );
 
+// Variabili per gestire il refresh token in modo atomico ed evitare race conditions
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+/**
+ * Gestisce la coda di richieste in attesa del nuovo access token.
+ * @param error Errore se il refresh è fallito
+ * @param token Nuovo access token se il refresh ha avuto successo
+ */
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+
+  failedQueue = [];
+};
+
 /**
  * RESPONSE INTERCEPTOR
  * Gestisce errori 401 (Unauthorized) tentando refresh token automatico.
  * Se il refresh fallisce, effettua logout e redirect a /login.
+ * 
+ * Implementato con coda di richieste per gestire chiamate concorrenti.
  */
 api.interceptors.response.use(
   // Success: ritorna response normalmente
   (response) => response,
 
   // Error: gestione 401 e refresh token
-  async (error: AxiosError) => {
+  async (error: AxiosError<ApiError>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
     // Verifica se è un errore 401 e NON abbiamo già ritentato
@@ -54,7 +79,24 @@ api.interceptors.response.use(
       !originalRequest._retry && 
       !originalRequest.url?.includes('/auth/login')
     ) {
+      // Se c'è già un refresh in corso, mettiamo questa richiesta in coda
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
+            return api(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
 
       try {
         // Recupera refresh token da localStorage
@@ -78,6 +120,9 @@ api.interceptors.response.use(
 
         console.log('[AXIOS] Access token rinnovato con successo');
 
+        // Elabora la coda con il nuovo token
+        processQueue(null, newAccessToken);
+
         // Aggiorna header della richiesta originale con nuovo token
         if (originalRequest.headers) {
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
@@ -86,13 +131,14 @@ api.interceptors.response.use(
         // Riprova la richiesta originale
         return api(originalRequest);
       } catch (refreshError) {
-        // Refresh token fallito: logout e redirect
+        // Refresh token fallito: pulizia e logout
         console.error('[AXIOS] Refresh token fallito, logout necessario');
 
-        // Pulisci localStorage
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
+        // Invalida la coda con l'errore
+        processQueue(refreshError, null);
+
+        // Pulisci lo store
+        useAuthStore.getState().clearAuth();
 
         // Redirect a login (solo se non siamo già lì)
         if (window.location.pathname !== '/login') {
@@ -100,13 +146,15 @@ api.interceptors.response.use(
         }
 
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 
     // Gestore errori globali (mostra toast per Network Error, 5xx, 403, ecc.)
-    // Ignora errori di refresh per evitare doppi log (gestiti già dal try/catch interno)
+    // Ignora errori di refresh per evitare doppi log
     if (!originalRequest.url?.includes('/auth/refresh')) {
-      handleGlobalError(error as any);
+      handleGlobalError(error);
     }
 
     // Per tutti gli altri errori, passa al catch della chiamata

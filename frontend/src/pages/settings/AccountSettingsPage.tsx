@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { FiUser, FiMail, FiLock, FiSave } from 'react-icons/fi';
 import { useAuthStore } from '../../store/authStore';
 import { useUpdateDetails, useUpdatePassword } from '../../hooks/useUser';
@@ -9,25 +8,12 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 
-// ============= SCHEMI DI VALIDAZIONE =============
-
-const detailsSchema = z.object({
-  name: z.string().min(2, 'Il nome deve avere almeno 2 caratteri'),
-  surname: z.string().min(2, 'Il cognome deve avere almeno 2 caratteri'),
-  email: z.string().email('Email non valida'),
-});
-
-const passwordSchema = z.object({
-  currentPassword: z.string().min(1, 'Inserisci la password attuale'),
-  newPassword: z.string().min(8, 'La nuova password deve avere almeno 8 caratteri'),
-  confirmPassword: z.string().min(1, 'Conferma la nuova password'),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Le password non coincidono",
-  path: ["confirmPassword"],
-});
-
-type DetailsFormValues = z.infer<typeof detailsSchema>;
-type PasswordFormValues = z.infer<typeof passwordSchema>;
+import { 
+  detailsSchema, 
+  passwordUpdateSchema, 
+  type DetailsFormValues, 
+  type PasswordFormValues 
+} from '../../schemas/user.schema';
 
 /**
  * PAGE - IMPOSTAZIONI ACCOUNT
@@ -76,7 +62,7 @@ export default function AccountSettingsPage() {
     watch: watchPassword,
     formState: { errors: passwordErrors },
   } = useForm<PasswordFormValues>({
-    resolver: zodResolver(passwordSchema),
+    resolver: zodResolver(passwordUpdateSchema),
   });
 
   const confirmPassword = watchPassword('confirmPassword');

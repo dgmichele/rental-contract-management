@@ -3,7 +3,9 @@ import toast from 'react-hot-toast';
 import { userService } from '../services/api/user.service';
 import { useAuthStore } from '../store/authStore';
 import type { UpdateDetailsRequest, UpdatePasswordRequest } from '../types/auth';
-import { getErrorMessage } from '../utils/errorHandler';
+import { getErrorMessage, type HandledAxiosError } from '../utils/errorHandler';
+import { invalidateRelatedQueries } from '../utils/queryInvalidator';
+import type { ApiError } from '../types/api';
 
 /**
  * HOOK - AGGIORNA DATI UTENTE
@@ -20,11 +22,11 @@ export const useUpdateDetails = () => {
       updateUser(response.data);
       
       // Invalida eventuali query che usano i dati dell'utente
-      queryClient.invalidateQueries({ queryKey: ['user', 'me'] });
+      invalidateRelatedQueries(queryClient, 'user');
       
       toast.success(response.message || 'Profilo aggiornato con successo! ✅');
     },
-    onError: (error: any) => {
+    onError: (error: HandledAxiosError<ApiError>) => {
       if (error._isHandled) return;
       const message = getErrorMessage(error) || "Errore durante l'aggiornamento del profilo";
       toast.error(message, { id: 'profile-update-error' });
@@ -41,7 +43,7 @@ export const useUpdatePassword = () => {
     onSuccess: (response) => {
       toast.success(response.message || 'Password aggiornata con successo! 🔐');
     },
-    onError: (error: any) => {
+    onError: (error: HandledAxiosError<ApiError>) => {
       if (error._isHandled) return;
       const message = getErrorMessage(error) || "Errore durante l'aggiornamento della password";
       toast.error(message, { id: 'password-update-error' });

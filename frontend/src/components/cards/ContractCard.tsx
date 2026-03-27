@@ -1,5 +1,5 @@
-
 import { useNavigate } from 'react-router-dom';
+import { useMemo } from 'react';
 import clsx from 'clsx';
 import dayjs from 'dayjs';
 import { FaEye, FaHome, FaCalendarDay, FaMoneyBillWave, FaUser, FaEdit, FaTrash } from 'react-icons/fa';
@@ -35,20 +35,25 @@ export const ContractCard = ({
   const navigate = useNavigate();
 
   const isCedolareSecca = contract.cedolare_secca;
+  
+  // Memoized values to optimize rendering in lists
+  const isRenewal = useMemo(() => {
+    const isNaturalExpiration = expiryType === 'contract';
+    return isCedolareSecca || isNaturalExpiration;
+  }, [isCedolareSecca, expiryType]);
+
+  const buttonLabel = useMemo(() => {
+    if (!expiryType) return 'Visualizza contratto';
+    return isRenewal ? 'Gestisci rinnovo' : 'Gestisci annualità';
+  }, [expiryType, isRenewal]);
+
+  const formattedDate = useMemo(() => {
+    return expiryDate 
+      ? dayjs(expiryDate).format('DD/MM/YYYY') 
+      : dayjs(contract.end_date).format('DD/MM/YYYY');
+  }, [expiryDate, contract.end_date]);
+  
   const isNaturalExpiration = expiryType === 'contract'; 
-  
-  // Logic:
-  // "Gestisci rinnovo" -> If cedolare secca OR natural expiration
-  // "Gestisci annualità" -> If NOT cedolare secca AND intermediate annuity
-  const isRenewal = isCedolareSecca || isNaturalExpiration;
-  
-  // Base button label logic: if expiryType is provided, we use manage labels, 
-  // otherwise (like in detail pages) we use "Visualizza contratto"
-  let buttonLabel = isRenewal ? 'Gestisci rinnovo' : 'Gestisci annualità';
-  if (!expiryType) {
-    buttonLabel = 'Visualizza contratto';
-  }
-  
   
   const handleManage = () => {
     if (!expiryType) {
@@ -63,10 +68,6 @@ export const ContractCard = ({
   const handleView = () => {
     navigate(`/contracts/${contract.id}?mode=view`, { state: { returnUrl } });
   };
-
-  const formattedDate = expiryDate 
-    ? dayjs(expiryDate).format('DD/MM/YYYY') 
-    : dayjs(contract.end_date).format('DD/MM/YYYY');
 
   return (
     <Card className={clsx("flex flex-col relative h-full transition-transform hover:-translate-y-1 shadow-sm hover:shadow-lg", className)}>

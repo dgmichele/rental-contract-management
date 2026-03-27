@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { AxiosError } from 'axios';
 import toast from 'react-hot-toast';
 import * as contractsService from '../services/api/contracts.service';
 import type {
@@ -10,34 +9,16 @@ import type {
   ContractFilters,
 } from '../types/contract';
 import type { ApiError } from '../types/api';
-import { getErrorMessage } from '../utils/errorHandler';
+import { getErrorMessage, type HandledAxiosError } from '../utils/errorHandler';
+import { QUERY_KEYS } from '../config/react-query';
+import { invalidateRelatedQueries, invalidateResourceDetail } from '../utils/queryInvalidator';
 
-/**
- * Query keys per invalidazione cache
- */
-const contractKeys = {
-  all: ['contracts'] as const,
-  lists: () => [...contractKeys.all, 'list'] as const,
-  list: (filters?: ContractFilters) => [...contractKeys.lists(), filters] as const,
-  details: () => [...contractKeys.all, 'detail'] as const,
-  detail: (id: number) => [...contractKeys.details(), id] as const,
-  annuities: (id: number) => [...contractKeys.all, 'annuities', id] as const,
-};
 
 // ============= QUERY HOOKS =============
 
-/**
- * Hook per ottenere lista contratti con filtri e paginazione
- * 
- * @param filters - Filtri opzionali (page, limit, ownerId, search, expiryMonth, expiryYear)
- * @returns Query con data paginata e stato loading/error
- * 
- * @example
- * const { data, isLoading, error } = useContracts({ page: 1, limit: 12, ownerId: 5 });
- */
 export const useContracts = (filters?: ContractFilters) => {
   return useQuery({
-    queryKey: contractKeys.list(filters),
+    queryKey: QUERY_KEYS.contracts.list(JSON.stringify(filters || {})),
     queryFn: () => contractsService.getContracts(filters),
     placeholderData: (previousData) => previousData,
     staleTime: 1000 * 60 * 5, // 5 minuti
@@ -56,7 +37,7 @@ export const useContracts = (filters?: ContractFilters) => {
  */
 export const useContract = (id: number, enabled: boolean = true) => {
   return useQuery({
-    queryKey: contractKeys.detail(id),
+    queryKey: QUERY_KEYS.contracts.detail(id),
     queryFn: () => contractsService.getContractById(id),
     enabled: enabled && id > 0,
     staleTime: 1000 * 60 * 5, // 5 minuti
@@ -75,7 +56,7 @@ export const useContract = (id: number, enabled: boolean = true) => {
  */
 export const useContractAnnuities = (id: number, enabled: boolean = true) => {
   return useQuery({
-    queryKey: contractKeys.annuities(id),
+    queryKey: QUERY_KEYS.contracts.annuities(id),
     queryFn: () => contractsService.getContractAnnuities(id),
     enabled: enabled && id > 0,
     staleTime: 1000 * 60 * 5, // 5 minuti
@@ -111,18 +92,11 @@ export const useCreateContract = () => {
   return useMutation({
     mutationFn: (data: CreateContractRequest) => contractsService.createContract(data),
     onSuccess: (response) => {
-      // Invalida cache lista contratti, dashboard e proprietari
-      queryClient.invalidateQueries({ queryKey: contractKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['expiring-contracts'] });
-      queryClient.invalidateQueries({ queryKey: ['owners'] });
-      queryClient.invalidateQueries({ queryKey: ['owner'] });
-      queryClient.invalidateQueries({ queryKey: ['owner-contracts'] });
-      
+      invalidateRelatedQueries(queryClient, 'contracts');
       toast.success(response.message || 'Contratto creato con successo');
     },
-    onError: (error: AxiosError<ApiError>) => {
-      if ((error as any)._isHandled) return;
+    onError: (error: HandledAxiosError<ApiError>) => {
+      if (error._isHandled) return;
       toast.error(getErrorMessage(error), { id: 'contract-create-error' });
     },
   });
@@ -150,19 +124,11 @@ export const useUpdateContract = () => {
     mutationFn: ({ id, data }: { id: number; data: UpdateContractRequest }) =>
       contractsService.updateContract(id, data),
     onSuccess: (response, variables) => {
-      // Invalida cache contratto specifico, lista, dashboard e proprietari
-      queryClient.invalidateQueries({ queryKey: contractKeys.detail(variables.id) });
-      queryClient.invalidateQueries({ queryKey: contractKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['expiring-contracts'] });
-      queryClient.invalidateQueries({ queryKey: ['owners'] });
-      queryClient.invalidateQueries({ queryKey: ['owner'] });
-      queryClient.invalidateQueries({ queryKey: ['owner-contracts'] });
-      
+      invalidateResourceDetail(queryClient, 'contracts', variables.id);
       toast.success(response.message || 'Contratto aggiornato con successo');
     },
-    onError: (error: AxiosError<ApiError>) => {
-      if ((error as any)._isHandled) return;
+    onError: (error: HandledAxiosError<ApiError>) => {
+      if (error._isHandled) return;
       toast.error(getErrorMessage(error), { id: 'contract-update-error' });
     },
   });
@@ -201,20 +167,11 @@ export const useRenewContract = () => {
     mutationFn: ({ id, data }: { id: number; data: RenewContractRequest }) =>
       contractsService.renewContract(id, data),
     onSuccess: (response, variables) => {
-      // Invalida cache contratto specifico, lista, dashboard e proprietari
-      queryClient.invalidateQueries({ queryKey: contractKeys.detail(variables.id) });
-      queryClient.invalidateQueries({ queryKey: contractKeys.annuities(variables.id) });
-      queryClient.invalidateQueries({ queryKey: contractKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['expiring-contracts'] });
-      queryClient.invalidateQueries({ queryKey: ['owners'] });
-      queryClient.invalidateQueries({ queryKey: ['owner'] });
-      queryClient.invalidateQueries({ queryKey: ['owner-contracts'] });
-      
+      invalidateResourceDetail(queryClient, 'contracts', variables.id);
       toast.success(response.message || 'Contratto rinnovato con successo');
     },
-    onError: (error: AxiosError<ApiError>) => {
-      if ((error as any)._isHandled) return;
+    onError: (error: HandledAxiosError<ApiError>) => {
+      if (error._isHandled) return;
       toast.error(getErrorMessage(error), { id: 'contract-renew-error' });
     },
   });
@@ -243,20 +200,11 @@ export const useUpdateContractAnnuity = () => {
     mutationFn: ({ id, data }: { id: number; data: UpdateAnnuityRequest }) =>
       contractsService.updateContractAnnuity(id, data),
     onSuccess: (response, variables) => {
-      // Invalida cache contratto specifico, annuities, lista, dashboard e proprietari
-      queryClient.invalidateQueries({ queryKey: contractKeys.detail(variables.id) });
-      queryClient.invalidateQueries({ queryKey: contractKeys.annuities(variables.id) });
-      queryClient.invalidateQueries({ queryKey: contractKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['expiring-contracts'] });
-      queryClient.invalidateQueries({ queryKey: ['owners'] });
-      queryClient.invalidateQueries({ queryKey: ['owner'] });
-      queryClient.invalidateQueries({ queryKey: ['owner-contracts'] });
-      
+      invalidateResourceDetail(queryClient, 'contracts', variables.id);
       toast.success(response.message || 'Annualità aggiornata con successo');
     },
-    onError: (error: AxiosError<ApiError>) => {
-      if ((error as any)._isHandled) return;
+    onError: (error: HandledAxiosError<ApiError>) => {
+      if (error._isHandled) return;
       toast.error(getErrorMessage(error), { id: 'annuity-update-error' });
     },
   });
@@ -277,19 +225,12 @@ export const useDeleteContract = () => {
   return useMutation({
     mutationFn: (id: number) => contractsService.deleteContract(id),
     onSuccess: (_, deletedId) => {
-      // Invalida cache contratto specifico, lista, dashboard e proprietari
-      queryClient.invalidateQueries({ queryKey: contractKeys.detail(deletedId) });
-      queryClient.invalidateQueries({ queryKey: contractKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['expiring-contracts'] });
-      queryClient.invalidateQueries({ queryKey: ['owners'] });
-      queryClient.invalidateQueries({ queryKey: ['owner'] });
-      queryClient.invalidateQueries({ queryKey: ['owner-contracts'] });
-      
+      invalidateRelatedQueries(queryClient, 'contracts');
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.contracts.detail(deletedId) });
       toast.success('Contratto eliminato con successo');
     },
-    onError: (error: AxiosError<ApiError>) => {
-      if ((error as any)._isHandled) return;
+    onError: (error: HandledAxiosError<ApiError>) => {
+      if (error._isHandled) return;
       toast.error(getErrorMessage(error), { id: 'contract-delete-error' });
     },
   });
