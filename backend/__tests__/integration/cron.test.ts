@@ -189,7 +189,7 @@ describe('Cron Job Notifications Integration Tests', () => {
       expect(notification).toBeDefined();
       expect(notification.sent_to_client).toBe(true);
       expect(notification.sent_to_internal).toBe(true);
-      expect(notification.year).toBeNull(); // Contract renewal non ha year
+      expect(notification.year).toBe(2025); // Contract renewal ora ha l'anno di fine contratto (mocked targetDate year)
       expect(notification.sent_at).toBeTruthy();
 
       console.log('[CRON_TEST] ✅ Notification inserita correttamente:', notification.id);

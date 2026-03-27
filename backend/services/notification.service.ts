@@ -19,7 +19,7 @@ import { logCron, logCronError } from './logger.service';
  * 
  * @param contractId - ID del contratto
  * @param type - Tipo di notifica ('contract_renewal' o 'annuity_renewal')
- * @param year - Anno di riferimento (null per rinnovo contratto)
+ * @param year - Anno di riferimento (anno di scadenza per rinnovo contratto, indice anno per annualità)
  * @returns true se questo processo ha "reclamato" la notifica, false se già esisteva
  */
 export const claimNotification = async (
@@ -199,7 +199,9 @@ export const sendExpiringContractsNotifications = async () => {
 
       // CLAIM ATOMICO: tenta di inserire la notifica nel DB.
       // Se un altro processo/istanza ha già inserito → skip (claimed = false)
-      const claimed = await claimNotification(contract.id, 'contract_renewal', null);
+      // ⭐ Usa l'anno di scadenza come identificativo unico per permettere nuovi invii post-rinnovo
+      const expiryYear = dayjs(contract.end_date).year();
+      const claimed = await claimNotification(contract.id, 'contract_renewal', expiryYear);
       if (!claimed) {
         stats.skipped++;
         continue;
@@ -220,7 +222,7 @@ export const sendExpiringContractsNotifications = async () => {
 
       if (sentInternal || sentClient) {
         // Aggiorna lo stato della notifica con i risultati effettivi
-        await updateNotificationStatus(contract.id, 'contract_renewal', null, sentClient, sentInternal);
+        await updateNotificationStatus(contract.id, 'contract_renewal', expiryYear, sentClient, sentInternal);
         stats.sent++;
       } else {
         logCronError(`[NOTIFICATION_SERVICE] ❌ Tutti i tentativi email falliti per contratto ${contract.id}`);
