@@ -10,18 +10,13 @@ import { logCron, logCronError } from './logger.service';
 import { parseDecimal } from '../utils/contract.utils';
 
 /**
- * Tenta di "reclamare" una notifica inserendola atomicamente nel DB.
- * Usa INSERT ... ON CONFLICT DO NOTHING per garantire che solo un processo
- * riesca a inserire la notifica (vince la race condition).
- * 
- * Questo approccio elimina il problema TOCTOU (Time-of-Check to Time-of-Use):
- * - VECCHIO: CHECK → SEND → INSERT (due processi possono entrambi passare il CHECK)
- * - NUOVO: INSERT (atomico) → SEND solo se INSERT riuscito
- * 
- * @param contractId - ID del contratto
+ * Tenta di inserire la notifica nel DB.
+ * Essendo protetto a monte dal lock advisory del cron, non c'è più
+ * il rischio di race condition tra istanze multiple.
+ * * @param contractId - ID del contratto
  * @param type - Tipo di notifica ('contract_renewal' o 'annuity_renewal')
  * @param year - Anno di riferimento (anno di scadenza per rinnovo contratto, indice anno per annualità)
- * @returns true se questo processo ha "reclamato" la notifica, false se già esisteva
+ * @returns true se la notifica è stata inserita (non esisteva), false altrimenti
  */
 export const claimNotification = async (
   contractId: number, 
@@ -29,13 +24,8 @@ export const claimNotification = async (
   year: number | null
 ): Promise<boolean> => {
   try {
-    // PostgreSQL gotcha: NULL ≠ NULL nel UNIQUE constraint.
-    // Quindi ON CONFLICT non funziona con year=NULL (contract_renewal).
-    // Soluzione: usiamo una transazione SERIALIZABLE con SELECT FOR UPDATE + INSERT.
-    // Questo garantisce atomicità anche con valori NULL.
-    
+    // Transazione normale READ COMMITTED
     const result = await db.transaction(async (trx) => {
-      // 1. Prova a leggere con lock esclusivo (FOR UPDATE)
       let existingQuery = trx('notifications')
         .where({ contract_id: contractId, type: type });
       
@@ -45,15 +35,13 @@ export const claimNotification = async (
         existingQuery = existingQuery.whereNull('year');
       }
 
-      // FOR UPDATE: blocca la riga se esiste, impedendo letture concorrenti
-      const existing = await existingQuery.forUpdate().first();
+      const existing = await existingQuery.first();
       
       if (existing) {
-        // Già inviata da un altro processo
+        // La notifica esiste già (es. inviata in un'esecuzione di un giorno precedente)
         return null;
       }
 
-      // 2. Non esiste → inserisci (all'interno della stessa transaction)
       const [inserted] = await trx('notifications').insert({
         contract_id: contractId,
         type: type,
@@ -64,19 +52,19 @@ export const claimNotification = async (
       }).returning('id');
 
       return inserted;
-    }, { isolationLevel: 'serializable' });
+    });
 
     const claimed = result !== null;
     
     if (claimed) {
-      logCron(`[NOTIFICATION_SERVICE] 🔒 Notifica reclamata con successo (ID: ${result.id}) per contratto ${contractId}, tipo: ${type}, anno: ${year}`);
+      logCron(`[NOTIFICATION_SERVICE] 🔒 Notifica creata con successo (ID: ${result.id}) per contratto ${contractId}, tipo: ${type}, anno: ${year}`);
     } else {
-      logCron(`[NOTIFICATION_SERVICE] ⏭️ Notifica già reclamata da altro processo per contratto ${contractId}, tipo: ${type}, anno: ${year}`);
+      logCron(`[NOTIFICATION_SERVICE] ⏭️ Notifica già esistente per contratto ${contractId}, tipo: ${type}, anno: ${year}`);
     }
 
     return claimed;
   } catch (error) {
-    logCronError(`[NOTIFICATION_SERVICE] ❌ Errore durante claim notifica per contratto ${contractId}:`, error);
+    logCronError(`[NOTIFICATION_SERVICE] ❌ Errore durante inserimento notifica per contratto ${contractId}:`, error);
     return false;
   }
 };
@@ -159,27 +147,25 @@ const getFullContract = async (contractId: number): Promise<ContractWithRelation
 
 /**
  * Funzione principale eseguita dal Cron Job (default: ogni giorno alle 08:00).
- * 
- * Logica ANTI-DUPLICATI (atomica):
- * 1. Calcola la data target (oggi + N giorni).
- * 2. Cerca contratti/annualità in scadenza.
- * 3. Per ogni match: PRIMA inserisce la notifica nel DB (atomico con ON CONFLICT).
- * 4. Solo se l'inserimento riesce (= questo processo ha "vinto"), invia le email.
- * 5. Aggiorna lo stato della notifica con i risultati dell'invio.
- * 
- * Questo garantisce che anche con N istanze del server (es. cPanel con multipli worker),
- * le email vengono inviate una sola volta.
- * 
- * @returns Oggetto con statistiche sull'esecuzione
+ * * Utilizza pg_try_advisory_lock per garantire che, in presenza di più worker/istanze,
+ * solo uno esegua effettivamente il job.
+ * * @returns Oggetto con statistiche sull'esecuzione
  */
 export const sendExpiringContractsNotifications = async () => {
-  // Configurazione giorni da env o default a 7
-  const daysBefore = parseInt(process.env.CRON_NOTIFICATION_DAYS_BEFORE || '7', 10);
+  // Chiave arbitraria per il lock del DB (deve essere un intero a 64-bit univoco per questo specifico job)
+  const LOCK_KEY = 123456789;
   
-  // Calcola data target formattata YYYY-MM-DD per match esatto DB
-  const targetDate = dayjs().add(daysBefore, 'day').format('YYYY-MM-DD');
+  // 1. Tenta di acquisire il lock a livello di database
+  const lockAcquired = await db.raw(
+    'SELECT pg_try_advisory_lock(?)', [LOCK_KEY]
+  );
+  
+  if (!lockAcquired.rows[0].pg_try_advisory_lock) {
+    logCron('[NOTIFICATION_SERVICE] ⏭️ Job scadenze già in esecuzione su altro processo (lock negato), skip.');
+    return { processed: 0, sent: 0, skipped: 0, failed: 0 };
+  }
 
-  logCron(`[NOTIFICATION_SERVICE] 🚀 Avvio check scadenze per data target: ${targetDate}`);
+  logCron('[NOTIFICATION_SERVICE] 🔐 Lock advisory acquisito, avvio job scadenze.');
 
   const stats = {
     processed: 0,
@@ -189,89 +175,93 @@ export const sendExpiringContractsNotifications = async () => {
   };
 
   try {
-    // ==========================================
-    // 1. GESTIONE SCADENZA CONTRATTI (FINE NATURALE)
-    // ==========================================
-    const expiringContracts = await db('contracts')
-      .where('end_date', targetDate); // Scadenza esatta tra N giorni
+    // Configurazione giorni da env o default a 7
+    const daysBefore = parseInt(process.env.CRON_NOTIFICATION_DAYS_BEFORE || '7', 10);
+    const targetDate = dayjs().add(daysBefore, 'day').format('YYYY-MM-DD');
 
-    for (const contract of expiringContracts) {
-      stats.processed++;
+    logCron(`[NOTIFICATION_SERVICE] 🚀 Check scadenze per data target: ${targetDate}`);
 
-      // CLAIM ATOMICO: tenta di inserire la notifica nel DB.
-      // Se un altro processo/istanza ha già inserito → skip (claimed = false)
-      // ⭐ Usa l'anno di scadenza come identificativo unico per permettere nuovi invii post-rinnovo
-      const expiryYear = dayjs(contract.end_date).year();
-      const claimed = await claimNotification(contract.id, 'contract_renewal', expiryYear);
-      if (!claimed) {
-        stats.skipped++;
-        continue;
+    try {
+      // ==========================================
+      // 1. GESTIONE SCADENZA CONTRATTI (FINE NATURALE)
+      // ==========================================
+      const expiringContracts = await db('contracts')
+        .where('end_date', targetDate); 
+
+      for (const contract of expiringContracts) {
+        stats.processed++;
+
+        const expiryYear = dayjs(contract.end_date).year();
+        const claimed = await claimNotification(contract.id, 'contract_renewal', expiryYear);
+        if (!claimed) {
+          stats.skipped++;
+          continue;
+        }
+
+        const fullContract = await getFullContract(contract.id);
+        if (!fullContract) {
+          stats.failed++;
+          continue;
+        }
+
+        logCron(`[NOTIFICATION_SERVICE] 📧 Invio reminder CONTRATTO ID: ${contract.id}`);
+
+        const sentInternal = await emailService.sendExpirationReminderInternal(fullContract, 'contract');
+        const sentClient = await emailService.sendExpirationReminderClient(fullContract, 'contract');
+
+        if (sentInternal || sentClient) {
+          await updateNotificationStatus(contract.id, 'contract_renewal', expiryYear, sentClient, sentInternal);
+          stats.sent++;
+        } else {
+          logCronError(`[NOTIFICATION_SERVICE] ❌ Tutti i tentativi email falliti per contratto ${contract.id}`);
+          stats.failed++;
+        }
       }
 
-      // Recupera dati completi (System Level Fetch)
-      const fullContract = await getFullContract(contract.id);
-      if (!fullContract) {
-        stats.failed++;
-        continue;
+      // ==========================================
+      // 2. GESTIONE SCADENZA ANNUALITÀ (INTERMEDIE)
+      // ==========================================
+      const expiringAnnuities = await db('annuities')
+        .where('due_date', targetDate)
+        .andWhere('is_paid', false);
+
+      for (const annuity of expiringAnnuities) {
+        stats.processed++;
+
+        const claimed = await claimNotification(annuity.contract_id, 'annuity_renewal', annuity.year);
+        if (!claimed) {
+          stats.skipped++;
+          continue;
+        }
+
+        const fullContract = await getFullContract(annuity.contract_id);
+        if (!fullContract) {
+          stats.failed++;
+          continue;
+        }
+
+        logCron(`[NOTIFICATION_SERVICE] 📧 Invio reminder ANNUALITÀ ${annuity.year} Contratto ID: ${annuity.contract_id}`);
+
+        const sentInternal = await emailService.sendExpirationReminderInternal(fullContract, 'annuity', annuity.year);
+        const sentClient = await emailService.sendExpirationReminderClient(fullContract, 'annuity', annuity.year);
+
+        if (sentInternal || sentClient) {
+          await updateNotificationStatus(annuity.contract_id, 'annuity_renewal', annuity.year, sentClient, sentInternal);
+          stats.sent++;
+        } else {
+          logCronError(`[NOTIFICATION_SERVICE] ❌ Tutti i tentativi email falliti per annualità contratto ${annuity.contract_id}`);
+          stats.failed++;
+        }
       }
 
-      logCron(`[NOTIFICATION_SERVICE] 📧 Invio reminder CONTRATTO ID: ${contract.id}`);
-
-      // Invia email (Best effort) — solo questo processo le invia
-      const sentInternal = await emailService.sendExpirationReminderInternal(fullContract, 'contract');
-      const sentClient = await emailService.sendExpirationReminderClient(fullContract, 'contract');
-
-      if (sentInternal || sentClient) {
-        // Aggiorna lo stato della notifica con i risultati effettivi
-        await updateNotificationStatus(contract.id, 'contract_renewal', expiryYear, sentClient, sentInternal);
-        stats.sent++;
-      } else {
-        logCronError(`[NOTIFICATION_SERVICE] ❌ Tutti i tentativi email falliti per contratto ${contract.id}`);
-        stats.failed++;
-      }
+    } catch (error) {
+      logCronError('[NOTIFICATION_SERVICE] ❌ Errore critico durante esecuzione job:', error);
     }
-
-    // ==========================================
-    // 2. GESTIONE SCADENZA ANNUALITÀ (INTERMEDIE)
-    // ==========================================
-    const expiringAnnuities = await db('annuities')
-      .where('due_date', targetDate)
-      .andWhere('is_paid', false);
-
-    for (const annuity of expiringAnnuities) {
-      stats.processed++;
-
-      // CLAIM ATOMICO: tenta di inserire la notifica nel DB
-      const claimed = await claimNotification(annuity.contract_id, 'annuity_renewal', annuity.year);
-      if (!claimed) {
-        stats.skipped++;
-        continue;
-      }
-
-      const fullContract = await getFullContract(annuity.contract_id);
-      if (!fullContract) {
-        stats.failed++;
-        continue;
-      }
-
-      logCron(`[NOTIFICATION_SERVICE] 📧 Invio reminder ANNUALITÀ ${annuity.year} Contratto ID: ${annuity.contract_id}`);
-
-      // Invia email — solo questo processo le invia
-      const sentInternal = await emailService.sendExpirationReminderInternal(fullContract, 'annuity', annuity.year);
-      const sentClient = await emailService.sendExpirationReminderClient(fullContract, 'annuity', annuity.year);
-
-      if (sentInternal || sentClient) {
-        await updateNotificationStatus(annuity.contract_id, 'annuity_renewal', annuity.year, sentClient, sentInternal);
-        stats.sent++;
-      } else {
-        logCronError(`[NOTIFICATION_SERVICE] ❌ Tutti i tentativi email falliti per annualità contratto ${annuity.contract_id}`);
-        stats.failed++;
-      }
-    }
-
-  } catch (error) {
-    logCronError('[NOTIFICATION_SERVICE] ❌ Errore critico durante esecuzione job:', error);
-    // Non rilanciamo l'errore per non far crashare il processo Node principale se il cron fallisce
+  } finally {
+    // 2. Rilascia SEMPRE il lock alla fine, anche se il job fallisce,
+    // altrimenti il job non potrà MAI più ripartire finché non si riavvia il DB o scade la sessione.
+    await db.raw('SELECT pg_advisory_unlock(?)', [LOCK_KEY]);
+    logCron('[NOTIFICATION_SERVICE] 🔓 Lock advisory rilasciato correttamente.');
   }
 
   logCron('[NOTIFICATION_SERVICE] 🏁 Job completato. Statistiche:', stats);
