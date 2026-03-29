@@ -556,9 +556,9 @@ export const renewContract = async (
 
       console.log('[CONTRACT_SERVICE] ✅ Date validate:', data.start_date, '→', data.end_date);
 
-      // 3. Calcola last_annuity_paid: anno della nuova start_date
-      // Logica: il rinnovo implica il pagamento dell'annualità dell'anno di inizio
-      const lastAnnuityPaid = startDate.year();
+      // 3. Calcola last_annuity_paid: solo se NON è cedolare secca
+      // Se è cedolare secca, lo mettiamo a null per pulizia dati
+      const lastAnnuityPaid = data.cedolare_secca ? null : startDate.year();
       console.log('[CONTRACT_SERVICE] 📅 last_annuity_paid settato a:', lastAnnuityPaid);
 
       // 4. Elimina vecchie annuities (pulizia completa)
