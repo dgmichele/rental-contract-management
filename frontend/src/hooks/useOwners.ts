@@ -99,10 +99,10 @@ export const useDeleteOwner = () => {
  */
 export const useOwnerContracts = (id: number, page = 1, limit = 12) => {
   return useQuery({
-    queryKey: [...QUERY_KEYS.owners.contracts(id), page, limit], // page e limit separati, non in oggetto
+    queryKey: [...QUERY_KEYS.owners.contracts(id), page, limit],
     queryFn: () => ownersService.getOwnerContracts(id, page, limit),
     enabled: !!id && !isNaN(id),
     placeholderData: (previousData) => previousData,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0, // ← nessuna cache, rifetcha sempre al cambio pagina
   });
 };
