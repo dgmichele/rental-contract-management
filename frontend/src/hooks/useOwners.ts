@@ -7,23 +7,15 @@ import { QUERY_KEYS } from '../config/react-query';
 import { invalidateRelatedQueries, invalidateResourceDetail } from '../utils/queryInvalidator';
 import type { ApiError } from '../types/api';
 
-/**
- * HOOK - OTTIENI LISTA PROPRIETARI
- * Supporta paginazione e ricerca.
- */
 export const useOwners = (page = 1, limit = 12, search = '') => {
   return useQuery({
     queryKey: QUERY_KEYS.owners.list(JSON.stringify({ page, limit, search })),
     queryFn: () => ownersService.getOwners(page, limit, search),
     placeholderData: (previousData) => previousData,
-    staleTime: 5 * 60 * 1000, // 5 minuti
+    staleTime: 5 * 60 * 1000,
   });
 };
 
-/**
- * HOOK - OTTIENI SINGOLO PROPRIETARIO
- * Include le statistiche.
- */
 export const useOwner = (id: number) => {
   return useQuery({
     queryKey: QUERY_KEYS.owners.detail(id),
@@ -33,9 +25,6 @@ export const useOwner = (id: number) => {
   });
 };
 
-/**
- * HOOK - CREA NUOVO PROPRIETARIO
- */
 export const useCreateOwner = () => {
   const queryClient = useQueryClient();
 
@@ -53,9 +42,6 @@ export const useCreateOwner = () => {
   });
 };
 
-/**
- * HOOK - AGGIORNA PROPRIETARIO ESISTENTE
- */
 export const useUpdateOwner = () => {
   const queryClient = useQueryClient();
 
@@ -74,9 +60,6 @@ export const useUpdateOwner = () => {
   });
 };
 
-/**
- * HOOK - ELIMINA PROPRIETARIO
- */
 export const useDeleteOwner = () => {
   const queryClient = useQueryClient();
 
@@ -95,14 +78,17 @@ export const useDeleteOwner = () => {
 };
 
 /**
- * HOOK - OTTIENI CONTRATTI DI UN PROPRIETARIO
+ * Pattern identico a useContracts:
+ * - i parametri di paginazione entrano nella queryKey tramite JSON.stringify
+ * - React Query tratta ogni combinazione di parametri come una entry separata in cache
+ * - placeholderData evita il flash di contenuto vuoto tra una pagina e l'altra
  */
 export const useOwnerContracts = (id: number, page = 1, limit = 12) => {
   return useQuery({
-    queryKey: [...QUERY_KEYS.owners.contracts(id), page, limit],
+    queryKey: QUERY_KEYS.owners.contractsList(id, JSON.stringify({ page, limit })),
     queryFn: () => ownersService.getOwnerContracts(id, page, limit),
     enabled: !!id && !isNaN(id),
     placeholderData: (previousData) => previousData,
-    staleTime: 0, // ← nessuna cache, rifetcha sempre al cambio pagina
+    staleTime: 5 * 60 * 1000,
   });
 };
