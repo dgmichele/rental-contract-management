@@ -1,27 +1,31 @@
 import { QueryClient } from '@tanstack/react-query';
 import { QUERY_KEYS } from '../config/react-query';
 
-export const invalidateRelatedQueries = (
-  queryClient: QueryClient,
-  resource: 'contracts' | 'owners' | 'dashboard' | 'user'
-) => {
+/**
+ * Utility per invalidare selettivamente o massivamente la cache di React Query.
+ * Previene la duplicazione della logica di invalidazione nei mutation hooks.
+ */
+export const invalidateRelatedQueries = (queryClient: QueryClient, resource: 'contracts' | 'owners' | 'dashboard' | 'user') => {
   switch (resource) {
     case 'contracts':
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.contracts.all });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard.all });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.owners.all });
+      // Quando un contratto cambia, invalidiamo:
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.contracts.all }); // Liste e dettagli
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard.all }); // KPI e liste scadenze
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.owners.all }); // I proprietari potrebbero avere stats aggiornate
       break;
-
+      
     case 'owners':
+      // Quando un proprietario cambia, invalidiamo:
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.owners.all });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard.all });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard.all }); // KPI e liste scadenze
+      // Se cambiano i dati del proprietario, i contratti associati potrebbero rifletterlo
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.contracts.all });
       break;
-
+      
     case 'dashboard':
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard.all });
       break;
-
+      
     case 'user':
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.user.me });
       break;
@@ -29,15 +33,11 @@ export const invalidateRelatedQueries = (
 };
 
 /**
- * Invalida singola risorsa per ID e le sue liste correlate.
- *
- * Per gli owner contracts: invalidando QUERY_KEYS.owners.contracts(id)
- * React Query invalida per prefisso, coprendo automaticamente tutte le
- * entry di contractsList(id, *) generate dalla paginazione.
+ * Invalida singola risorsa per ID e le sue liste correlate
  */
 export const invalidateResourceDetail = (
-  queryClient: QueryClient,
-  resource: 'contracts' | 'owners',
+  queryClient: QueryClient, 
+  resource: 'contracts' | 'owners', 
   id: number
 ) => {
   if (resource === 'contracts') {
@@ -46,7 +46,6 @@ export const invalidateResourceDetail = (
     invalidateRelatedQueries(queryClient, 'contracts');
   } else if (resource === 'owners') {
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.owners.detail(id) });
-    // Invalida tutti i contratti paginati di questo owner (prefisso match)
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.owners.contracts(id) });
     invalidateRelatedQueries(queryClient, 'owners');
   }
