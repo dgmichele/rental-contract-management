@@ -53,7 +53,7 @@ export const QUERY_KEYS = {
     list: (filters: string) => [...QUERY_KEYS.owners.lists(), filters] as const,
     details: () => [...QUERY_KEYS.owners.all, 'detail'] as const,
     detail: (id: number) => [...QUERY_KEYS.owners.details(), id] as const,
-    contracts: (id: number) => [...QUERY_KEYS.owners.detail(id), 'contracts'] as const,
+    contracts: (id: number, filters?: string) => [...QUERY_KEYS.owners.detail(id), 'contracts', ...(filters ? [filters] : [])] as const,
   },
 
   // ============= DASHBOARD =============

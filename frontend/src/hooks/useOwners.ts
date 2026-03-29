@@ -99,7 +99,7 @@ export const useDeleteOwner = () => {
  */
 export const useOwnerContracts = (id: number, page = 1, limit = 12) => {
   return useQuery({
-    queryKey: QUERY_KEYS.owners.contracts(id),
+    queryKey: QUERY_KEYS.owners.contracts(id, JSON.stringify({ page, limit })),
     queryFn: () => ownersService.getOwnerContracts(id, page, limit),
     enabled: !!id && !isNaN(id),
     placeholderData: (previousData) => previousData,
