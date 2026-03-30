@@ -401,10 +401,24 @@ export const updateContract = async (
       // 4. Prepara dati update contratto (solo campi forniti, ESCLUSO tenant_data)
       const { tenant_data, ...contractData } = data; // Rimuovi tenant_data dai dati contratto
       
+      const regimeChanged = data.cedolare_secca !== undefined && data.cedolare_secca !== existingContract.cedolare_secca;
+      
       const updateData: Partial<Contract> = {
         ...contractData,
         updated_at: new Date(),
       };
+
+      // ⭐ NUOVO: Pulizia dati se stiamo passando a cedolare_secca: true
+      if (regimeChanged && data.cedolare_secca === true) {
+        updateData.last_annuity_paid = null;
+        console.log('[CONTRACT_SERVICE] Cambio in cedolare secca, last_annuity_paid resettato a null');
+        
+        // Pulizia delle vecchie notifiche sulle annualità che non servono più per liberare la memoria del Cron
+        const deletedNotifications = await trx('notifications')
+          .where({ contract_id: contractId, type: 'annuity_renewal' })
+          .delete();
+        console.log(`[CONTRACT_SERVICE] Pulite ${deletedNotifications} notifiche di annualità obsolete`);
+      }
 
       // 5. Aggiorna contratto
       const [updatedContract] = await trx<Contract>('contracts')
@@ -414,21 +428,21 @@ export const updateContract = async (
 
       console.log('[CONTRACT_SERVICE] ✅ Contratto aggiornato:', updatedContract.id);
 
-      // ⭐ 6. NUOVO: Ricalcola annuities se sono state modificate le date del contratto
-      const datesChanged = data.start_date || data.end_date;
+      // ⭐ 6. Ricalcola annuities se sono state modificate le date del contratto O il regime
+      const datesChanged = !!(data.start_date || data.end_date);
       
-      if (datesChanged) {
-        console.log('[CONTRACT_SERVICE] Date modificate, ricalcolo annuities...');
+      if (datesChanged || regimeChanged) {
+        console.log('[CONTRACT_SERVICE] Date o regime modificati, ricalcolo annuities...');
         await annuityService.recalculateAnnuityDueDates(contractId, trx);
-        console.log('[CONTRACT_SERVICE] ✅ Annuities ricalcolate');
+        console.log('[CONTRACT_SERVICE] ✅ Annuities ricalcolate/pulite');
       }
 
-      // ⭐ 7. NUOVO: Sincronizza is_paid delle annuities se last_annuity_paid è stato modificato
-      const newLastAnnuity = data.last_annuity_paid;
+      // ⭐ 7. Sincronizza is_paid delle annuities se last_annuity_paid è stato modificato (e non siamo in cedolare secca)
+      const newLastAnnuity = updateData.last_annuity_paid !== undefined ? updateData.last_annuity_paid : data.last_annuity_paid;
       const oldLastAnnuity = existingContract.last_annuity_paid;
       console.log('[CONTRACT_SERVICE] last_annuity_paid check - old:', oldLastAnnuity, '(type:', typeof oldLastAnnuity, ') new:', newLastAnnuity, '(type:', typeof newLastAnnuity, ')');
       
-      if (newLastAnnuity !== undefined && Number(newLastAnnuity) !== Number(oldLastAnnuity)) {
+      if (!updatedContract.cedolare_secca && newLastAnnuity !== undefined && Number(newLastAnnuity) !== Number(oldLastAnnuity)) {
         console.log('[CONTRACT_SERVICE] last_annuity_paid modificato, sincronizzazione is_paid...');
         await annuityService.syncAnnuityPaidStatus(contractId, trx);
         console.log('[CONTRACT_SERVICE] ✅ is_paid annuities sincronizzato');
