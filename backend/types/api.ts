@@ -126,7 +126,6 @@ export interface ContractWithRelations extends Contract {
   owner: Owner;
   tenant: Tenant;
   annuities?: Annuity[];
-  userEmail?: string; // ⭐ NUOVO: Email dell'utente gestore per notifiche interne
 }
 
 // ============= QUERY PARAMS =============

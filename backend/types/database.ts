@@ -106,7 +106,6 @@ export interface Notification {
   type: NotificationType;
   year: number | null;
   sent_to_client: boolean;
-  sent_to_internal: boolean;
   sent_at: Date;
 }
 

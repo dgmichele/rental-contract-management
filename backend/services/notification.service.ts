@@ -47,7 +47,6 @@ export const claimNotification = async (
         type: type,
         year: year,
         sent_to_client: false,
-        sent_to_internal: false,
         sent_at: new Date(),
       }).returning('id');
 
@@ -76,14 +75,12 @@ export const claimNotification = async (
  * @param type - Tipo di notifica
  * @param year - Anno di riferimento
  * @param sentToClient - Se l'email al cliente è stata inviata
- * @param sentToInternal - Se l'email interna è stata inviata
  */
 const updateNotificationStatus = async (
   contractId: number,
   type: NotificationType,
   year: number | null,
-  sentToClient: boolean,
-  sentToInternal: boolean
+  sentToClient: boolean
 ): Promise<void> => {
   try {
     const query = db('notifications')
@@ -97,7 +94,6 @@ const updateNotificationStatus = async (
 
     await query.update({
       sent_to_client: sentToClient,
-      sent_to_internal: sentToInternal,
     });
   } catch (error) {
     logCronError(`[NOTIFICATION_SERVICE] ❌ Errore aggiornamento stato notifica:`, error);
@@ -128,20 +124,13 @@ const getFullContract = async (contractId: number): Promise<ContractWithRelation
     return null;
   }
 
-  // 3. Recupera l'email dell'utente gestore (User) associato all'owner
-  const managingUser = await db('users')
-    .select('email')
-    .where('id', owner.user_id)
-    .first();
-
-  // 4. Costruisce l'oggetto tipizzato ContractWithRelations
+  // 3. Costruisce l'oggetto tipizzato ContractWithRelations
   return {
     ...contract,
     monthly_rent: parseDecimal(contract.monthly_rent),
     owner,
     tenant,
     annuities,
-    userEmail: managingUser?.email // ⭐ NUOVO: Aggiunge email utente per notifiche interne
   };
 };
 
@@ -204,20 +193,22 @@ export const sendExpiringContractsNotifications = async () => {
           continue;
         }
 
+        if (!fullContract.owner.email) {
+          logCron(`[NOTIFICATION_SERVICE] ⏭️ Nessuna email owner per contratto ID: ${contract.id}, skip invio email.`);
+          await updateNotificationStatus(contract.id, 'contract_renewal', expiryYear, false);
+          stats.skipped++;
+          continue;
+        }
+
         logCron(`[NOTIFICATION_SERVICE] 📧 Invio reminder CONTRATTO ID: ${contract.id}`);
 
-        const sentInternal = await emailService.sendExpirationReminderInternal(fullContract, 'contract');
-        
-        // Invia email al cliente solo se presente
-        const sentClient = fullContract.owner.email 
-          ? await emailService.sendExpirationReminderClient(fullContract, 'contract')
-          : false;
+        const sentClient = await emailService.sendExpirationReminderClient(fullContract, 'contract');
 
-        if (sentInternal || sentClient) {
-          await updateNotificationStatus(contract.id, 'contract_renewal', expiryYear, sentClient, sentInternal);
+        if (sentClient) {
+          await updateNotificationStatus(contract.id, 'contract_renewal', expiryYear, true);
           stats.sent++;
         } else {
-          logCronError(`[NOTIFICATION_SERVICE] ❌ Tutti i tentativi email falliti per contratto ${contract.id}`);
+          logCronError(`[NOTIFICATION_SERVICE] ❌ Invio email fallito per contratto ${contract.id}`);
           stats.failed++;
         }
       }
@@ -244,20 +235,22 @@ export const sendExpiringContractsNotifications = async () => {
           continue;
         }
 
+        if (!fullContract.owner.email) {
+          logCron(`[NOTIFICATION_SERVICE] ⏭️ Nessuna email owner per annualità ${annuity.year} Contratto ID: ${annuity.contract_id}, skip.`);
+          await updateNotificationStatus(annuity.contract_id, 'annuity_renewal', annuity.year, false);
+          stats.skipped++;
+          continue;
+        }
+
         logCron(`[NOTIFICATION_SERVICE] 📧 Invio reminder ANNUALITÀ ${annuity.year} Contratto ID: ${annuity.contract_id}`);
 
-        const sentInternal = await emailService.sendExpirationReminderInternal(fullContract, 'annuity', annuity.year);
-        
-        // Invia email al cliente solo se presente
-        const sentClient = fullContract.owner.email 
-          ? await emailService.sendExpirationReminderClient(fullContract, 'annuity', annuity.year)
-          : false;
+        const sentClient = await emailService.sendExpirationReminderClient(fullContract, 'annuity', annuity.year);
 
-        if (sentInternal || sentClient) {
-          await updateNotificationStatus(annuity.contract_id, 'annuity_renewal', annuity.year, sentClient, sentInternal);
+        if (sentClient) {
+          await updateNotificationStatus(annuity.contract_id, 'annuity_renewal', annuity.year, true);
           stats.sent++;
         } else {
-          logCronError(`[NOTIFICATION_SERVICE] ❌ Tutti i tentativi email falliti per annualità contratto ${annuity.contract_id}`);
+          logCronError(`[NOTIFICATION_SERVICE] ❌ Invio email fallito per annualità contratto ${annuity.contract_id}`);
           stats.failed++;
         }
       }

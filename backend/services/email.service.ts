@@ -4,8 +4,6 @@ import { render } from '@react-email/render';
 // @ts-ignore
 import ResetPasswordEmail from '../emails/ResetPasswordEmail';
 // @ts-ignore
-import ExpirationReminderInternal from '../emails/ExpirationReminderInternal';
-// @ts-ignore
 import ExpirationReminderClient from '../emails/ExpirationReminderClient';
 import AppError from '../utils/AppError';
 import { ContractWithRelations } from '../types/api';
@@ -87,82 +85,7 @@ const formatDateItalian = (date: string | Date): string => {
   return dayjs(date).format('D MMMM YYYY');
 };
 
-/**
- * Invia email di reminder scadenza al team interno.
- * Template semplice e funzionale con dati essenziali del contratto.
- * 
- * Gestione errori: "best effort" - logga errori ma NON blocca il flusso.
- * 
- * @param contract - Contratto completo con owner e tenant
- * @param type - Tipo di scadenza ('contract' | 'annuity')
- * @param year - Anno annualità (opzionale, solo per type='annuity')
- * @returns true se invio riuscito, false altrimenti
- */
-export const sendExpirationReminderInternal = async (
-  contract: ContractWithRelations,
-  type: 'contract' | 'annuity',
-  year?: number
-): Promise<boolean> => {
-  logInfo('[EMAIL_SERVICE] 📧 Preparazione email reminder interna per contratto: ' + contract.id);
 
-  try {
-    // Estrai dati necessari dal contratto
-    const ownerName = `${contract.owner.name} ${contract.owner.surname}`;
-    const tenantName = `${contract.tenant.name} ${contract.tenant.surname}`;
-    
-    // Determina data di scadenza (unificato)
-    const expiryDateRaw = extractExpiryDateRaw(contract, type, year);
-    
-    if (!expiryDateRaw) {
-      console.error('[EMAIL_SERVICE] ❌ Data di scadenza non trovata per contratto:', contract.id);
-      return false;
-    }
-
-    const expiryDate = formatDateItalian(expiryDateRaw);
-    console.log('[EMAIL_SERVICE] Data scadenza formattata:', expiryDate);
-
-    // Renderizza template React Email in HTML
-    const html = await render(
-      ExpirationReminderInternal({
-        contractId: contract.id,
-        ownerName,
-        tenantName,
-        expiryDate,
-        type,
-        annuityYear: year,
-        address: contract.address, // Opzionale
-      })
-    );
-
-    logInfo('[EMAIL_SERVICE] ✅ Template interno renderizzato');
-
-    // Determina subject dinamico
-    const subject = type === 'contract' 
-      ? `🔔 Scadenza contratto: ${ownerName} - ${tenantName}`
-      : `🔔 Scadenza annualità ${year}: ${ownerName} - ${tenantName}`;
-
-    // Invia email tramite Resend API
-    const { data, error } = await resend.emails.send({
-      from: `${process.env.FROM_NAME} <${process.env.FROM_EMAIL}>`,
-      to: contract.userEmail || process.env.INTERNAL_NOTIFICATION_EMAIL as string, // ⭐ Dinamico (User Email) o fallback statico
-      subject,
-      html,
-    });
-
-    if (error) {
-      console.error('[EMAIL_SERVICE] ❌ Errore Resend API (email interna):', error);
-      return false; // Best effort: non bloccare il flusso
-    }
-
-    logInfo('[EMAIL_SERVICE] ✅ Email interna inviata con successo. ID: ' + data?.id);
-    return true;
-
-  } catch (error) {
-    // Log errore ma NON interrompere il flusso (best effort)
-    logError('[EMAIL_SERVICE] ❌ Errore invio email interna:', error);
-    return false;
-  }
-};
 
 /**
  * Invia email di reminder scadenza al cliente (proprietario).
