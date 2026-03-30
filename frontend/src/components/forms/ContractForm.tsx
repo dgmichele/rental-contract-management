@@ -61,9 +61,17 @@ export default function ContractForm({
 
   const { register, handleSubmit } = methods;
 
+  // Log degli errori di validazione per debug istantaneo (come richiesto)
+  const onInvalid = (errors: any) => {
+    console.error('[FORM_ERROR] Validazione fallita:', errors);
+  };
+
   return (
     <FormProvider {...methods}>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+      <form 
+        onSubmit={handleSubmit((data) => onSubmit(data as ContractFormData), onInvalid)} 
+        className="space-y-8"
+      >
         {/* Sezione Proprietario */}
         {mode !== 'renew' && mode !== 'annuity' && (
           <div className="space-y-4">
@@ -133,26 +141,34 @@ export default function ContractForm({
 
               {/* Durata Contratto */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input
-                  label="Data inizio"
-                  name="start_date"
-                  type="date"
-                  register={register}
-                  error={errors.start_date?.message}
-                  startIcon={<FaCalendarAlt />}
-                  disabled={isFieldDisabled('start_date')}
-                  min={mode === 'renew' ? todayStr : undefined}
-                />
-                <Input
-                  label="Data fine"
-                  name="end_date"
-                  type="date"
-                  register={register}
-                  error={errors.end_date?.message}
-                  startIcon={<FaCalendarAlt />}
-                  disabled={isFieldDisabled('end_date')}
-                  min={mode === 'renew' ? todayStr : undefined}
-                />
+                <div className={mode === 'renew' ? "pointer-events-none opacity-70" : ""}>
+                  <Input
+                    label={mode === 'renew' ? "Data inizio (Originale)" : "Data inizio"}
+                    name="start_date"
+                    type="date"
+                    register={register}
+                    error={errors.start_date?.message}
+                    startIcon={<FaCalendarAlt />}
+                    disabled={isFieldDisabled('start_date')}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Input
+                    label="Data fine"
+                    name="end_date"
+                    type="date"
+                    register={register}
+                    error={errors.end_date?.message}
+                    startIcon={<FaCalendarAlt />}
+                    disabled={isFieldDisabled('end_date')}
+                    min={mode === 'renew' ? todayStr : undefined}
+                  />
+                  {mode === 'renew' && (
+                    <p className="text-[10px] text-text-subtle italic px-1">
+                      * Il rinnovo deve estendere il contratto di almeno 30 giorni.
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Cedolare Secca */}

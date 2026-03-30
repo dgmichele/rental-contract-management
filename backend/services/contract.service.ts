@@ -542,41 +542,40 @@ export const renewContract = async (
 
       console.log('[CONTRACT_SERVICE] ✅ Contratto trovato, owner_id:', existingContract.owner_id, 'tenant_id:', existingContract.tenant_id);
 
-      // 2. Validazione date (flessibile: permette gap tra vecchio end_date e nuovo start_date)
-      const startDate = dayjs(data.start_date);
-      const endDate = dayjs(data.end_date);
+      // 2. Validazione date (la start_date NON viene modificata durante un rinnovo)
+      const startDate = dayjs(existingContract.start_date); // Manteniamo la data di inizio originale
+      const endDate = dayjs(data.end_date); // Solo la data di fine cambia
+      const oldEndDate = dayjs(existingContract.end_date);
 
-      if (!startDate.isValid() || !endDate.isValid()) {
-        throw new AppError('Date non valide', 400);
+      if (!endDate.isValid()) {
+        throw new AppError('Data di fine non valida', 400);
       }
 
       if (endDate.isBefore(startDate) || endDate.isSame(startDate)) {
-        throw new AppError('La data di fine deve essere successiva alla data di inizio', 400);
+        throw new AppError('La data di fine deve essere successiva alla data di inizio originale', 400);
+      }
+      
+      // Controllo estensione minima: almeno 30 giorni oltre la vecchia data di fine
+      if (endDate.diff(oldEndDate, 'day') < 30) {
+        throw new AppError('Un rinnovo deve estendere il contratto di almeno 30 giorni', 400);
       }
 
-      console.log('[CONTRACT_SERVICE] ✅ Date validate:', data.start_date, '→', data.end_date);
+      console.log('[CONTRACT_SERVICE] ✅ Date validate, start_date (invariata):', existingContract.start_date, '→ end_date:', data.end_date);
 
       // 3. Calcola last_annuity_paid: solo se NON è cedolare secca
-      // Se è cedolare secca, lo mettiamo a null per pulizia dati
-      const lastAnnuityPaid = data.cedolare_secca ? null : startDate.year();
+      // In fase di rinnovo consideriamo pagato l'anno predefinito corrente, mantenendo comunque quelli già pagati
+      const currentYear = dayjs().year();
+      const lastAnnuityPaid = data.cedolare_secca ? null : Math.max(existingContract.last_annuity_paid || 0, currentYear);
       console.log('[CONTRACT_SERVICE] 📅 last_annuity_paid settato a:', lastAnnuityPaid);
 
-      // 4. Elimina vecchie annuities (pulizia completa)
-      const deletedCount = await trx('annuities')
-        .where({ contract_id: contractId })
-        .del();
-
-      console.log('[CONTRACT_SERVICE] 🗑️  Annuities vecchie eliminate:', deletedCount);
-
-      // 5. Aggiorna contratto con nuove condizioni
+      // 4. Aggiorna contratto con nuove condizioni (escludendo start_date per sicurezza)
       const updateData: Partial<Contract> = {
-        start_date: data.start_date,
         end_date: data.end_date,
         cedolare_secca: data.cedolare_secca,
         typology: data.typology,
         canone_concordato: data.canone_concordato,
         monthly_rent: data.monthly_rent,
-        last_annuity_paid: lastAnnuityPaid, // ⭐ Anno del rinnovo
+        last_annuity_paid: lastAnnuityPaid,
         updated_at: new Date(),
       };
 
@@ -586,28 +585,29 @@ export const renewContract = async (
 
       console.log('[CONTRACT_SERVICE] ✅ Contratto aggiornato con nuove condizioni');
 
-      // 6. Rigenera annuities (se NON cedolare_secca)
+      // 5. Ricalcola annuities e sincronizza lo stato dei pagamenti
+      console.log('[CONTRACT_SERVICE] 🔄 Ricalcolo annuities per adattarsi alla nuova end_date ed eventuale cambio regime...');
       let newAnnuities: any[] = [];
-
-      if (!data.cedolare_secca) {
-        console.log('[CONTRACT_SERVICE] 🔄 Generazione nuove annuities...');
-
-        try {
-          // Usa annuity.service per generare annuities (rispetta logica esistente)
-          await annuityService.generateAnnuitiesForContract(contractId, trx);
-          
-          // Recupera le annuities appena generate per includerle nella response
-          newAnnuities = await trx('annuities')
-            .where({ contract_id: contractId })
-            .orderBy('year', 'asc');
-
-          console.log('[CONTRACT_SERVICE] ✅ Nuove annuities generate:', newAnnuities.length);
-        } catch (error) {
-          console.error('[CONTRACT_SERVICE] ❌ Errore generazione nuove annuities:', error);
-          throw new AppError('Errore durante la generazione delle nuove annualità', 500);
+      
+      try {
+        // Questa funzione adatta le annuities esistenti e genera solo quelle nuove necessarie,
+        // gestendo automaticamente anche il passaggio da/verso cedolare secca
+        await annuityService.recalculateAnnuityDueDates(contractId, trx);
+        
+        // Sincronizza lo stato dei pagamenti in base al nuovo last_annuity_paid calcolato
+        if (!data.cedolare_secca) {
+          await annuityService.syncAnnuityPaidStatus(contractId, trx);
         }
-      } else {
-        console.log('[CONTRACT_SERVICE] ℹ️  Contratto in cedolare_secca, nessuna annuity generata');
+
+        // Recupera le annuities aggiornate per includerle nella response
+        newAnnuities = await trx('annuities')
+          .where({ contract_id: contractId })
+          .orderBy('year', 'asc');
+
+        console.log('[CONTRACT_SERVICE] ✅ Annuities aggiornate:', newAnnuities.length);
+      } catch (error) {
+        console.error('[CONTRACT_SERVICE] ❌ Errore durante il ricalcolo delle annualità:', error);
+        throw new AppError('Errore durante l\'aggiornamento delle annualità', 500);
       }
 
       // 7. Recupera dettagli completi per response (owner, tenant, annuities)

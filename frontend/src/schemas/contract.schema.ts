@@ -20,7 +20,7 @@ export const createContractSchema = (minAnnuityYear?: number) => z.object({
     z.number({ message: 'Il canone è obbligatorio' }).min(0, 'Il canone non può essere negativo')
   ),
   last_annuity_paid: z.any().transform(val => (val === '' || val === null || isNaN(val as any) ? null : Number(val))).pipe(
-    z.number({ message: 'Inserire un anno valido' })
+    z.number()
      .min(minAnnuityYear || 2000, `L'anno non può essere inferiore a ${minAnnuityYear || 2000}`)
      .nullable()
   ),

@@ -72,20 +72,32 @@ export const useContractFormLogic = ({
     const start = new Date(startDate);
     const end = new Date(endDate);
     
-    if (start < today || end < today) return true;
+    if (end < today) return true;
     if (start >= end) return true;
+
+    // Controllo estensione minima 30 giorni rispetto alla vecchia end_date
+    if (initialData?.end_date) {
+      const oldEnd = new Date(initialData.end_date);
+      const diffMs = end.getTime() - oldEnd.getTime();
+      const diffDays = diffMs / (1000 * 60 * 60 * 24);
+      if (diffDays < 30) return true;
+    }
     
     return false;
-  }, [mode, startDate, endDate]);
+  }, [mode, startDate, endDate, initialData?.end_date]);
 
   useEffect(() => {
-    if (mode === 'renew' && !cedolareSecca && startDate) {
-      const year = new Date(startDate).getFullYear();
-      if (!isNaN(year)) {
+    if (mode === 'renew') {
+      if (!cedolareSecca) {
+        const year = new Date().getFullYear();
         setValue('last_annuity_paid', year, { shouldDirty: true });
+        console.log('[FORM_LOGIC] Regime ordinario rilevato, impostato last_annuity_paid:', year);
+      } else {
+        setValue('last_annuity_paid', null, { shouldDirty: true });
+        console.log('[FORM_LOGIC] Cedolare secca rilevata, resettato last_annuity_paid a null');
       }
     }
-  }, [mode, cedolareSecca, startDate, setValue]);
+  }, [mode, cedolareSecca, setValue]);
 
   useEffect(() => {
     if (preselectedOwnerId) {
