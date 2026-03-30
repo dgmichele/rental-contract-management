@@ -38,8 +38,8 @@ export interface ErrorResponse {
 export interface CreateOwnerBody {
   name: string;
   surname: string;
-  phone: string;
-  email: string;
+  phone?: string;
+  email?: string;
 }
 
 export interface UpdateOwnerBody {
@@ -76,8 +76,8 @@ export interface CreateContractBody {
 export interface CreateTenantData {
   name: string;
   surname: string;
-  phone: string;
-  email: string;
+  phone?: string;
+  email?: string;
 }
 
 /**

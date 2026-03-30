@@ -6,7 +6,7 @@ export interface CreateOwnerRequest {
   name: string;
   surname: string;
   phone?: string;
-  email: string;
+  email?: string;
 }
 
 export interface UpdateOwnerRequest {

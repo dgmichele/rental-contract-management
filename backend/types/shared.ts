@@ -13,16 +13,16 @@ export interface OwnerData {
   id: number;
   name: string;
   surname: string;
-  phone: string;
-  email: string;
+  phone?: string;
+  email?: string;
 }
 
 export interface TenantData {
   id: number;
   name: string;
   surname: string;
-  phone: string;
-  email: string;
+  phone?: string;
+  email?: string;
 }
 
 export interface ContractData {

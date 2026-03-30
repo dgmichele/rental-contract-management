@@ -25,8 +25,8 @@ export interface Owner {
   id: number;
   name: string;
   surname: string;
-  phone: string;
-  email: string;
+  phone?: string;
+  email?: string;
   user_id: number;
   created_at: Date;
   updated_at: Date;
@@ -50,8 +50,8 @@ export interface Tenant {
   id: number;
   name: string;
   surname: string;
-  phone: string;
-  email: string;
+  phone?: string;
+  email?: string;
   user_id: number;
   created_at: Date;
   updated_at: Date;

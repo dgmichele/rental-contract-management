@@ -17,7 +17,7 @@ const tenantDataSchema = z.object({
   name: z.string().min(1, 'Nome inquilino obbligatorio').trim(),
   surname: z.string().min(1, 'Cognome inquilino obbligatorio').trim(),
   phone: z.string().optional(),
-  email: z.string().email('Email inquilino non valida').optional(),
+  email: z.string().email('Email inquilino non valida').optional().or(z.literal('')),
 });
 
 /**
@@ -27,7 +27,7 @@ const updateTenantDataSchema = z.object({
   name: z.string().min(1, 'Nome inquilino non può essere vuoto').trim().optional(),
   surname: z.string().min(1, 'Cognome inquilino non può essere vuoto').trim().optional(),
   phone: z.string().optional(),
-  email: z.string().email('Email inquilino non valida').optional(),
+  email: z.string().email('Email inquilino non valida').optional().or(z.literal('')),
 });
 
 /**

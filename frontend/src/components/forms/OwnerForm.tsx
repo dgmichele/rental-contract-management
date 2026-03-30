@@ -74,7 +74,7 @@ export default function OwnerForm({
 
       {/* Email */}
       <Input
-        label="Email"
+        label="Email (opzionale)"
         name="email"
         type="email"
         register={register}

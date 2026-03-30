@@ -10,7 +10,7 @@ export const tenantDataSchema = z.object({
 export const createContractSchema = (minAnnuityYear?: number) => z.object({
   owner_id: z.number().min(1, 'Seleziona un proprietario'),
   tenant_data: tenantDataSchema,
-  address: z.string().min(1, 'L\'indirizzo è obbligatorio').trim(),
+  address: z.string().trim().optional().or(z.literal('')),
   start_date: z.string().min(1, 'La data di inizio è obbligatoria'),
   end_date: z.string().min(1, 'La data di fine è obbligatoria'),
   cedolare_secca: z.boolean(),

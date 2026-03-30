@@ -130,7 +130,7 @@ export default function ContractForm({
 
               {/* Indirizzo */}
               <Input
-                label="Indirizzo immobile"
+                label="Indirizzo immobile (opzionale)"
                 name="address"
                 register={register}
                 error={errors.address?.message}

@@ -207,7 +207,11 @@ export const sendExpiringContractsNotifications = async () => {
         logCron(`[NOTIFICATION_SERVICE] 📧 Invio reminder CONTRATTO ID: ${contract.id}`);
 
         const sentInternal = await emailService.sendExpirationReminderInternal(fullContract, 'contract');
-        const sentClient = await emailService.sendExpirationReminderClient(fullContract, 'contract');
+        
+        // Invia email al cliente solo se presente
+        const sentClient = fullContract.owner.email 
+          ? await emailService.sendExpirationReminderClient(fullContract, 'contract')
+          : false;
 
         if (sentInternal || sentClient) {
           await updateNotificationStatus(contract.id, 'contract_renewal', expiryYear, sentClient, sentInternal);
@@ -243,7 +247,11 @@ export const sendExpiringContractsNotifications = async () => {
         logCron(`[NOTIFICATION_SERVICE] 📧 Invio reminder ANNUALITÀ ${annuity.year} Contratto ID: ${annuity.contract_id}`);
 
         const sentInternal = await emailService.sendExpirationReminderInternal(fullContract, 'annuity', annuity.year);
-        const sentClient = await emailService.sendExpirationReminderClient(fullContract, 'annuity', annuity.year);
+        
+        // Invia email al cliente solo se presente
+        const sentClient = fullContract.owner.email 
+          ? await emailService.sendExpirationReminderClient(fullContract, 'annuity', annuity.year)
+          : false;
 
         if (sentInternal || sentClient) {
           await updateNotificationStatus(annuity.contract_id, 'annuity_renewal', annuity.year, sentClient, sentInternal);
