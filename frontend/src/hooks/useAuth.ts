@@ -31,6 +31,10 @@ export const useAuth = () => {
   const loginMutation = useMutation({
     mutationFn: (credentials: LoginRequest) => authService.login(credentials),
     onSuccess: (response) => {
+      // SECURITY: Pulisci cache React Query della sessione precedente
+      // per evitare data leak cross-account
+      queryClient.clear();
+
       setAuth(response.data.user, {
         accessToken: response.data.accessToken,
         refreshToken: response.data.refreshToken,
@@ -52,6 +56,10 @@ export const useAuth = () => {
   const registerMutation = useMutation({
     mutationFn: (userData: RegisterRequest) => authService.register(userData),
     onSuccess: (response) => {
+      // SECURITY: Pulisci cache React Query della sessione precedente
+      // per evitare data leak cross-account
+      queryClient.clear();
+
       setAuth(response.data.user, {
         accessToken: response.data.accessToken,
         refreshToken: response.data.refreshToken,

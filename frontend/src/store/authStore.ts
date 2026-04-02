@@ -57,6 +57,8 @@ export const useAuthStore = create<AuthState>()(
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
+        // SECURITY: Rimuovi storage persistente Zustand per evitare residui cross-sessione
+        localStorage.removeItem('auth-storage');
       },
 
       /**
