@@ -143,8 +143,8 @@ export const sendExpirationReminderClient = async (
 
     // Determina subject dinamico
     const subject = type === 'contract' 
-      ? `🔔 Scadenza contratto di locazione - ${expiryDate}`
-      : `🔔 Scadenza annualità ${year} - ${expiryDate}`;
+      ? `🔔 Scadenza contratto di locazione - ${tenantName}`
+      : `🔔 Scadenza annualità ${year} - ${tenantName}`;
 
     // Invia email tramite Resend API
     const { data, error } = await resend.emails.send({
