@@ -5,6 +5,7 @@ import type { Annuity } from '../../types/contract';
 import { 
   FaCheck
 } from 'react-icons/fa';
+import { useAnnuityTimeline } from "./hooks/useAnnuityTimeline";
 
 interface AnnuityTimelineProps {
   annuities: Annuity[];
@@ -17,127 +18,165 @@ export const AnnuityTimeline: React.FC<AnnuityTimelineProps> = ({
   contractStartYear,
   contractEndYear,
 }) => {
-  // Generiamo tutti gli anni tra l'inizio e la fine del contratto
-  const years: number[] = [];
-  for (let year = contractStartYear; year <= contractEndYear; year++) {
-    years.push(year);
-  }
-
-  const today = dayjs();
-  
-  // Trova l'annualità non pagata più imminente (la prima nel tempo)
-  const nextAnnuityYear = [...annuities]
-    .filter(a => !a.is_paid && a.due_date)
-    .sort((a, b) => dayjs(a.due_date).unix() - dayjs(b.due_date).unix())[0]?.year;
+  const {
+    years,
+    nextAnnuityYear,
+    today,
+    scrollRef,
+    activeAnnuityRef,
+    showLeftFade,
+    showRightFade,
+    updateFades,
+    dragHandlers
+  } = useAnnuityTimeline({
+    annuities,
+    contractStartYear,
+    contractEndYear
+  });
 
   return (
-    <div className="w-full py-6">
-      <div className="relative flex flex-col md:flex-row md:justify-between w-full max-w-4xl mx-auto">
-        {/* Linea Verticale (mobile) */}
-        <div className="absolute left-[19px] top-4 bottom-4 w-[2px] bg-border md:hidden" />
+    <div className="relative w-full py-3 group">
+      {/* Sfumatura Fade Sinistra (Desktop) */}
+      <div className={clsx(
+        "absolute left-0 top-0 bottom-0 w-24 z-20 pointer-events-none transition-opacity duration-300 hidden md:block",
+        "bg-linear-to-r from-bg-card via-bg-card/50 to-transparent",
+        showLeftFade ? "opacity-100" : "opacity-0"
+      )} />
 
-        {/* Linea Orizzontale (desktop) */}
-        <div className="absolute top-[19px] left-[20px] right-[20px] h-[2px] bg-border hidden md:block z-0" />
+      {/* Sfumatura Fade Destra (Desktop) */}
+      <div className={clsx(
+        "absolute right-0 top-0 bottom-0 w-24 z-20 pointer-events-none transition-opacity duration-300 hidden md:block",
+        "bg-linear-to-l from-bg-card via-bg-card/50 to-transparent",
+        showRightFade ? "opacity-100" : "opacity-0"
+      )} />
 
-        {years.map((year) => {
-          // Cerchiamo l'annualità corrispondente
-          const annuity = annuities.find((a) => a.year === year);
+      {/* Container Scrollabile */}
+      <div 
+        ref={scrollRef}
+        onScroll={updateFades}
+        {...dragHandlers}
+        className={clsx(
+          "w-full overflow-x-auto md:overflow-x-auto no-scrollbar py-8",
+          "cursor-grab active:cursor-grabbing select-none"
+        )}
+      >
+        <div className="relative flex flex-col md:flex-row md:min-w-max px-6 md:px-20">
+          
+          {/* Linea Verticale (mobile) */}
+          <div className="absolute left-[44px] top-8 bottom-8 w-[2px] bg-border md:hidden" />
 
-          let isPaid = false;
-          let dueDate = "";
-          const isStart = year === contractStartYear;
-          const isEnd = year === contractEndYear;
+          {years.map((year) => {
+            const annuity = annuities.find((a) => a.year === year);
+            let isPaid = false;
+            let dueDate = "";
+            const isStart = year === contractStartYear;
+            const isEnd = year === contractEndYear;
 
-          if (annuity) {
-            isPaid = annuity.is_paid;
-            dueDate = dayjs(annuity.due_date).format("DD/MM/YYYY");
-          } else if (isStart) {
-            // L'anno di apertura è di default pagato
-            isPaid = true;
-          } else if (isEnd) {
-             // L'anno di scadenza non ha una "scadenza annualità" solitamente
-             isPaid = false;
-          }
-
-          // Controllo scadenza
-          let expireSoon = false;
-          let expired = false;
-          if (!isPaid && annuity && annuity.due_date) {
-            const expireDate = dayjs(annuity.due_date);
-            const daysLeft = expireDate.diff(today, "day");
-            if (daysLeft < 0) {
-              expired = true;
-            } else if (daysLeft <= 60) {
-              expireSoon = true;
+            if (annuity) {
+              isPaid = annuity.is_paid;
+              dueDate = dayjs(annuity.due_date).format("DD/MM/YYYY");
+            } else if (isStart) {
+              isPaid = true;
+            } else if (isEnd) {
+              isPaid = false;
             }
-          }
 
-          const isNext = year === nextAnnuityYear;
+            let expireSoon = false;
+            let expired = false;
+            if (!isPaid && annuity && annuity.due_date) {
+              const expireDate = dayjs(annuity.due_date);
+              const daysLeft = expireDate.diff(today, "day");
+              if (daysLeft < 0) expired = true;
+              else if (daysLeft <= 60) expireSoon = true;
+            }
 
-          return (
-            <div
-              key={year}
-              className="relative flex flex-row md:flex-col items-start md:items-center mb-8 md:mb-0 last:mb-0 z-10 basis-0 grow md:grow-0"
-            >
-              {/* Pallino */}
+            const isNext = year === nextAnnuityYear;
+            const isTarget = isNext || (expired && !isPaid);
+
+            return (
               <div
+                key={year}
+                ref={isTarget ? activeAnnuityRef : null}
                 className={clsx(
-                  "flex items-center justify-center w-10 h-10 rounded-full border-2 bg-bg-main shrink-0 transition-all duration-300 relative",
-                  isPaid ? "border-primary bg-primary" : "border-border text-border",
-                  isNext && "border-orange-500 shadow-lg animate-pulse-ring"
+                  "relative flex flex-row md:flex-col items-start md:items-center mb-10 md:mb-0 last:mb-0 z-10",
+                  "w-full md:w-[220px] flex-none"
                 )}
               >
-                {isPaid ? (
-                  <span className=""><FaCheck className="text-bg-main"/></span>
-                ) : (
-                  <div className={clsx(
-                    "w-4 h-4 rounded-full transition-colors duration-300",
-                    isNext ? "bg-orange-500 scale-110" : "bg-transparent"
-                  )} />
-                )}
-              </div>
+                {/* Linea orizzontale (desktop) */}
+                <div className="hidden md:block absolute top-[24px] left-0 right-0 h-[2px] bg-border z-0" 
+                  style={{ 
+                    left: isStart ? '50%' : '0', 
+                    right: isEnd ? '50%' : '0' 
+                  }} 
+                />
 
-              {/* Contenuto Testuale */}
-              <div className="ml-4 md:ml-0 md:mt-4 flex flex-col items-start md:items-center w-full">
-                <div className="flex flex-wrap md:justify-center items-center gap-2">
-                  <span
-                    className={clsx(
-                      "font-bold text-lg transition-colors duration-300",
-                      isPaid ? "text-text-title" : (expired ? "text-error" : (isNext ? "text-orange-600" : "text-text-body")),
-                    )}
-                  >
-                    {year}
-                  </span>
-                  {expireSoon && (
-                    <span className="bg-orange-50 text-orange-600 px-2 py-0.5 rounded text-xs border border-orange-200 whitespace-nowrap">
-                      ⚠️ scade a breve
-                    </span>
+                {/* Pallino */}
+                <div
+                  className={clsx(
+                    "flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full border-2 bg-bg-main shrink-0 transition-all duration-300 relative z-10",
+                    isPaid ? "border-primary bg-primary" : "border-border text-border",
+                    isNext && "border-orange-500 shadow-lg animate-pulse-ring"
                   )}
-                  {expired && (
-                    <span className="bg-red-50 text-red-600 px-2 py-0.5 rounded text-xs border border-red-200 whitespace-nowrap">
-                      ⚠️ scaduta
-                    </span>
+                >
+                  {isPaid ? (
+                    <FaCheck className="text-bg-main text-lg"/>
+                  ) : (
+                    <div className={clsx(
+                      "w-4 h-4 md:w-5 md:h-5 rounded-full transition-colors duration-300",
+                      isNext ? "bg-orange-500 scale-110" : "bg-transparent"
+                    )} />
                   )}
                 </div>
 
-                {isStart && (
-                  <span className="text-text-subtle text-sm text-center">Apertura</span>
-                )}
-                {isEnd && (
-                  <span className="text-text-subtle text-sm text-center">
-                    Scadenza naturale
-                  </span>
-                )}
-                {dueDate && (
-                  <span className="text-text-body text-sm mt-1 text-center font-medium">
-                    Scadenza: {dueDate}
-                  </span>
-                )}
+                {/* Contenuto Testuale */}
+                <div className="ml-4 md:ml-0 md:mt-6 flex flex-col items-start md:items-center w-full text-left md:text-center">
+                  <div className="flex flex-wrap md:justify-center items-center gap-2">
+                    <span
+                      className={clsx(
+                        "font-bold text-lg md:text-xl transition-colors duration-300",
+                        isPaid ? "text-text-title" : (expired ? "text-error" : (isNext ? "text-orange-600" : "text-text-body")),
+                      )}
+                    >
+                      {year}
+                    </span>
+                    {expireSoon && (
+                      <span className="bg-orange-50 text-orange-600 px-2 py-0.5 rounded text-[10px] border border-orange-200 whitespace-nowrap">
+                        ⚠️ scade a breve
+                      </span>
+                    )}
+                    {expired && (
+                      <span className="bg-red-50 text-red-600 px-2 py-0.5 rounded text-[10px] border border-red-200 whitespace-nowrap">
+                        ⚠️ scaduta
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col md:items-center gap-0.5 mt-1">
+                    {isStart && (
+                      <span className="text-text-subtle text-[10px] uppercase tracking-widest font-bold">Apertura</span>
+                    )}
+                    {isEnd && (
+                      <span className="text-text-subtle text-[10px] uppercase tracking-widest font-bold">
+                        Scadenza naturale
+                      </span>
+                    )}
+                    {dueDate && (
+                      <span className="text-text-body text-xs font-medium">
+                        Scadenza: {dueDate}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
+
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
     </div>
   );
 };
