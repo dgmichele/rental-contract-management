@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { UseFormRegister, FieldValues, Path } from 'react-hook-form';
 import clsx from 'clsx';
+import { FiEye, FiEyeOff } from 'react-icons/fi';
 
 interface InputProps<T extends FieldValues> extends React.InputHTMLAttributes<HTMLInputElement> {
   // Etichetta del campo input
@@ -23,6 +24,7 @@ interface InputProps<T extends FieldValues> extends React.InputHTMLAttributes<HT
  * Componente input di testo integrato con react-hook-form.
  * Include label, gestione errori e helper text.
  * Supporta un'icona opzionale a sinistra.
+ * Gestisce automaticamente il toggle della visibilità per campi password.
  * 
  * @param label Etichetta visibile sopra l'input
  * @param name Nome del campo (deve corrispondere alle chiavi del form)
@@ -42,6 +44,17 @@ export default function Input<T extends FieldValues>({
   type = 'text',
   ...props
 }: InputProps<T>) {
+  // Stato per gestire la visibilità della password
+  const [showPassword, setShowPassword] = useState(false);
+  const isPassword = type === 'password';
+
+  // Il tipo finale dell'input dipende dallo stato se è un campo password
+  const inputType = isPassword ? (showPassword ? 'text' : 'password') : type;
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
   return (
     <div className={clsx('flex flex-col gap-1 w-full min-w-0', className)}>
       {/* Label del campo */}
@@ -60,7 +73,7 @@ export default function Input<T extends FieldValues>({
         {/* Campo Input */}
         <input
           id={name}
-          type={type}
+          type={inputType}
           // Integrazione con react-hook-form, gestisce valueAsNumber se type è number
           {...register(name, { valueAsNumber: type === 'number' })}
           onFocus={(e) => {
@@ -78,12 +91,26 @@ export default function Input<T extends FieldValues>({
               'border-red-500 focus:border-red-500': error,
               // Padding extra a sinistra se c'è l'icona
               'pl-10': startIcon,
+              // Padding extra a destra se è un campo password (per l'icona dell'occhio)
+              'pr-10': isPassword,
               // Safari fix per input type date
               'appearance-none': type === 'date',
             }
           )}
           {...props}
         />
+
+        {/* Toggle Visibilità Password (mostrato solo se type="password") */}
+        {isPassword && (
+          <button
+            type="button"
+            onClick={togglePasswordVisibility}
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-text-subtle hover:text-primary transition-colors focus:outline-none"
+            title={showPassword ? "Nascondi password" : "Mostra password"}
+          >
+            {showPassword ? <FiEyeOff size={20} className='cursor-pointer' /> : <FiEye size={20} className='cursor-pointer' />}
+          </button>
+        )}
       </div>
       
       {/* Messaggi di errore o aiuto */}
