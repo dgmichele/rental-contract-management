@@ -15,25 +15,19 @@ import { parseDecimal } from '../utils/contract.utils';
  * il rischio di race condition tra istanze multiple.
  * * @param contractId - ID del contratto
  * @param type - Tipo di notifica ('contract_renewal' o 'annuity_renewal')
- * @param year - Anno di riferimento (anno di scadenza per rinnovo contratto, indice anno per annualità)
+ * @param referenceDate - Data di riferimento (scadenza del contratto o data dell'annualità)
  * @returns true se la notifica è stata inserita (non esisteva), false altrimenti
  */
 export const claimNotification = async (
   contractId: number, 
   type: NotificationType, 
-  year: number | null
+  referenceDate: string
 ): Promise<boolean> => {
   try {
     // Transazione normale READ COMMITTED
     const result = await db.transaction(async (trx) => {
-      let existingQuery = trx('notifications')
-        .where({ contract_id: contractId, type: type });
-      
-      if (year !== null) {
-        existingQuery = existingQuery.where('year', year);
-      } else {
-        existingQuery = existingQuery.whereNull('year');
-      }
+      const existingQuery = trx('notifications')
+        .where({ contract_id: contractId, type: type, reference_date: referenceDate });
 
       const existing = await existingQuery.first();
       
@@ -45,7 +39,7 @@ export const claimNotification = async (
       const [inserted] = await trx('notifications').insert({
         contract_id: contractId,
         type: type,
-        year: year,
+        reference_date: referenceDate,
         sent_to_client: false,
         sent_at: new Date(),
       }).returning('id');
@@ -56,9 +50,9 @@ export const claimNotification = async (
     const claimed = result !== null;
     
     if (claimed) {
-      logCron(`[NOTIFICATION_SERVICE] 🔒 Notifica creata con successo (ID: ${result.id}) per contratto ${contractId}, tipo: ${type}, anno: ${year}`);
+      logCron(`[NOTIFICATION_SERVICE] 🔒 Notifica creata con successo (ID: ${result.id}) per contratto ${contractId}, tipo: ${type}, data: ${referenceDate}`);
     } else {
-      logCron(`[NOTIFICATION_SERVICE] ⏭️ Notifica già esistente per contratto ${contractId}, tipo: ${type}, anno: ${year}`);
+      logCron(`[NOTIFICATION_SERVICE] ⏭️ Notifica già esistente per contratto ${contractId}, tipo: ${type}, data: ${referenceDate}`);
     }
 
     return claimed;
@@ -79,18 +73,12 @@ export const claimNotification = async (
 const updateNotificationStatus = async (
   contractId: number,
   type: NotificationType,
-  year: number | null,
+  referenceDate: string,
   sentToClient: boolean
 ): Promise<void> => {
   try {
     const query = db('notifications')
-      .where({ contract_id: contractId, type: type });
-
-    if (year !== null) {
-      query.where('year', year);
-    } else {
-      query.whereNull('year');
-    }
+      .where({ contract_id: contractId, type: type, reference_date: referenceDate });
 
     await query.update({
       sent_to_client: sentToClient,
@@ -180,8 +168,8 @@ export const sendExpiringContractsNotifications = async () => {
       for (const contract of expiringContracts) {
         stats.processed++;
 
-        const expiryYear = dayjs(contract.end_date).year();
-        const claimed = await claimNotification(contract.id, 'contract_renewal', expiryYear);
+        const referenceDate = contract.end_date;
+        const claimed = await claimNotification(contract.id, 'contract_renewal', referenceDate);
         if (!claimed) {
           stats.skipped++;
           continue;
@@ -195,7 +183,7 @@ export const sendExpiringContractsNotifications = async () => {
 
         if (!fullContract.owner.email) {
           logCron(`[NOTIFICATION_SERVICE] ⏭️ Nessuna email owner per contratto ID: ${contract.id}, skip invio email.`);
-          await updateNotificationStatus(contract.id, 'contract_renewal', expiryYear, false);
+          await updateNotificationStatus(contract.id, 'contract_renewal', referenceDate, false);
           stats.skipped++;
           continue;
         }
@@ -205,7 +193,7 @@ export const sendExpiringContractsNotifications = async () => {
         const sentClient = await emailService.sendExpirationReminderClient(fullContract, 'contract');
 
         if (sentClient) {
-          await updateNotificationStatus(contract.id, 'contract_renewal', expiryYear, true);
+          await updateNotificationStatus(contract.id, 'contract_renewal', referenceDate, true);
           stats.sent++;
         } else {
           logCronError(`[NOTIFICATION_SERVICE] ❌ Invio email fallito per contratto ${contract.id}`);
@@ -223,7 +211,8 @@ export const sendExpiringContractsNotifications = async () => {
       for (const annuity of expiringAnnuities) {
         stats.processed++;
 
-        const claimed = await claimNotification(annuity.contract_id, 'annuity_renewal', annuity.year);
+        const referenceDate = annuity.due_date;
+        const claimed = await claimNotification(annuity.contract_id, 'annuity_renewal', referenceDate);
         if (!claimed) {
           stats.skipped++;
           continue;
@@ -237,7 +226,7 @@ export const sendExpiringContractsNotifications = async () => {
 
         if (!fullContract.owner.email) {
           logCron(`[NOTIFICATION_SERVICE] ⏭️ Nessuna email owner per annualità ${annuity.year} Contratto ID: ${annuity.contract_id}, skip.`);
-          await updateNotificationStatus(annuity.contract_id, 'annuity_renewal', annuity.year, false);
+          await updateNotificationStatus(annuity.contract_id, 'annuity_renewal', referenceDate, false);
           stats.skipped++;
           continue;
         }
@@ -247,7 +236,7 @@ export const sendExpiringContractsNotifications = async () => {
         const sentClient = await emailService.sendExpirationReminderClient(fullContract, 'annuity', annuity.year);
 
         if (sentClient) {
-          await updateNotificationStatus(annuity.contract_id, 'annuity_renewal', annuity.year, true);
+          await updateNotificationStatus(annuity.contract_id, 'annuity_renewal', referenceDate, true);
           stats.sent++;
         } else {
           logCronError(`[NOTIFICATION_SERVICE] ❌ Invio email fallito per annualità contratto ${annuity.contract_id}`);

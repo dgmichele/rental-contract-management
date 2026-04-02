@@ -104,7 +104,7 @@ export interface Notification {
   id: number;
   contract_id: number;
   type: NotificationType;
-  year: number | null;
+  reference_date: string; // YYYY-MM-DD format
   sent_to_client: boolean;
   sent_at: Date;
 }
