@@ -13,11 +13,12 @@ dayjs.extend(utc);
  * Logica:
  * - Se cedolare_secca: true → return []
  * - Calcola anni intermedi tra start_date e end_date (ESCLUSI primo e ultimo)
- * - Per ogni anno: crea annuity con two_date = start_date + N anni
+ * - Per ogni anno: crea annuity con due_date = end_date (stesso giorno/mese) nell'anno dell'annualità
  * - is_paid basato su last_annuity_paid del contratto
  * 
  * Esempi:
- * - 2025-2028: genera [2026, 2027]
+ * - start 2023-11-01 / end 2029-10-31: genera [2024, 2025, 2026, 2027, 2028]
+ *   con due_date = XX-10-31 per ogni anno
  * - 2025-2026: genera [] (nessun anno intermedio)
  * - 2025-2030: genera [2026, 2027, 2028, 2029]
  * 
@@ -80,8 +81,9 @@ export const generateAnnuitiesForContract = async (
 
       // 4. Crea annuities per ogni anno intermedio
       const annuitiesToInsert: NewAnnuity[] = intermediateYears.map((year) => {
-        // Calcola due_date: stesso giorno e mese dello start_date, ma anno diverso
-        const dueDate = dayjs(contract.start_date)
+        // Calcola due_date: stesso giorno e mese della end_date, ma anno dell'annualità
+        // (es. end_date 31/10/2029 → due_date 31/10/2026 per l'anno 2026)
+        const dueDate = dayjs(contract.end_date)
           .year(year)
           .format('YYYY-MM-DD');
 
@@ -281,7 +283,7 @@ export const updateAnnuityPaid = async (
  * - Se cedolare_secca: elimina tutte le annuities (non dovrebbero esistere)
  * - Calcola i nuovi anni intermedi basati su start_date e end_date aggiornate
  * - Elimina annuities per anni che non sono più intermedi
- * - Aggiorna le due_date delle annuities esistenti
+ * - Aggiorna le due_date delle annuities esistenti usando giorno/mese di end_date
  * - Crea nuove annuities per anni intermedi mancanti
  * 
  * @param contractId - ID del contratto
@@ -359,12 +361,13 @@ export const recalculateAnnuityDueDates = async (
       }
 
       // 6. Aggiorna le due_date delle annuities esistenti che rimangono valide
+      // Usa end_date come riferimento per giorno/mese (nuova logica)
       const yearsToUpdate = existingAnnuities
         .filter(a => newIntermediateYears.includes(a.year))
         .map(a => a.year);
 
       for (const year of yearsToUpdate) {
-        const newDueDate = dayjs(contract.start_date)
+        const newDueDate = dayjs(contract.end_date)
           .year(year)
           .format('YYYY-MM-DD');
 
@@ -384,7 +387,8 @@ export const recalculateAnnuityDueDates = async (
 
       if (yearsToCreate.length > 0) {
         const annuitiesToInsert: NewAnnuity[] = yearsToCreate.map((year) => {
-          const dueDate = dayjs(contract.start_date)
+          // Usa end_date come riferimento per giorno/mese (nuova logica)
+          const dueDate = dayjs(contract.end_date)
             .year(year)
             .format('YYYY-MM-DD');
 
