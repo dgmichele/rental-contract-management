@@ -111,7 +111,7 @@ const ContractDetailPage: React.FC = () => {
 
           {mode === 'annuity' ? (
             <>
-              {contract && !contract.cedolare_secca && (
+              {contract && !contract.cedolare_secca && dayjs(contract.start_date).year() !== dayjs(contract.end_date).year() && (
                 <div className="mb-8">
                   <AnnuityTimeline 
                     annuities={contract?.annuities || []}
@@ -150,7 +150,9 @@ const ContractDetailPage: React.FC = () => {
               minAnnuityYear={contract 
                 ? (mode === 'edit' 
                   ? dayjs(contract.start_date).year()
-                  : (contract.last_annuity_paid ? contract.last_annuity_paid + 1 : dayjs(contract.start_date).year() + 1))
+                  : (mode === 'renew'
+                    ? Math.max(contract.last_annuity_paid || 0, dayjs().year())
+                    : (contract.last_annuity_paid ? contract.last_annuity_paid + 1 : dayjs(contract.start_date).year() + 1)))
                 : 2000
               }
               onSubmit={handlers.handleSubmit}

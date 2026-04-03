@@ -31,7 +31,7 @@ export const AnnuityTimeline: React.FC<AnnuityTimelineProps> = ({
   } = useAnnuityTimeline({
     annuities,
     contractStartYear,
-    contractEndYear
+    contractEndYear,
   });
 
   return (

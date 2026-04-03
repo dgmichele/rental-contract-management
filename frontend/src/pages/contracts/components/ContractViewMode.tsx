@@ -194,7 +194,7 @@ export const ContractViewMode: React.FC<ContractViewModeProps> = ({
         </div>
       </div>
 
-      {!contract.cedolare_secca && (
+      {!contract.cedolare_secca && dayjs(contract.start_date).year() !== dayjs(contract.end_date).year() && (
         <div className="bg-bg-card rounded-xl border border-border p-6 shadow-sm mt-8">
           <h3 className="text-lg font-bold text-text-title mb-4 flex items-center gap-2 pb-2 border-b border-border">
               <FaCalendarAlt className="text-secondary" /> Timeline annualità
