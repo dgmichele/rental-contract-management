@@ -117,6 +117,7 @@ const ContractDetailPage: React.FC = () => {
                     annuities={contract?.annuities || []}
                     contractStartYear={dayjs(contract.start_date).year()}
                     contractEndYear={dayjs(contract.end_date).year()}
+                    isMobileScrollable={true}
                   />
                 </div>
               )}

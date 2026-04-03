@@ -11,12 +11,14 @@ interface AnnuityTimelineProps {
   annuities: Annuity[];
   contractStartYear: number;
   contractEndYear: number;
+  isMobileScrollable?: boolean;
 }
 
 export const AnnuityTimeline: React.FC<AnnuityTimelineProps> = ({
   annuities,
   contractStartYear,
   contractEndYear,
+  isMobileScrollable = false,
 }) => {
   const {
     years,
@@ -37,16 +39,18 @@ export const AnnuityTimeline: React.FC<AnnuityTimelineProps> = ({
 
   return (
     <div className="relative w-full py-3 group">
-      {/* Sfumatura Fade Sinistra (Desktop) */}
+      {/* Sfumatura Fade Sinistra */}
       <div className={clsx(
-        "absolute left-0 top-0 bottom-0 w-24 z-20 pointer-events-none transition-opacity duration-300 hidden md:block",
+        "absolute left-0 top-0 bottom-0 w-24 z-20 pointer-events-none transition-opacity duration-300",
+        !isMobileScrollable && "hidden md:block",
         "bg-linear-to-r from-bg-card via-bg-card/50 to-transparent",
         showLeftFade ? "opacity-100" : "opacity-0"
       )} />
 
-      {/* Sfumatura Fade Destra (Desktop) */}
+      {/* Sfumatura Fade Destra */}
       <div className={clsx(
-        "absolute right-0 top-0 bottom-0 w-24 z-20 pointer-events-none transition-opacity duration-300 hidden md:block",
+        "absolute right-0 top-0 bottom-0 w-24 z-20 pointer-events-none transition-opacity duration-300",
+        !isMobileScrollable && "hidden md:block",
         "bg-linear-to-l from-bg-card via-bg-card/50 to-transparent",
         showRightFade ? "opacity-100" : "opacity-0"
       )} />
@@ -61,10 +65,15 @@ export const AnnuityTimeline: React.FC<AnnuityTimelineProps> = ({
           "cursor-grab active:cursor-grabbing select-none"
         )}
       >
-        <div className="relative flex flex-col md:flex-row md:min-w-max px-6 md:px-20">
+        <div className={clsx(
+          "relative flex px-6 md:px-20",
+          isMobileScrollable ? "flex-row min-w-max" : "flex-col md:flex-row md:min-w-max"
+        )}>
           
           {/* Linea Verticale (mobile) */}
-          <div className="absolute left-[44px] top-8 bottom-8 w-[2px] bg-border md:hidden" />
+          {!isMobileScrollable && (
+            <div className="absolute left-[44px] top-8 bottom-8 w-[2px] bg-border md:hidden" />
+          )}
 
           {years.map((year) => {
             const annuity = annuities.find((a) => a.year === year);
@@ -99,12 +108,17 @@ export const AnnuityTimeline: React.FC<AnnuityTimelineProps> = ({
                 key={year}
                 ref={isTarget ? activeAnnuityRef : null}
                 className={clsx(
-                  "relative flex flex-row md:flex-col items-start md:items-center mb-10 md:mb-0 last:mb-0 z-10",
-                  "w-full md:w-[220px] flex-none"
+                  "relative flex z-10 flex-none",
+                  isMobileScrollable 
+                    ? "flex-col items-center w-[140px] md:w-[220px] mb-0" 
+                    : "flex-row items-start md:flex-col md:items-center w-full md:w-[220px] mb-10 md:mb-0 last:mb-0"
                 )}
               >
-                {/* Linea orizzontale (desktop) */}
-                <div className="hidden md:block absolute top-[24px] left-0 right-0 h-[2px] bg-border z-0" 
+                {/* Linea orizzontale */}
+                <div className={clsx(
+                  "absolute left-0 right-0 h-[2px] bg-border z-0",
+                  isMobileScrollable ? "top-[20px] md:top-[24px]" : "hidden md:block md:top-[24px]"
+                )} 
                   style={{ 
                     left: isStart ? '50%' : '0', 
                     right: isEnd ? '50%' : '0' 
@@ -130,8 +144,15 @@ export const AnnuityTimeline: React.FC<AnnuityTimelineProps> = ({
                 </div>
 
                 {/* Contenuto Testuale */}
-                <div className="ml-4 md:ml-0 md:mt-6 flex flex-col items-start md:items-center w-full text-left md:text-center">
-                  <div className="flex flex-wrap md:justify-center items-center gap-2">
+                <div className={clsx(
+                  "flex flex-col w-full",
+                  isMobileScrollable 
+                    ? "items-center text-center mt-3 md:mt-6" 
+                    : "ml-4 md:ml-0 md:mt-6 items-start md:items-center text-left md:text-center"
+                )}>
+                  <div className={clsx(
+                    "flex flex-col md:flex-row md:justify-center items-center gap-1 md:gap-2"
+                  )}>
                     <span
                       className={clsx(
                         "font-bold text-lg md:text-xl transition-colors duration-300",
@@ -141,18 +162,21 @@ export const AnnuityTimeline: React.FC<AnnuityTimelineProps> = ({
                       {year}
                     </span>
                     {expireSoon && (
-                      <span className="bg-orange-50 text-orange-600 px-2 py-0.5 rounded text-[10px] border border-orange-200 whitespace-nowrap">
+                      <span className="bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded text-[9px] md:text-[10px] border border-orange-200 whitespace-nowrap">
                         ⚠️ scade a breve
                       </span>
                     )}
                     {expired && (
-                      <span className="bg-red-50 text-red-600 px-2 py-0.5 rounded text-[10px] border border-red-200 whitespace-nowrap">
+                      <span className="bg-red-50 text-red-600 px-1.5 py-0.5 rounded text-[9px] md:text-[10px] border border-red-200 whitespace-nowrap">
                         ⚠️ scaduta
                       </span>
                     )}
                   </div>
 
-                  <div className="flex flex-col md:items-center gap-0.5 mt-1">
+                  <div className={clsx(
+                    "flex flex-col gap-0.5 mt-1",
+                    isMobileScrollable ? "items-center" : "md:items-center"
+                  )}>
                     {isStart && (
                       <span className="text-text-subtle text-[10px] uppercase tracking-widest font-bold">Apertura</span>
                     )}
@@ -162,7 +186,7 @@ export const AnnuityTimeline: React.FC<AnnuityTimelineProps> = ({
                       </span>
                     )}
                     {dueDate && (
-                      <span className="text-text-body text-xs font-medium">
+                      <span className="text-text-body text-[10px] md:text-xs font-medium">
                         Scadenza: {dueDate}
                       </span>
                     )}
