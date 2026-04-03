@@ -21,6 +21,7 @@ export const AnnuityTimeline: React.FC<AnnuityTimelineProps> = ({
   const {
     years,
     nextAnnuityYear,
+    focusYear,
     today,
     scrollRef,
     activeAnnuityRef,
@@ -91,7 +92,7 @@ export const AnnuityTimeline: React.FC<AnnuityTimelineProps> = ({
             }
 
             const isNext = year === nextAnnuityYear;
-            const isTarget = isNext || (expired && !isPaid);
+            const isTarget = year === focusYear;
 
             return (
               <div

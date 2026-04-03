@@ -86,9 +86,14 @@ export const useAnnuityTimeline = ({
     updateFades();
   };
 
+  const focusYear = useMemo(() => {
+    return nextAnnuityYear ?? contractEndYear;
+  }, [nextAnnuityYear, contractEndYear]);
+
   return {
     years,
     nextAnnuityYear,
+    focusYear,
     today,
     scrollRef,
     activeAnnuityRef,
