@@ -163,7 +163,19 @@ export const getExpiringContracts = async (
 
   const contractIds = expiringItemsRaw.map((item: any) => item.contract_id);
 
-  // 7. Idrata i risultati: recupera i dettagli completi dei contratti
+  // 7. Idrata i risultati: recupera i dettagli completi dei contratti e notifiche
+  const notificationsRaw = await db("notifications")
+    .whereIn("contract_id", contractIds);
+
+  const notificationMap = new Map<string, any>();
+  notificationsRaw.forEach((n: any) => {
+    const refDate = dayjs(n.reference_date).format('YYYY-MM-DD');
+    const key = `${n.contract_id}-${n.type}-${refDate}`;
+    notificationMap.set(key, n);
+  });
+
+  const daysBefore = parseInt(process.env.CRON_NOTIFICATION_DAYS_BEFORE || '7', 10);
+
   const contracts = await db("contracts")
     .select(
       "contracts.*",
@@ -190,12 +202,46 @@ export const getExpiringContracts = async (
   });
 
   // 8. Formatta la risposta finale
-  const data: ExpiringItem[] = expiringItemsRaw.map((item: any) => ({
-    contract: contractMap.get(item.contract_id)!,
-    expiryType: item.expiry_type as "contract" | "annuity",
-    expiryDate: dayjs(item.expiry_date).toISOString(), // Standardizza formato data
-    annuityYear: item.annuity_year || undefined, // Rimuove 'null'
-  }));
+  const today = now.startOf('day');
+
+  const data: ExpiringItem[] = expiringItemsRaw.map((item: any) => {
+    const contractObj = contractMap.get(item.contract_id)!;
+    const expiryType = item.expiry_type as "contract" | "annuity";
+    const rawExpiryDate = dayjs(item.expiry_date);
+    const expiryYear = expiryType === "contract" ? rawExpiryDate.year() : item.annuity_year;
+    
+    const notifType = expiryType === "contract" ? "contract_renewal" : "annuity_renewal";
+    const expiryDateStr = rawExpiryDate.format('YYYY-MM-DD');
+    const notifKey = `${contractObj.id}-${notifType}-${expiryDateStr}`;
+    const notification = notificationMap.get(notifKey);
+
+    const cronDay = rawExpiryDate.subtract(daysBefore, 'day').startOf('day');
+    const cronDeadline = cronDay.hour(8).minute(0).second(0);
+    const daysUntilSend = Math.max(0, cronDay.diff(today, 'day'));
+    
+    let notifStatus: 'GREEN' | 'GRAY' | 'RED' | 'YELLOW' = 'YELLOW';
+
+    if (!contractObj.owner.email) {
+      notifStatus = 'GRAY';
+    } else if (notification && notification.sent_to_client) {
+      notifStatus = 'GREEN';
+    } else if (now.diff(cronDeadline) >= 0) {
+      notifStatus = 'RED';
+    } else {
+      notifStatus = 'YELLOW';
+    }
+
+    return {
+      contract: contractObj,
+      expiryType,
+      expiryDate: rawExpiryDate.toISOString(),
+      annuityYear: item.annuity_year || undefined,
+      notificationStatus: {
+        status: notifStatus,
+        daysUntilSend: notifStatus === 'YELLOW' ? daysUntilSend : undefined
+      }
+    };
+  });
 
   return {
     success: true,

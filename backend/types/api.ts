@@ -153,11 +153,17 @@ export interface DashboardStats {
   totalMonthlyRent: number;
 }
 
+export interface NotificationStatus {
+  status: 'GREEN' | 'GRAY' | 'RED' | 'YELLOW';
+  daysUntilSend?: number;
+}
+
 export interface ExpiringItem {
   contract: ContractWithRelations;
   expiryType: 'contract' | 'annuity';
   expiryDate: string;
   annuityYear?: number;
+  notificationStatus?: NotificationStatus;
 }
 
 export interface DashboardStatsResponse {

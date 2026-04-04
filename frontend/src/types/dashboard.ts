@@ -9,11 +9,17 @@ export interface DashboardStats {
   expiringContractsNextMonth: number; // Renamed to match backend response/service
 }
 
+export interface NotificationStatus {
+  status: 'GREEN' | 'GRAY' | 'RED' | 'YELLOW';
+  daysUntilSend?: number;
+}
+
 export interface ExpiringItem {
   contract: ContractWithRelations;
   expiryType: 'contract' | 'annuity';
   expiryDate: string;
   annuityYear?: number;
+  notificationStatus?: NotificationStatus;
 }
 
 export interface DashboardStatsResponse extends DashboardStats {}

@@ -116,6 +116,7 @@ export default function Dashboard() {
                             expiryType={item.expiryType}
                             expiryDate={item.expiryDate}
                             annuityYear={item.annuityYear}
+                            notificationStatus={item.notificationStatus}
                         />
                     ))}
                 </div>
@@ -159,6 +160,7 @@ export default function Dashboard() {
                             expiryType={item.expiryType}
                             expiryDate={item.expiryDate}
                             annuityYear={item.annuityYear}
+                            notificationStatus={item.notificationStatus}
                         />
                     ))}
                 </div>

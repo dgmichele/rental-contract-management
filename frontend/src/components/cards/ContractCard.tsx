@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMemo } from 'react';
 import clsx from 'clsx';
 import dayjs from 'dayjs';
-import { FaEye, FaHome, FaCalendarDay, FaMoneyBillWave, FaUser, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaEye, FaHome, FaCalendarDay, FaMoneyBillWave, FaUser, FaEdit, FaTrash, FaCheckCircle, FaInfoCircle, FaTimesCircle, FaClock } from 'react-icons/fa';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import type { ContractWithRelations } from '../../types/shared';
@@ -19,6 +19,10 @@ interface ContractCardProps {
   onDelete?: () => void;
   className?: string;
   returnUrl?: string;
+  notificationStatus?: {
+    status: 'GREEN' | 'GRAY' | 'RED' | 'YELLOW';
+    daysUntilSend?: number;
+  };
 }
 
 export const ContractCard = ({ 
@@ -30,7 +34,8 @@ export const ContractCard = ({
   onEdit,
   onDelete,
   className,
-  returnUrl
+  returnUrl,
+  notificationStatus
 }: ContractCardProps) => {
   const navigate = useNavigate();
 
@@ -157,6 +162,35 @@ export const ContractCard = ({
          </div>
       </div>
 
+      {/* Notification Banner */}
+      {notificationStatus && (
+        <div className={clsx(
+          "mb-4 flex items-center gap-2 p-2.5 rounded-lg border text-sm shadow-sm transition-colors",
+          {
+            'bg-success/10 border-success/20 text-success': notificationStatus.status === 'GREEN',
+            'bg-bg-main/50 border-border/50 text-text-subtle': notificationStatus.status === 'GRAY',
+            'bg-error/10 border-error/20 text-error': notificationStatus.status === 'RED',
+            'bg-warning/10 border-warning/20 text-warning-dark': notificationStatus.status === 'YELLOW',  
+          },
+          notificationStatus.status === 'YELLOW' && 'text-warning' 
+        )}>
+           {notificationStatus.status === 'GREEN' && <FaCheckCircle className="shrink-0" size={16} />}
+           {notificationStatus.status === 'GRAY' && <FaInfoCircle className="shrink-0" size={16} />}
+           {notificationStatus.status === 'RED' && <FaTimesCircle className="shrink-0" size={16} />}
+           {notificationStatus.status === 'YELLOW' && <FaClock className="shrink-0" size={16} />}
+           
+           <span className="font-medium leading-tight">
+             {notificationStatus.status === 'GREEN' && 'Notifica recapitata'}
+             {notificationStatus.status === 'GRAY' && 'Notifica sospesa: email assente'}
+             {notificationStatus.status === 'RED' && 'Notifica non recapitata'}
+             {notificationStatus.status === 'YELLOW' && (
+               notificationStatus.daysUntilSend === 0 
+                 ? 'Invio previsto per oggi' 
+                 : `Notifica in attesa, invio tra ${notificationStatus.daysUntilSend} giorn${notificationStatus.daysUntilSend === 1 ? 'o' : 'i'}`
+             )}
+           </span>
+        </div>
+      )}
 
       {/* Financials Grid */}
       <div className={clsx("grid gap-3 mb-4 mt-auto", isCedolareSecca ? "grid-cols-1" : "grid-cols-2")}>

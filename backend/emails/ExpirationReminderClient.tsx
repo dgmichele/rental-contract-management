@@ -48,10 +48,7 @@ const ExpirationReminderClient = ({
     <Html>
       <Head />
       <Preview>
-        {type === 'contract'
-          ? `🔔 Scadenza contratto di locazione - ${expiryDate}`
-          : `🔔 Scadenza annualità ${annuityYear} - ${expiryDate}`
-        }
+        Scadenza in data {expiryDate}
       </Preview>
       <Body style={styles.body}>
         <Container style={styles.container}>
