@@ -40,6 +40,7 @@ export const ContractCard = ({
   const navigate = useNavigate();
 
   const isCedolareSecca = contract.cedolare_secca;
+  const isCanoneConcordato = contract.canone_concordato;
   
   // Memoized values to optimize rendering in lists
   const isRenewal = useMemo(() => {
@@ -76,12 +77,34 @@ export const ContractCard = ({
 
   return (
     <Card className={clsx("flex flex-col relative h-full transition-transform hover:-translate-y-1 shadow-sm hover:shadow-lg", className)}>
-      {/* Cedolare Secca Banner */}
-      {isCedolareSecca && (
+      {/* Banners */}
+      {isCedolareSecca && isCanoneConcordato ? (
+        <div className="absolute top-0 left-0 flex items-center gap-1 z-10">
+          <div 
+            className="bg-secondary/10 text-secondary border-b border-r border-secondary/20 text-[10px] font-bold px-3 py-1 rounded-br-lg rounded-tl-lg uppercase tracking-wider"
+            title="Cedolare Secca"
+          >
+            Cedolare Secca
+          </div>
+          <div 
+            className="bg-secondary/10 text-secondary border-b border-l border-r border-secondary/20 text-[10px] font-bold px-3 py-1 rounded-bl-lg rounded-br-lg uppercase tracking-wider"
+            title="Canone Concordato"
+          >
+            10%
+          </div>
+        </div>
+      ) : isCedolareSecca ? (
         <div className="absolute top-0 left-0 bg-secondary/10 text-secondary border-b border-r border-secondary/20 text-[10px] font-bold px-3 py-1 rounded-br-lg rounded-tl-lg z-10 uppercase tracking-wider">
           Cedolare Secca
         </div>
-      )}
+      ) : isCanoneConcordato ? (
+        <div 
+          className="absolute top-0 left-0 bg-secondary/10 text-secondary border-b border-r border-secondary/20 text-[10px] font-bold px-3 py-1 rounded-br-lg rounded-tl-lg z-10 uppercase tracking-wider"
+          title="Canone Concordato"
+        >
+          10%
+        </div>
+      ) : null}
 
       {/* Action Icons Top Right */}
       <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 z-20 mb-4">
@@ -116,7 +139,7 @@ export const ContractCard = ({
       </div>
 
       {/* Header Info */}
-      <div className={clsx("mb-3", isCedolareSecca ? "mt-9" : "mt-6")}>
+      <div className={clsx("mb-3", (isCedolareSecca || isCanoneConcordato) ? "mt-9" : "mt-6")}>
         <div className="flex items-start gap-3">
             <div className="mt-1 bg-primary/10 p-2 rounded-full text-primary shrink-0">
                <FaUser size={16} />
