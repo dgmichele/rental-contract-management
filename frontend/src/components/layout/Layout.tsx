@@ -16,7 +16,7 @@ import MobileNav from './MobileNav';
  */
 const Layout = () => {
   return (
-    <div className="min-h-screen bg-bg-main">
+    <div className="min-h-screen bg-transparent">
       {/* Header */}
       <Header />
 

@@ -126,6 +126,7 @@ const ContractsListPage = () => {
               <ContractCard
                 key={contract.id}
                 contract={contract}
+                showAnnuityBanner={true}
                 displayMode="owner" // Nella lista generale mostriamo proprietario come titolo principale (default)
                 onEdit={() => navigate(`/contracts/${contract.id}?mode=edit`, { state: { returnUrl: window.location.pathname + window.location.search } })}
                 onDelete={() => dispatch({ type: 'OPEN_DELETE_MODAL', payload: contract })}

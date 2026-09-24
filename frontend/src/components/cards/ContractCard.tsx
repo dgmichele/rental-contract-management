@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMemo } from 'react';
 import clsx from 'clsx';
 import dayjs from 'dayjs';
-import { FaEye, FaHome, FaCalendarDay, FaMoneyBillWave, FaUser, FaEdit, FaTrash, FaCheckCircle, FaInfoCircle, FaTimesCircle, FaClock } from 'react-icons/fa';
+import { FaEye, FaHome, FaCalendarDay, FaMoneyBillWave, FaUser, FaEdit, FaTrash, FaCheckCircle, FaInfoCircle, FaTimesCircle, FaClock, FaArrowRight } from 'react-icons/fa';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import type { ContractWithRelations } from '../../types/shared';
@@ -14,6 +14,7 @@ interface ContractCardProps {
   expiryType?: 'contract' | 'annuity';
   expiryDate?: string; // ISO string expected
   annuityYear?: number;
+  showAnnuityBanner?: boolean;
   displayMode?: 'owner' | 'tenant'; // 'owner' shows owner as title, 'tenant' shows tenant as title
   onEdit?: () => void;
   onDelete?: () => void;
@@ -30,6 +31,7 @@ export const ContractCard = ({
   expiryType, 
   expiryDate, 
   annuityYear, 
+  showAnnuityBanner = false,
   displayMode = 'owner',
   onEdit,
   onDelete,
@@ -59,6 +61,45 @@ export const ContractCard = ({
       : dayjs(contract.end_date).format('DD/MM/YYYY');
   }, [expiryDate, contract.end_date]);
   
+  const nextAnnuityInfo = useMemo(() => {
+    if (!showAnnuityBanner || isCedolareSecca) return null;
+
+    const startYear = dayjs(contract.start_date).year();
+    const endYear = dayjs(contract.end_date).year();
+
+    // Se fornito l'array delle annuities (es. ContractWithRelations con relations popolate)
+    if (contract.annuities && contract.annuities.length > 0) {
+      const unpaidAnnuities = [...contract.annuities]
+        .filter((a) => !a.is_paid && a.due_date)
+        .sort((a, b) => dayjs(a.due_date).unix() - dayjs(b.due_date).unix());
+
+      if (unpaidAnnuities.length > 0) {
+        const next = unpaidAnnuities[0];
+        return {
+          year: next.year,
+          formattedDate: dayjs(next.due_date).format('DD/MM/YYYY'),
+        };
+      }
+    }
+
+    // Calcolo fallback in base a last_annuity_paid e alle regole applicative:
+    // gli anni intermedi sono da (startYear + 1) a (endYear - 1).
+    // La data di scadenza (due_date) segue giorno e mese di end_date nell'anno di riferimento.
+    const nextYear = contract.last_annuity_paid 
+      ? contract.last_annuity_paid + 1 
+      : startYear + 1;
+
+    if (nextYear < endYear) {
+      const calculatedDueDate = dayjs(contract.end_date).year(nextYear);
+      return {
+        year: nextYear,
+        formattedDate: calculatedDueDate.format('DD/MM/YYYY'),
+      };
+    }
+
+    return null;
+  }, [showAnnuityBanner, isCedolareSecca, contract.annuities, contract.last_annuity_paid, contract.start_date, contract.end_date]);
+
   const isNaturalExpiration = expiryType === 'contract'; 
   
   const handleManage = () => {
@@ -184,6 +225,20 @@ export const ContractCard = ({
             <span className="font-bold text-text-title">{formattedDate}</span>
          </div>
       </div>
+
+      {/* Next Annuity Expiry Banner */}
+      {nextAnnuityInfo && (
+        <div className="flex items-center gap-2 -mt-2 mb-4 px-3 py-2 bg-bg-card border border-warning/25 rounded-lg text-xs shadow-xs">
+          <FaClock className="text-warning shrink-0" size={13} />
+          <span className="text-text-body font-medium">
+            Scadenza annualità {nextAnnuityInfo.year}
+          </span>
+          <FaArrowRight className="text-text-body shrink-0" size={10} />
+          <span className="font-medium text-text-body">
+            {nextAnnuityInfo.formattedDate}
+          </span>
+        </div>
+      )}
 
       {/* Notification Banner */}
       {notificationStatus && (

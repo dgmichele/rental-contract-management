@@ -24,9 +24,35 @@
       sans-serif;
     font-weight: 400;
     color: theme("colors.text-body");
-    background-color: theme("colors.bg-main");
+    background-color: transparent;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /*
+   * Layer di sfondo fisso isolato su GPU:
+   * elimina il flicker bianco e i micro-lag durante lo scroll su mobile
+   * (iOS Safari e Android WebKit non ricalcolano background-size: cover ad ogni frame).
+   * L'immagine si trova in /public/background.webp
+   */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100dvh;
+    background-image: url("/background.webp");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    z-index: -99;
+    pointer-events: none;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    will-change: transform;
   }
 
   /* Titoli h1, h2 - Merriweather 900 */

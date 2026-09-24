@@ -146,6 +146,7 @@ const OwnerDetailPage: React.FC = () => {
                 <ContractCard 
                   key={contract.id} 
                   contract={contract as ContractWithRelations} 
+                  showAnnuityBanner={true}
                   displayMode="tenant"
                   onEdit={() => navigate(`/contracts/${contract.id}?mode=edit`, { state: location.state })}
                   onDelete={() => dispatch({ type: 'OPEN_DELETE_CONTRACT_MODAL', payload: contract as ContractWithRelations })}
