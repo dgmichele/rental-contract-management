@@ -8,10 +8,10 @@ import dayjs from 'dayjs';
  * Test suite completa per Cron Job notifiche.
  * 
  * Copertura:
- * - Trova contratti in scadenza tra 7 giorni
- * - Trova annuities non pagate in scadenza tra 7 giorni
- * - Invia email interna + cliente (mock)
- * - Popola correttamente tabella notifications
+ * - Trova contratti in scadenza tra 30 giorni
+ * - Trova annuities non pagate in scadenza tra 30 giorni
+ * - Invia email cliente (mock)
+ * - Popola correttamente tabella notifications con reference_date
  * - Prevenzione duplicati (no re-invio)
  * - Log successi/fallimenti
  */
@@ -35,7 +35,6 @@ describe('Cron Job Notifications Integration Tests', () => {
     jest.clearAllMocks();
 
     // Mock email service per evitare invii reali
-    mockedEmailService.sendExpirationReminderInternal.mockResolvedValue(true);
     mockedEmailService.sendExpirationReminderClient.mockResolvedValue(true);
 
     // Crea user di test
@@ -77,20 +76,20 @@ describe('Cron Job Notifications Integration Tests', () => {
   // ============= TEST 1: CONTRATTI IN SCADENZA =============
   describe('Contratti in scadenza naturale (end_date)', () => {
     
-    it('✅ Dovrebbe trovare contratti con scadenza esatta tra 7 giorni', async () => {
+    it('✅ Dovrebbe trovare contratti con scadenza esatta tra 30 giorni', async () => {
       // Mock data: oggi = 2025-01-15
       const today = dayjs('2025-01-15');
-      const targetDate = today.add(7, 'day').format('YYYY-MM-DD'); // 2025-01-22
+      const targetDate = today.add(30, 'day').format('YYYY-MM-DD'); // 2025-02-14
 
       console.log('[CRON_TEST] Data oggi (mock):', today.format('YYYY-MM-DD'));
-      console.log('[CRON_TEST] Data target (oggi + 7):', targetDate);
+      console.log('[CRON_TEST] Data target (oggi + 30):', targetDate);
 
-      // Crea contratto con scadenza tra 7 giorni
+      // Crea contratto con scadenza tra 30 giorni
       const [contract] = await db('contracts').insert({
         owner_id: testOwnerId,
         tenant_id: testTenantId,
         start_date: '2021-01-22',
-        end_date: targetDate, // Scade tra 7 giorni
+        end_date: targetDate, // Scade tra 30 giorni
         cedolare_secca: true,
         typology: 'residenziale',
         canone_concordato: true,
@@ -101,8 +100,7 @@ describe('Cron Job Notifications Integration Tests', () => {
       console.log('[CRON_TEST] Contratto creato con end_date:', contract.end_date);
 
       // Simula esecuzione cron job con data mockata
-      // Nota: Passiamo la data target direttamente per il test
-      const daysBefore = 7;
+      const daysBefore = 30;
       const calculatedTarget = today.add(daysBefore, 'day').format('YYYY-MM-DD');
 
       // Verifica che il contratto sia nel range corretto
@@ -116,7 +114,7 @@ describe('Cron Job Notifications Integration Tests', () => {
 
     it('✅ Dovrebbe inviare email per contratto in scadenza', async () => {
       const today = dayjs('2025-01-15');
-      const targetDate = today.add(7, 'day').format('YYYY-MM-DD');
+      const targetDate = today.add(30, 'day').format('YYYY-MM-DD');
 
       // Crea contratto in scadenza
       await db('contracts').insert({
@@ -130,9 +128,7 @@ describe('Cron Job Notifications Integration Tests', () => {
         monthly_rent: 500,
       }).returning('*');
 
-      // Esegui notification service (simulando cron job)
-      // NOTA: Il service usa dayjs() interno, quindi dobbiamo mockare process.env
-      process.env.CRON_NOTIFICATION_DAYS_BEFORE = '7';
+      process.env.CRON_NOTIFICATION_DAYS_BEFORE = '30';
       
       // Mock dayjs per restituire la data fissa
       jest.useFakeTimers({ doNotFake: ['setTimeout'] });
@@ -140,15 +136,13 @@ describe('Cron Job Notifications Integration Tests', () => {
 
       const stats = await notificationService.sendExpiringContractsNotifications();
 
-      // Aspetta che le operazioni async siano completate
       await new Promise(resolve => setTimeout(resolve, 300));
 
       // Verifica statistiche
       expect(stats.processed).toBeGreaterThanOrEqual(1);
       expect(stats.sent).toBeGreaterThanOrEqual(1);
 
-      // Verifica che le email siano state chiamate (mock)
-      expect(mockedEmailService.sendExpirationReminderInternal).toHaveBeenCalled();
+      // Verifica che l'email client sia stata chiamata (mock)
       expect(mockedEmailService.sendExpirationReminderClient).toHaveBeenCalled();
 
       console.log('[CRON_TEST] ✅ Email inviate (mock verificato)');
@@ -156,7 +150,7 @@ describe('Cron Job Notifications Integration Tests', () => {
 
     it('✅ Dovrebbe popolare correttamente tabella notifications', async () => {
       const today = dayjs('2025-01-15');
-      const targetDate = today.add(7, 'day').format('YYYY-MM-DD');
+      const targetDate = today.add(30, 'day').format('YYYY-MM-DD');
 
       // Crea contratto in scadenza
       const [contract] = await db('contracts').insert({
@@ -188,8 +182,7 @@ describe('Cron Job Notifications Integration Tests', () => {
 
       expect(notification).toBeDefined();
       expect(notification.sent_to_client).toBe(true);
-      expect(notification.sent_to_internal).toBe(true);
-      expect(notification.year).toBe(2025); // Contract renewal ora ha l'anno di fine contratto (mocked targetDate year)
+      expect(dayjs(notification.reference_date).format('YYYY-MM-DD')).toBe(targetDate);
       expect(notification.sent_at).toBeTruthy();
 
       console.log('[CRON_TEST] ✅ Notification inserita correttamente:', notification.id);
@@ -199,9 +192,9 @@ describe('Cron Job Notifications Integration Tests', () => {
   // ============= TEST 2: ANNUITIES IN SCADENZA =============
   describe('Annuities in scadenza (due_date, is_paid=false)', () => {
     
-    it('✅ Dovrebbe trovare annuities non pagate con scadenza tra 7 giorni', async () => {
+    it('✅ Dovrebbe trovare annuities non pagate con scadenza tra 30 giorni', async () => {
       const today = dayjs('2025-01-15');
-      const targetDate = today.add(7, 'day').format('YYYY-MM-DD'); // 2025-01-22
+      const targetDate = today.add(30, 'day').format('YYYY-MM-DD'); // 2025-02-14
 
       // Crea contratto NON cedolare secca (genera annuities)
       const [contract] = await db('contracts').insert({
@@ -209,18 +202,18 @@ describe('Cron Job Notifications Integration Tests', () => {
         tenant_id: testTenantId,
         start_date: '2023-01-22',
         end_date: '2027-01-22',
-        cedolare_secca: false, // Importante: false per annuities
+        cedolare_secca: false,
         typology: 'residenziale',
         canone_concordato: true,
         monthly_rent: 700,
         last_annuity_paid: null,
       }).returning('*');
 
-      // Crea annuity manualmente con due_date = oggi + 7
+      // Crea annuity con due_date = oggi + 30
       const [annuity] = await db('annuities').insert({
         contract_id: contract.id,
         year: 2026,
-        due_date: targetDate, // Scade tra 7 giorni
+        due_date: targetDate, // Scade tra 30 giorni
         is_paid: false, // NON pagata
       }).returning('*');
 
@@ -238,7 +231,7 @@ describe('Cron Job Notifications Integration Tests', () => {
 
     it('✅ Dovrebbe inviare email per annuity in scadenza', async () => {
       const today = dayjs('2025-01-15');
-      const targetDate = today.add(7, 'day').format('YYYY-MM-DD');
+      const targetDate = today.add(30, 'day').format('YYYY-MM-DD');
 
       // Crea contratto e annuity
       const [contract] = await db('contracts').insert({
@@ -271,12 +264,6 @@ describe('Cron Job Notifications Integration Tests', () => {
       expect(stats.processed).toBeGreaterThanOrEqual(1);
       expect(stats.sent).toBeGreaterThanOrEqual(1);
 
-      expect(mockedEmailService.sendExpirationReminderInternal).toHaveBeenCalledWith(
-        expect.any(Object),
-        'annuity',
-        2026
-      );
-
       expect(mockedEmailService.sendExpirationReminderClient).toHaveBeenCalledWith(
         expect.any(Object),
         'annuity',
@@ -286,9 +273,9 @@ describe('Cron Job Notifications Integration Tests', () => {
       console.log('[CRON_TEST] ✅ Email annuity inviate (mock verificato)');
     });
 
-    it('✅ Dovrebbe popolare notifications con anno annuity', async () => {
+    it('✅ Dovrebbe popolare notifications con reference_date annuity', async () => {
       const today = dayjs('2025-01-15');
-      const targetDate = today.add(7, 'day').format('YYYY-MM-DD');
+      const targetDate = today.add(30, 'day').format('YYYY-MM-DD');
 
       const [contract] = await db('contracts').insert({
         owner_id: testOwnerId,
@@ -315,21 +302,20 @@ describe('Cron Job Notifications Integration Tests', () => {
       await notificationService.sendExpiringContractsNotifications();
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      // Verifica notification con year
+      // Verifica notification con reference_date
       const notification = await db('notifications')
         .where({
           contract_id: contract.id,
           type: 'annuity_renewal',
-          year: 2026,
+          reference_date: targetDate,
         })
         .first();
 
       expect(notification).toBeDefined();
-      expect(notification.year).toBe(2026); // Anno annuity presente
+      expect(dayjs(notification.reference_date).format('YYYY-MM-DD')).toBe(targetDate);
       expect(notification.sent_to_client).toBe(true);
-      expect(notification.sent_to_internal).toBe(true);
 
-      console.log('[CRON_TEST] ✅ Notification annuity inserita con year:', notification.year);
+      console.log('[CRON_TEST] ✅ Notification annuity inserita con reference_date:', notification.reference_date);
     });
   });
 
@@ -338,7 +324,7 @@ describe('Cron Job Notifications Integration Tests', () => {
     
     it('✅ Dovrebbe NON inviare email duplicate per stesso contratto', async () => {
       const today = dayjs('2025-01-15');
-      const targetDate = today.add(7, 'day').format('YYYY-MM-DD');
+      const targetDate = today.add(30, 'day').format('YYYY-MM-DD');
 
       // Crea contratto
       const [contract] = await db('contracts').insert({
@@ -361,12 +347,10 @@ describe('Cron Job Notifications Integration Tests', () => {
       await new Promise(resolve => setTimeout(resolve, 300));
 
       expect(stats1.sent).toBe(1);
-      expect(mockedEmailService.sendExpirationReminderInternal).toHaveBeenCalledTimes(1);
       expect(mockedEmailService.sendExpirationReminderClient).toHaveBeenCalledTimes(1);
 
       // Reset mock calls
       jest.clearAllMocks();
-      mockedEmailService.sendExpirationReminderInternal.mockResolvedValue(true);
       mockedEmailService.sendExpirationReminderClient.mockResolvedValue(true);
 
       // SECONDO RUN: NON deve inviare email (già inviata)
@@ -375,7 +359,6 @@ describe('Cron Job Notifications Integration Tests', () => {
 
       expect(stats2.sent).toBe(0); // Nessuna nuova email
       expect(stats2.skipped).toBe(1); // Saltato per duplicato
-      expect(mockedEmailService.sendExpirationReminderInternal).not.toHaveBeenCalled();
       expect(mockedEmailService.sendExpirationReminderClient).not.toHaveBeenCalled();
 
       // Verifica: solo 1 notification in DB
@@ -389,7 +372,7 @@ describe('Cron Job Notifications Integration Tests', () => {
 
     it('✅ Dovrebbe NON inviare email duplicate per stessa annuity', async () => {
       const today = dayjs('2025-01-15');
-      const targetDate = today.add(7, 'day').format('YYYY-MM-DD');
+      const targetDate = today.add(30, 'day').format('YYYY-MM-DD');
 
       const [contract] = await db('contracts').insert({
         owner_id: testOwnerId,
@@ -421,7 +404,6 @@ describe('Cron Job Notifications Integration Tests', () => {
 
       // Reset mock
       jest.clearAllMocks();
-      mockedEmailService.sendExpirationReminderInternal.mockResolvedValue(true);
       mockedEmailService.sendExpirationReminderClient.mockResolvedValue(true);
 
       // SECONDO RUN
@@ -430,14 +412,14 @@ describe('Cron Job Notifications Integration Tests', () => {
 
       expect(stats2.sent).toBe(0);
       expect(stats2.skipped).toBe(1);
-      expect(mockedEmailService.sendExpirationReminderInternal).not.toHaveBeenCalled();
+      expect(mockedEmailService.sendExpirationReminderClient).not.toHaveBeenCalled();
 
       // Verifica DB: solo 1 notification
       const notifications = await db('notifications')
         .where({
           contract_id: contract.id,
           type: 'annuity_renewal',
-          year: 2026,
+          reference_date: targetDate,
         });
 
       expect(notifications.length).toBe(1);
@@ -449,15 +431,15 @@ describe('Cron Job Notifications Integration Tests', () => {
   // ============= TEST 4: EDGE CASES =============
   describe('Edge cases e gestione errori', () => {
     
-    it('✅ Dovrebbe ignorare contratti NON in scadenza tra 7 giorni', async () => {
+    it('✅ Dovrebbe ignorare contratti NON in scadenza tra 30 giorni', async () => {
       const today = dayjs('2025-01-15');
       
-      // Contratto con scadenza tra 10 giorni (NON 7)
+      // Contratto con scadenza tra 40 giorni (NON 30)
       await db('contracts').insert({
         owner_id: testOwnerId,
         tenant_id: testTenantId,
         start_date: '2021-01-25',
-        end_date: today.add(10, 'day').format('YYYY-MM-DD'), // +10 giorni
+        end_date: today.add(40, 'day').format('YYYY-MM-DD'), // +40 giorni
         cedolare_secca: true,
         typology: 'residenziale',
         canone_concordato: true,
@@ -473,14 +455,14 @@ describe('Cron Job Notifications Integration Tests', () => {
 
       // NON dovrebbe trovare contratti
       expect(stats.sent).toBe(0);
-      expect(mockedEmailService.sendExpirationReminderInternal).not.toHaveBeenCalled();
+      expect(mockedEmailService.sendExpirationReminderClient).not.toHaveBeenCalled();
 
       console.log('[CRON_TEST] ✅ Contratto fuori range ignorato');
     });
 
     it('✅ Dovrebbe ignorare annuities già pagate (is_paid=true)', async () => {
       const today = dayjs('2025-01-15');
-      const targetDate = today.add(7, 'day').format('YYYY-MM-DD');
+      const targetDate = today.add(30, 'day').format('YYYY-MM-DD');
 
       const [contract] = await db('contracts').insert({
         owner_id: testOwnerId,
@@ -511,14 +493,14 @@ describe('Cron Job Notifications Integration Tests', () => {
 
       // NON dovrebbe inviare notifiche
       expect(stats.sent).toBe(0);
-      expect(mockedEmailService.sendExpirationReminderInternal).not.toHaveBeenCalled();
+      expect(mockedEmailService.sendExpirationReminderClient).not.toHaveBeenCalled();
 
       console.log('[CRON_TEST] ✅ Annuity già pagata ignorata');
     });
 
-    it('✅ Dovrebbe gestire fallimento parziale email (best effort)', async () => {
+    it('✅ Dovrebbe marcare come failed se l\'invio email fallisce', async () => {
       const today = dayjs('2025-01-15');
-      const targetDate = today.add(7, 'day').format('YYYY-MM-DD');
+      const targetDate = today.add(30, 'day').format('YYYY-MM-DD');
 
       await db('contracts').insert({
         owner_id: testOwnerId,
@@ -531,46 +513,7 @@ describe('Cron Job Notifications Integration Tests', () => {
         monthly_rent: 500,
       });
 
-      // Mock: email interna fallisce, cliente successo
-      mockedEmailService.sendExpirationReminderInternal.mockResolvedValue(false);
-      mockedEmailService.sendExpirationReminderClient.mockResolvedValue(true);
-
-      // Mock dayjs
-      jest.useFakeTimers({ doNotFake: ['setTimeout'] });
-      jest.setSystemTime(today.toDate());
-
-      const stats = await notificationService.sendExpiringContractsNotifications();
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      // Dovrebbe comunque considerare "sent" se almeno una email è andata
-      expect(stats.sent).toBe(1);
-
-      // Verifica notification: sent_to_internal = false, sent_to_client = true
-      const notification = await db('notifications').orderBy('id', 'desc').first();
-      
-      expect(notification.sent_to_internal).toBe(false);
-      expect(notification.sent_to_client).toBe(true);
-
-      console.log('[CRON_TEST] ✅ Fallimento parziale gestito (best effort)');
-    });
-
-    it('✅ Dovrebbe marcare come failed se TUTTE le email falliscono', async () => {
-      const today = dayjs('2025-01-15');
-      const targetDate = today.add(7, 'day').format('YYYY-MM-DD');
-
-      await db('contracts').insert({
-        owner_id: testOwnerId,
-        tenant_id: testTenantId,
-        start_date: '2021-01-22',
-        end_date: targetDate,
-        cedolare_secca: true,
-        typology: 'residenziale',
-        canone_concordato: true,
-        monthly_rent: 500,
-      });
-
-      // Mock: entrambe le email falliscono
-      mockedEmailService.sendExpirationReminderInternal.mockResolvedValue(false);
+      // Mock: email fallisce
       mockedEmailService.sendExpirationReminderClient.mockResolvedValue(false);
 
       // Mock dayjs
@@ -584,13 +527,12 @@ describe('Cron Job Notifications Integration Tests', () => {
       expect(stats.failed).toBe(1);
 
       // Con il pattern claim-first, la notification viene inserita PRIMA dell'invio
-      // ma i campi sent_to_* restano false (email non inviate)
+      // ma sent_to_client resta false (email non inviata)
       const notifications = await db('notifications');
       expect(notifications.length).toBe(1);
       expect(notifications[0].sent_to_client).toBe(false);
-      expect(notifications[0].sent_to_internal).toBe(false);
 
-      console.log('[CRON_TEST] ✅ Tutte le email fallite → marcato come failed, notification con sent=false');
+      console.log('[CRON_TEST] ✅ Email fallita → marcato come failed, notification con sent=false');
     });
   });
 
@@ -599,7 +541,7 @@ describe('Cron Job Notifications Integration Tests', () => {
     
     it('✅ Dovrebbe restituire statistiche corrette', async () => {
       const today = dayjs('2025-01-15');
-      const targetDate = today.add(7, 'day').format('YYYY-MM-DD');
+      const targetDate = today.add(30, 'day').format('YYYY-MM-DD');
 
       // Crea 2 contratti in scadenza
       await db('contracts').insert([
@@ -643,7 +585,7 @@ describe('Cron Job Notifications Integration Tests', () => {
 
     it('✅ Dovrebbe loggare correttamente successi e fallimenti', async () => {
       const today = dayjs('2025-01-15');
-      const targetDate = today.add(7, 'day').format('YYYY-MM-DD');
+      const targetDate = today.add(30, 'day').format('YYYY-MM-DD');
 
       // Crea 1 contratto (successo) e 1 annuity (fallimento simulato)
       const [contract1] = await db('contracts').insert({
@@ -677,11 +619,10 @@ describe('Cron Job Notifications Integration Tests', () => {
 
       // Mock: primo successo, secondo fallisce
       let callCount = 0;
-      mockedEmailService.sendExpirationReminderInternal.mockImplementation(() => {
+      mockedEmailService.sendExpirationReminderClient.mockImplementation(() => {
         callCount++;
         return Promise.resolve(callCount === 1); // Solo primo successo
       });
-      mockedEmailService.sendExpirationReminderClient.mockResolvedValue(false);
 
       // Mock dayjs
       jest.useFakeTimers({ doNotFake: ['setTimeout'] });

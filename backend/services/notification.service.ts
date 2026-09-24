@@ -132,17 +132,8 @@ export const sendExpiringContractsNotifications = async () => {
   // Chiave arbitraria per il lock del DB (deve essere un intero a 64-bit univoco per questo specifico job)
   const LOCK_KEY = 123456789;
   
-  // 1. Tenta di acquisire il lock a livello di database
-  const lockAcquired = await db.raw(
-    'SELECT pg_try_advisory_lock(?)', [LOCK_KEY]
-  );
-  
-  if (!lockAcquired.rows[0].pg_try_advisory_lock) {
-    logCron('[NOTIFICATION_SERVICE] ⏭️ Job scadenze già in esecuzione su altro processo (lock negato), skip.');
-    return { processed: 0, sent: 0, skipped: 0, failed: 0 };
-  }
-
-  logCron('[NOTIFICATION_SERVICE] 🔐 Lock advisory acquisito, avvio job scadenze.');
+  const connection = await db.client.acquireConnection();
+  let hasLock = false;
 
   const stats = {
     processed: 0,
@@ -152,8 +143,22 @@ export const sendExpiringContractsNotifications = async () => {
   };
 
   try {
-    // Configurazione giorni da env o default a 7
-    const daysBefore = parseInt(process.env.CRON_NOTIFICATION_DAYS_BEFORE || '7', 10);
+    // 1. Tenta di acquisire il lock a livello di database sulla connessione dedicata
+    const lockAcquired = await connection.query(
+      'SELECT pg_try_advisory_lock($1)', [LOCK_KEY]
+    );
+    
+    hasLock = lockAcquired.rows[0].pg_try_advisory_lock;
+
+    if (!hasLock) {
+      logCron('[NOTIFICATION_SERVICE] ⏭️ Job scadenze già in esecuzione su altro processo (lock negato), skip.');
+      return stats;
+    }
+
+    logCron('[NOTIFICATION_SERVICE] 🔐 Lock advisory acquisito, avvio job scadenze.');
+
+    // Configurazione giorni da env o default a 30
+    const daysBefore = parseInt(process.env.CRON_NOTIFICATION_DAYS_BEFORE || '30', 10);
     const targetDate = dayjs().add(daysBefore, 'day').format('YYYY-MM-DD');
 
     logCron(`[NOTIFICATION_SERVICE] 🚀 Check scadenze per data target: ${targetDate}`);
@@ -168,7 +173,7 @@ export const sendExpiringContractsNotifications = async () => {
       for (const contract of expiringContracts) {
         stats.processed++;
 
-        const referenceDate = contract.end_date;
+        const referenceDate = dayjs(contract.end_date).format('YYYY-MM-DD');
         const claimed = await claimNotification(contract.id, 'contract_renewal', referenceDate);
         if (!claimed) {
           stats.skipped++;
@@ -211,7 +216,7 @@ export const sendExpiringContractsNotifications = async () => {
       for (const annuity of expiringAnnuities) {
         stats.processed++;
 
-        const referenceDate = annuity.due_date;
+        const referenceDate = dayjs(annuity.due_date).format('YYYY-MM-DD');
         const claimed = await claimNotification(annuity.contract_id, 'annuity_renewal', referenceDate);
         if (!claimed) {
           stats.skipped++;
@@ -248,10 +253,15 @@ export const sendExpiringContractsNotifications = async () => {
       logCronError('[NOTIFICATION_SERVICE] ❌ Errore critico durante esecuzione job:', error);
     }
   } finally {
-    // 2. Rilascia SEMPRE il lock alla fine, anche se il job fallisce,
-    // altrimenti il job non potrà MAI più ripartire finché non si riavvia il DB o scade la sessione.
-    await db.raw('SELECT pg_advisory_unlock(?)', [LOCK_KEY]);
-    logCron('[NOTIFICATION_SERVICE] 🔓 Lock advisory rilasciato correttamente.');
+    if (hasLock) {
+      try {
+        await connection.query('SELECT pg_advisory_unlock($1)', [LOCK_KEY]);
+        logCron('[NOTIFICATION_SERVICE] 🔓 Lock advisory rilasciato correttamente.');
+      } catch (unlockErr) {
+        logCronError('[NOTIFICATION_SERVICE] ❌ Errore rilascio lock advisory:', unlockErr);
+      }
+    }
+    db.client.releaseConnection(connection);
   }
 
   logCron('[NOTIFICATION_SERVICE] 🏁 Job completato. Statistiche:', stats);

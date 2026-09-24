@@ -174,7 +174,7 @@ export const getExpiringContracts = async (
     notificationMap.set(key, n);
   });
 
-  const daysBefore = parseInt(process.env.CRON_NOTIFICATION_DAYS_BEFORE || '7', 10);
+  const daysBefore = parseInt(process.env.CRON_NOTIFICATION_DAYS_BEFORE || '30', 10);
 
   const contracts = await db("contracts")
     .select(
